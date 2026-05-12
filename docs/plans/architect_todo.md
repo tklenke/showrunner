@@ -29,8 +29,8 @@ implementation phase begins.
 - [ ] **Scribe write strategy** — Atomic file writes (write to temp, rename) vs. direct
   overwrite. Decide before Phase 3. Low stakes but needs to be consistent.
 
-- [ ] **MVP PC character sheet** — Tom to provide the PC character YAML and MD for the
-  Bargos mansion scene. Bargos is done; at least one PC is needed to run Phase 4.
+- [x] **MVP PC character sheet** — Kaelen Sunara (AI-driven Smuggler/Thief) and Z-4P0
+  (human-driven droid companion, `player: "human"`) created and committed.
 
 ---
 
@@ -103,9 +103,13 @@ Reference: `swskin/Game_masters_kit.pdf` Acts 1–2.
 Phases 5 and 6 are **not required** for this phase. The Referee operates with the specific
 rules and NPC stats for this scene baked inline — no `rules_lookup()` tool needed.
 
-- [ ] Adventure scene format: `state/scene_[n].yaml` (location, NPCs present, triggers, read-aloud text)
-- [ ] Convert Bargos mansion scenes (Acts 1–2) to YAML format
-  - Include inline stats for Gamorrean guards (weapon, damage, skills) directly in scene YAML
+- [x] Adventure scene format: `docs/plans/scene_format.md` — schema, Narrator prompt
+  assembly order (cache-aware: static scene file top, dynamic runtime state bottom),
+  `render_narrator_context()` spec, implementation notes.
+- [x] Convert Bargos mansion scenes (Acts 1–2) to YAML format
+  - `state/scene_0.yaml` — Bargos audience + Gamorrean Rumble (inline minion stats)
+  - `state/scene_1.yaml` — Gavos landing pad + EV-8D3 deception
+  - NOTE: Gamorrean Guard stats need verification against source adventure PDF.
 - [ ] Narrator: load scene, decide beats, manage the Gamorrean arrival ticking clock
 - [ ] World Runner: narrate scene descriptions and outcomes
 - [ ] Actors: voice Bargos, Genko, C3-P9, Gamorreans — using `render_actor_prompt()`

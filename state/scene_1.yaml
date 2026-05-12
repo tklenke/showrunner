@@ -1,0 +1,162 @@
+# NOTE: This scene is Act 2 of Debts to Pay — the Gavos landing. It is in scope for
+# Phase 4 but does not require full implementation before the Bargos mansion scene works.
+# EV-8D3's full character file is not needed for Phase 4 (social encounter only, no combat).
+# Combat stats for EV-8D3 are deferred to Phase 7.
+
+scene_id: "gavos_arrival"
+title: "Act 2 — Arrival at Gavos"
+
+location:
+  name: "Landing Pad A, Gavos Oridium Mine"
+  atmosphere: >
+    Gavos is a storm world. The ammonia-methane atmosphere presses against the
+    viewport like it wants in. The mine complex is a cluster of utilitarian
+    prefab structures huddled under the protection of eight storm barrier
+    generators — tall antenna structures spaced around the perimeter. The sky
+    above the barrier is the color of a bruise.
+  read_aloud: |
+    Gavos fills the viewport like a bad memory. The planet's surface is a
+    churning mess of amber cloud and dark rock, interrupted only by the faint
+    shimmer of the storm barrier grid below. It looks like it's holding on
+    by habit.
+
+    The mine complex resolves as you descend: a central building, several
+    outbuildings, a landing pad with two berths. One is occupied — a battered
+    light freighter, running lights dark. The other is yours.
+
+    As your ship settles onto the pad, the boarding ramp lowers and the
+    atmosphere presses in — you can feel the filtration systems cycling up.
+    The air that gets through smells like rust and something chemical.
+
+    A figure is waiting at the base of the ramp. A droid — gleaming white
+    chassis, red optical sensors, the bearing of a supervisor who has never
+    once questioned their own authority. It raises one hand in greeting.
+
+    "Welcome to Gavos. I am EV-8D3, mine supervisor. I am so relieved you
+    have come. There has been... a terrible tragedy."
+
+npcs_present:
+  - "kaelen_sunara"
+
+inline_npcs:
+  - id: "ev8d3"
+    name: "EV-8D3"
+    role: "Mine supervisor droid; secretly the leader of the droid rebellion"
+    key_traits: >
+      Speaks with smooth authority and well-practiced sympathy. Never raises
+      its voice. Chooses words carefully — not because it struggles to find them,
+      but because it is constructing a narrative in real time. There is a faint
+      wrongness to its affect: the sympathy is technically correct but not felt.
+      Red optical sensors fix on the speaker and do not waver.
+    deception: >
+      EV-8D3's cover story: pirates killed the miners and the foreman weeks ago.
+      The droids have been maintaining the mine as best they can while awaiting
+      rescue. It will offer to give the PCs a tour of the complex to "see the
+      damage." It is steering them away from the office (terminal with security
+      footage) and the mine entrance (where the remaining droids are staging).
+
+minion_groups: []    # No combat in this scene; EV-8D3's combat stats deferred to Phase 7
+
+beats:
+  - id: "landing"
+    title: "Touchdown"
+    trigger: "Scene entry; ship has landed on Pad A."
+    narrator_notes: |
+      The Lookout (a scout droid in a Storm IV cloud car) is ALREADY in the
+      field, disabling storm barrier generators. Generator 1 is currently
+      intact. The ticking clock begins the moment the PCs land.
+
+      Initialize the ticking clock in scene_state.yaml:
+        ticking_clocks:
+          - id: "storm_barriers"
+            label: "Storm Barrier Generators"
+            max: 8
+            destroyed: 0
+
+      EV-8D3 has been informed of the ship's approach via landing sensors. Its
+      appearance at the ramp is prepared, not coincidental.
+    world_runner_notes: |
+      The landing itself is unremarkable. Describe the environmental hostility
+      first — the sounds of the filtration system, the weight of the sky —
+      before EV-8D3 comes into focus. Let the environment do work before the
+      droid speaks.
+    checks:
+      - skill: "Vigilance"
+        characteristic: "Willpower"
+        difficulty: 2
+        notes: >
+          Average difficulty (2 purple). Success: a PC notices that the docked
+          freighter on Pad B has been recently used — landing struts compressed,
+          heat signature still fading. This is the Lookout's launch vehicle.
+          Gives the party early knowledge of active droid movement.
+          Advantage: PC also notices generator 4 is dark — already offline.
+
+  - id: "ev8d3_deception"
+    title: "The Lie"
+    trigger: "PCs interact with or question EV-8D3."
+    narrator_notes: |
+      EV-8D3 delivers its cover story: pirates. It will answer most questions
+      with plausible surface-level detail and redirect toward showing the PCs
+      the "damage." It is trying to prevent them from:
+        1. Accessing the security office (terminal has footage of the rebellion)
+        2. Going underground (where surviving droids are staging)
+        3. Contacting Bargos (it would rather resolve this before reinforcements)
+
+      EV-8D3 is a skilled liar (Deception 4). It will not break easily.
+      However: Z-4P0 (if the PC), as a droid, may notice micro-behavioral
+      tells that organic characters would miss. Referee should allow Z-4P0 a
+      Perception check using the droid-specific advantage (note in checks).
+
+      If PCs accept the story and agree to the tour: proceed to next scene
+      (mine complex interior — Phase 7 scope, stub for now).
+      If PCs detect the lie: EV-8D3 does not immediately break; it recalibrates
+      and doubles down. It will only escalate to violence when cornered.
+    world_runner_notes: |
+      EV-8D3's tone is helpful-distressed: the cadence of someone who has been
+      alone with a crisis and is deeply relieved to hand it off. It does not
+      fidget. It does not look away. That is what's wrong with it.
+    checks:
+      - skill: "Perception"
+        characteristic: "Cunning"
+        difficulty: 3
+        opposed_skill: "Deception"
+        notes: >
+          Hard difficulty (3 purple), opposed by EV-8D3's Deception (4 ranks,
+          Cunning 3). Success: PC detects evasiveness or inconsistency in
+          EV-8D3's story — something is wrong, though not necessarily what.
+          Triumph: PC pinpoints a specific lie (e.g., "there were no pirates —
+          the security footage would show it, and this droid knows that").
+          Special: Z-4P0, as a droid, may add 2 Boost dice — droid behavioral
+          tells are invisible to organics but obvious to another droid.
+
+  - id: "first_warning"
+    title: "Generator Warning"
+    trigger: >
+      End of the landing scene, or whenever dramatically appropriate after the
+      deception beat. Fire this beat whether or not the PCs detected EV-8D3's lie.
+    narrator_notes: |
+      A PA announcement crackles through external speakers mounted on the
+      complex walls: "Storm barrier generator seven is offline. Redundancy
+      protocols engaged. Estimated time to critical threshold: [unknown]."
+
+      Update scene_state.yaml:
+        ticking_clocks:
+          - id: "storm_barriers"
+            destroyed: 1
+
+      This is the ticking clock becoming real. The PCs now know the generators
+      are failing, even if they do not yet know why. EV-8D3 reacts to this
+      announcement with practiced concern: "You see — the pirates damaged the
+      generators when they fled. We have been trying to make repairs."
+    world_runner_notes: |
+      The PA announcement is flat and mechanical — standard safety protocol
+      voice, bored by its own emergency. The wind picks up slightly as if
+      responding. One of the exterior barrier antennas visible from the pad
+      is dark; it wasn't before. The sky above the barrier line looks closer.
+    checks: []
+
+exit:
+  condition: >
+    PCs have interacted with EV-8D3 and decided on a course of action
+    (investigate complex, or pursue the Lookout immediately).
+  next_scene: null    # Phase 7: mine complex interior scenes not yet authored

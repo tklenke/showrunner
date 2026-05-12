@@ -279,6 +279,179 @@ At the start of Phase 4, the architect should have provided:
 - Bargos mansion scenes converted to YAML (`state/scene_0.yaml`, `state/scene_1.yaml`)
   - Scene YAMLs include inline Gamorrean guard stats (no OggDude lookup needed)
 
+### Architect deliverables (ready for Phase 4)
+
+- `characters/kaelen_sunara.yaml` + `.md` — AI-driven Smuggler/Thief
+- `characters/Z-4P0.yaml` + `.md` — Human-driven droid companion (`player: "human"`)
+- `docs/plans/scene_format.md` — Scene YAML specification and Narrator prompt assembly design
+- `state/scene_0.yaml` — Bargos mansion scene (Act 1: audience + Gamorrean Rumble)
+- `state/scene_1.yaml` — Gavos arrival scene (Act 2: landing pad + EV-8D3 deception)
+
+---
+
+### [ ] 4.1 — Adventure Scene Loader
+
+File: `src/showrunner/tools/state_reader.py`
+
+Add `load_adventure_scene(n: int, state_dir: str = "state") -> dict`.
+Loads `state/scene_{n}.yaml`. Follows the same pattern as `load_scene_state()`.
+
+Tests to write (in `tests/test_state_reader.py`):
+- `test_load_adventure_scene_returns_dict`
+- `test_load_adventure_scene_has_required_keys` — scene_id, title, location, beats, exit
+- `test_load_adventure_scene_missing_file_raises`
+
+Use a fixture scene YAML in `tests/fixtures/` — do not read from `state/` in tests.
+
+---
+
+### [ ] 4.2 — Scene State Initialization
+
+File: `src/showrunner/tools/state_writer.py`
+
+Add `initialize_scene_state(scene_id: str, first_beat_id: str, state_dir: str = "state")`.
+Writes `state/scene_state.yaml` with:
+
+```yaml
+current_scene: 0
+current_beat: "<first_beat_id>"
+ticking_clocks: []
+character_plans: {}
+```
+
+Also add `advance_beat(beat_id: str)` — updates `current_beat` in `scene_state.yaml`.
+
+Tests to write (in `tests/test_state_writer.py`):
+- `test_initialize_scene_state_writes_correct_fields`
+- `test_advance_beat_updates_current_beat`
+- `test_advance_beat_preserves_other_fields` — ticking_clocks and character_plans unchanged
+
+Use `tmp_path` for all file writes.
+
+---
+
+### [ ] 4.3 — Narrator Context Builder
+
+File: `src/showrunner/agents/narrator.py`
+
+Implement `render_narrator_context(scene: dict, scene_state: dict, party_stats: dict, last_action: str) -> str`.
+
+Assembly order (static → dynamic, per `docs/plans/scene_format.md`):
+1. Location name and atmosphere
+2. Full scene beats list (static reference material for Narrator)
+3. NPC roster (npcs_present + inline_npcs)
+4. Minion groups if present
+5. Current beat id and character plans (from scene_state)
+6. Party wounds and strain (from party_stats)
+7. Ticking clock status (from scene_state)
+8. Last player action
+
+Tests to write (in a new `tests/test_narrator.py`):
+- `test_static_content_precedes_dynamic` — verify location appears before party wounds
+- `test_current_beat_included`
+- `test_last_action_at_end`
+- `test_ticking_clock_included_when_present`
+- `test_ticking_clock_absent_when_empty`
+
+---
+
+### [ ] 4.4 — Actors: Scene Character Loading
+
+File: `src/showrunner/agents/actors.py`
+
+Update Actors agent initialization to accept a scene dict. On each turn, load character
+files for all names in `scene["npcs_present"]` and call `render_actor_prompt()` for each.
+For characters in `scene["inline_npcs"]`, use the `key_traits` field as a lightweight
+prompt (no full character file).
+
+Tests to write (in `tests/test_actors.py` or `tests/test_render_actor_prompt.py`):
+- `test_actors_loads_npcs_from_scene`
+- `test_inline_npc_uses_key_traits`
+
+---
+
+### [ ] 4.5 — Referee Phase 4 System Prompt
+
+File: `src/showrunner/agents/referee.py`
+
+Build the Referee's backstory/system prompt with the following rules inline. These are
+the only rules needed for the Bargos mansion scene — do not add more.
+
+Rules to include:
+- **Pool construction**: `max(char, skill)` Ability dice, upgrade `min(char, skill)` to
+  Proficiency. Difficulty dice = check difficulty value from scene YAML.
+- **Vigilance check**: Average difficulty (2 purple). On success, PC acts before Gamorreans.
+  On failure, Gamorreans get one free advance before PCs act.
+- **Melee/Brawl attack**: Difficulty = target's defense (ranged or melee as appropriate).
+  Add 1 difficulty die per range band beyond Engaged.
+- **Damage**: Net successes + weapon damage − target soak = wounds taken (minimum 0).
+- **Minion death**: Gamorrean minion group wound threshold is 5 per minion. A minion dies
+  for every 5 wounds dealt. Group's skill ranks stay constant.
+- **Critical injuries**: Triggered by a Triumph, or by spending 2 Advantage.
+  Roll d100 on the critical injury table (defer to GM judgment for Phase 4 — no table lookup).
+
+Do NOT wire `rules_lookup()`. Leave it raising `NotImplementedError`.
+
+Tests to write (in `tests/test_referee.py`):
+- `test_referee_system_prompt_contains_pool_construction_rule`
+- `test_referee_system_prompt_contains_soak_rule`
+- `test_referee_system_prompt_contains_minion_wound_rule`
+
+---
+
+### [ ] 4.6 — World Runner Read-Aloud
+
+File: `src/showrunner/agents/world_runner.py`
+
+On scene entry, World Runner delivers `scene["location"]["read_aloud"]` verbatim.
+During beats, World Runner uses `beat["world_runner_notes"]` as atmospheric context.
+
+The World Runner does not invent scene details beyond what's in the scene file —
+it elaborates on what's there, it doesn't contradict it.
+
+Tests to write (in `tests/test_world_runner.py`):
+- `test_read_aloud_text_passed_to_world_runner`
+- `test_world_runner_notes_passed_per_beat`
+
+---
+
+### [ ] 4.7 — CLI Human Player Turn
+
+File: `src/showrunner/orchestrator.py`
+
+When a character's turn comes up and `character["identity"]["player"] == "human"`,
+prompt the CLI: `What does [name] do? > `
+
+Accept the player's input string. Pass it as the `last_action` into
+`render_narrator_context()` and to the Referee for check resolution.
+
+For Phase 4 the human character is Z-4P0. Kaelen is AI-driven.
+
+Tests to write (in `tests/test_orchestrator.py`):
+- `test_human_player_turn_prompts_cli` — mock stdin, verify prompt text
+- `test_ai_character_turn_calls_actors` — verify Actors is called for `player: "ai"`
+
+---
+
+### [ ] 4.8 — End-to-End Scene Playthrough
+
+No tests for this task — this is exploratory play. Run `src/showrunner/main.py` and
+play through `state/scene_0.yaml` (Bargos mansion) from entry to exit condition.
+
+Checklist before calling Phase 4 done:
+- [ ] Scene entry read-aloud is delivered by World Runner
+- [ ] Bargos audience beat runs; Negotiation check can be triggered
+- [ ] Gamorrean warning beat triggers; Vigilance check fires
+- [ ] Gamorrean Rumble combat resolves with dice (auto or manual input)
+- [ ] Wounds are tracked correctly; minions die at wound threshold multiples
+- [ ] Mission brief beat runs after combat
+- [ ] Scene exits cleanly; scene_state.yaml updated
+
+Issues found during play are bugs — fix them. If something requires an architectural
+decision, stop and raise it with Tom.
+
+---
+
 ### Referee in Phase 4
 
 The Referee's system prompt for this scene must include inline:

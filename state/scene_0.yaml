@@ -1,0 +1,215 @@
+# VERIFY: Gamorrean Guard stats sourced from EotE adventure module — confirm against source PDF.
+
+scene_id: "bargos_audience"
+title: "Act 1 — Audience with Bargos the Hutt"
+
+location:
+  name: "Bargos's Estate, Sleheyron"
+  atmosphere: >
+    Bargos's estate is an ostentatious display of wealth that doesn't quite land.
+    The hangings are rich but slightly faded; the exotic creature cages gleam but
+    a few are empty. The smell of expensive food competes with something mustier
+    beneath it. Money is here, but it's nervous money.
+  read_aloud: |
+    The invitation — if you could call it that — arrived via holonet, delivered by
+    a gleaming protocol droid bearing Bargos's crest. The message was polite, the
+    subtext less so. Bargos the Hutt requests your presence. Immediately.
+
+    The estate sits on the outskirts of Sleheyron's industrial quarter, walled and
+    guarded. You are ushered through corridors lined with guards and obsequious
+    servants into a high-ceilinged audience chamber. At the far end, reclining on
+    a repulsorlift dais surrounded by sycophants and the smell of spiced meats,
+    is Bargos the Hutt.
+
+    His left side is a ruin of old scar tissue — a past wound, never properly
+    treated. His right eye is sharp and calculating. Beside him, a small Toydarian
+    flutters nervously: Genko, his aide. A pristine protocol droid — C3-P9 — stands
+    at attention nearby.
+
+npcs_present:
+  - "bargos_the_hutt"
+  - "kaelen_sunara"
+
+inline_npcs:
+  - id: "c3p9"
+    name: "C3-P9"
+    role: "Bargos's protocol droid; delivers messages, facilitates introductions"
+    key_traits: "Deferential, precise, genuinely loyal to Bargos. Speaks in complete
+      sentences. Slightly condescending to organics in a polite, oblivious way."
+  - id: "genko"
+    name: "Genko"
+    role: "Bargos's Toydarian aide; whispers counsel, manages logistics"
+    key_traits: "Furtive, anxious, speaks in a rapid Toydarian-accented Basic. Knows
+      more than he lets on about the Gavos situation. Visibly uncomfortable when
+      the subject of the mine comes up."
+
+minion_groups:
+  - id: "gamorrean_guards"
+    name: "Renegade Gamorrean Guards"
+    count: 6
+    characteristics:
+      brawn: 3
+      agility: 2
+      intellect: 1
+      cunning: 1
+      willpower: 2
+      presence: 1
+    skills:
+      melee: 1
+      brawl: 1
+    soak: 4
+    wound_threshold: 5    # group of 6 = 30 total wounds; minion dies each 5 wounds
+    weapons:
+      - name: "Vibro-Axe"
+        skill: "Melee"
+        damage: 5         # Brawn 3 + 2 (Vibro-Axe bonus)
+        critical: 3
+        range: "Engaged"
+        special: "Vicious 2"
+
+beats:
+  - id: "summons"
+    title: "The Summons"
+    trigger: "Scene entry; always the first beat."
+    narrator_notes: |
+      C3-P9 meets the PCs at the entrance and escorts them in. Bargos watches them
+      enter but says nothing until they are standing before his dais — making them
+      wait is a deliberate power move. Let the silence sit for a moment before
+      Bargos speaks.
+
+      Genko whispers something to Bargos just before he addresses the PCs. This
+      whisper is about the Gavos situation — Genko is worried Bargos will reveal
+      too much anxiety. Bargos waves him off.
+    world_runner_notes: |
+      Emphasize the scale of the chamber and Bargos's deliberate theatricality.
+      The wait before he speaks should feel slightly uncomfortable. Describe the
+      sounds of the room — rustling, a low hum of repulsors, the clink of
+      someone eating — not silence, but Bargos's silence.
+    checks: []
+
+  - id: "audience"
+    title: "The Job"
+    trigger: "After the PCs have been acknowledged by Bargos."
+    narrator_notes: |
+      Bargos explains the situation in broad strokes: he recently acquired an
+      oridium mine on Gavos and sent a foreman with a work crew. He expected his
+      first payment weeks ago. Instead: silence. He wants the PCs to go to Gavos,
+      find out what happened, and return with 100,000 credits — his cut.
+
+      Bargos is DESPERATE but will not show it. He frames this as a simple
+      collection job. He does not mention the droid population at the mine. If
+      asked why he doesn't send his own people: "I am sending my own people.
+      You." If pressed further, he simply stares.
+
+      Genko will interject once to remind Bargos of the 'bonus structure' — a
+      modest bonus if PCs return within a specific timeframe.
+
+      If PCs push for better terms (Negotiation check), Bargos is willing to
+      negotiate a slightly higher fee or a bonus for speed, but not the base
+      100,000. That number is non-negotiable to him.
+    world_runner_notes: |
+      Bargos speaks slowly, deliberately, like every word is expensive. He uses
+      Huttese phrases when displeased. Genko flutters nervously throughout.
+      C3-P9 translates Bargos's occasional Huttese asides with cheerful literalness.
+    checks:
+      - skill: "Negotiation"
+        characteristic: "Presence"
+        difficulty: 2
+        opposed_skill: "Cool"
+        notes: >
+          PCs may attempt to negotiate better terms. Opposed by Bargos's Cool
+          (ranks 2, Presence 3). Success improves the payout or adds a speed
+          bonus. Failure means Bargos is visibly annoyed but the job stands.
+          Threat: Bargos notes the PCs' names for future reference.
+          Triumph: Bargos offers an additional 10,000 credits if they return
+          with Gavos's full ledger intact.
+
+  - id: "gamorrean_warning"
+    title: "Something Is Wrong"
+    trigger: >
+      After Bargos has finished explaining the job and the PCs are about to
+      respond or depart. Deliver this beat before any farewells are exchanged.
+    narrator_notes: |
+      Genko suddenly stops mid-flutter, staring at the chamber doors. A guard
+      at the entrance starts to say something — then goes silent as the doors
+      crash open.
+
+      Call for a Vigilance check. On success, the PCs see the Gamorrean guards
+      are NOT Bargos's household guards — their colors are wrong, and they are
+      armed for combat, not ceremony.
+
+      These are six renegade Gamorreans who have decided Bargos's weakness is
+      an opportunity. This is NOT connected to the Gavos situation — it is a
+      separate internal power play. Bargos is furious and alarmed.
+
+      Bargos and Genko are non-combatants. C3-P9 immediately moves to shield
+      Bargos (ineffectually). If the PCs do not protect Bargos and he takes
+      wounds, he will be less generous in the mission brief that follows.
+    world_runner_notes: |
+      The doors do not explode dramatically — they are shoved open with a
+      Gamorrean grunt. The sound is wrong before the sight: heavy footfalls
+      on stone, the scrape of metal. The chamber staff scatter. The air
+      changes immediately.
+    checks:
+      - skill: "Vigilance"
+        characteristic: "Willpower"
+        difficulty: 2
+        notes: >
+          Average difficulty (2 purple). Success: PC recognizes the intruders as
+          renegades before combat begins, granting 1 Boost die on initiative.
+          Failure: the Gamorreans get one free move toward Bargos before PCs act.
+
+  - id: "gamorrean_rumble"
+    title: "The Gamorrean Rumble"
+    trigger: "Immediately after the warning beat; combat begins."
+    narrator_notes: |
+      Six renegade Gamorrean Guards (minion_group: gamorrean_guards) attack.
+      Their objective is Bargos, not the PCs — they will advance toward the
+      dais, engaging PCs only if intercepted.
+
+      Round 1: Gamorreans advance. If no PC is blocking their path, one group
+      of three reaches Bargos's dais and attacks him.
+      Round 2+: Standard combat. Gamorreans fight until all are incapacitated.
+
+      Bargos's household guards are absent — this was an inside job; the
+      renegades arranged it. No reinforcements for several rounds.
+
+      If PCs protect Bargos effectively (he takes 0 wounds): he is impressed
+      and slightly indebted.
+      If Bargos takes any wounds: he is angered and blames the PCs for letting
+      it happen, despite it being their fault.
+    world_runner_notes: |
+      Gamorrean combat is visceral and loud — grunts, crashing furniture, the
+      hum of vibro-weapons. The room that looked like a throne room suddenly
+      feels like a pit fight. Describe environmental details as they get
+      destroyed: the food table overturned, a cage rattling loose, a servant
+      fleeing through a side door.
+    checks: []
+
+  - id: "mission_brief"
+    title: "The Mission Brief"
+    trigger: "After all six Gamorrean guards are incapacitated or driven off."
+    narrator_notes: |
+      Bargos regains his composure quickly — he is a survivor and not unused
+      to violence. He waves away C3-P9's fussing and addresses the PCs directly.
+
+      He gives them the coordinates to Gavos and whatever equipment clearances
+      they need for the mine. He is curt: "Find my money. Come back."
+
+      If Bargos took wounds: He is tight-lipped, shaken, and adds nothing beyond
+      the bare minimum. He explicitly notes his disappointment. Genko looks
+      mortified on everyone's behalf.
+
+      If Bargos took no wounds: He is warmer — still businesslike, but he
+      acknowledges the PCs competence. He may add a minor additional perk
+      (a contact name at the mine, a navigation update).
+    world_runner_notes: |
+      The aftermath of the fight is quiet in a fragile way. Servants are
+      emerging from hiding. C3-P9 is cataloguing damages in a pained tone.
+      Genko has produced a datapad with the Gavos coordinates. The smell
+      of a broken spice container mingles with ozone from a discharged weapon.
+    checks: []
+
+exit:
+  condition: "PCs have received the Gavos coordinates and Bargos has dismissed them."
+  next_scene: "gavos_arrival"
