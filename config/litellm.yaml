@@ -1,0 +1,28 @@
+# LiteLLM routing configuration — maps model aliases to local and cloud endpoints.
+# TODO(Phase 2): Verify connectivity to Alien and Sardinia before enabling.
+
+model_list:
+  # Alien node — Llama 3.2 3B via llama.cpp
+  - model_name: alien/llama-3.2-3b
+    litellm_params:
+      model: openai/llama-3.2-3b-instruct  # llama.cpp exposes OpenAI-compatible API
+      api_base: http://alien:8080/v1        # update with Alien's actual LAN IP
+      api_key: none
+
+  # Sardinia node — Llama 3.1 8B via LM Studio (Developer Mode)
+  - model_name: sardinia/llama-3.1-8b
+    litellm_params:
+      model: openai/llama-3.1-8b-instruct  # LM Studio exposes OpenAI-compatible API
+      api_base: http://sardinia:1234/v1     # update with Sardinia's actual LAN IP
+      api_key: lm-studio
+
+  # Gemini — Narrator / cloud escalation
+  - model_name: gemini/gemini-2.0-flash
+    litellm_params:
+      model: gemini/gemini-2.0-flash
+      api_key: os.environ/GEMINI_API_KEY
+
+litellm_settings:
+  drop_params: true        # ignore unsupported params silently
+  request_timeout: 120     # local models can be slow
+  num_retries: 2

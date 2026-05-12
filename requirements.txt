@@ -1,0 +1,10 @@
+# Core orchestration
+crewai>=0.80.0
+litellm>=1.50.0
+
+# YAML parsing
+pyyaml>=6.0
+
+# Testing
+pytest>=8.0
+pytest-cov>=5.0

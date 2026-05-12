@@ -1,0 +1,134 @@
+identity:
+  name: "Bargos the Hutt"
+  species: "Hutt"
+  career: "Crime Lord"
+  specialization: "Manipulator"
+  player: "ai"
+  npc_tier: "nemesis"           # minion | rival | nemesis
+  obligation:
+    amount: 0
+    type: "None"
+    details: "Bargos holds Obligation over others; he owes none himself."
+  motivation:
+    type: "Wealth"
+    details: >
+      Bargos invested heavily in the Gavos oridium mine — it represents a significant portion
+      of his current capital. He needs 100,000 credits returned to stabilise his position
+      in this sector. Reputation matters almost as much as money: being seen to collect
+      what is owed is essential to his standing.
+  background: >
+    Bargos is a mid-tier Hutt crime lord who recently expanded into the Gavos system,
+    acquiring an oridium mining operation from a rival who fell on hard times.
+    He controls a small network of debtors and hired muscle, but his reach is not
+    vast. He relies on his protocol droid C3-P9 to communicate with non-Huttese speakers
+    and on his Toydarian aide Genko for day-to-day operations.
+    His left face is visibly disfigured — the result of a years-old dispute he does not
+    discuss. He compensates with studied jolliness in formal audiences.
+
+characteristics:
+  brawn: 2
+  agility: 1
+  intellect: 3
+  cunning: 4
+  willpower: 3
+  presence: 3
+
+derived:
+  wound_threshold: 18      # Hutt species base +16 (naturally resilient bulk)
+  strain_threshold: 13     # willpower 3 + 10
+  soak: 3                  # brawn 2 + 1 natural toughness (Hutt species)
+  defense:
+    melee: 0
+    ranged: 0
+
+skills:
+  - name: "Coercion"
+    characteristic: "Willpower"
+    ranks: 3
+    career: true
+    descriptor: "your sharpest edge — you use it freely and without apology"
+  - name: "Deception"
+    characteristic: "Cunning"
+    ranks: 2
+    career: true
+    descriptor: "a comfortable second language"
+  - name: "Negotiation"
+    characteristic: "Presence"
+    ranks: 3
+    career: true
+    descriptor: "your preferred arena; you expect to win here"
+  - name: "Leadership"
+    characteristic: "Presence"
+    ranks: 2
+    career: true
+    descriptor: "those in your employ follow because the alternative is worse"
+  - name: "Knowledge (Underworld)"
+    characteristic: "Intellect"
+    ranks: 3
+    career: true
+    descriptor: "your native terrain; you know who owes whom in this sector"
+  - name: "Perception"
+    characteristic: "Cunning"
+    ranks: 2
+    career: false
+    descriptor: "you rarely miss a flicker of weakness or opportunity"
+  - name: "Cool"
+    characteristic: "Presence"
+    ranks: 2
+    career: false
+    descriptor: "composed in the face of unpleasantness; it is good for business"
+  - name: "Vigilance"
+    characteristic: "Willpower"
+    ranks: 1
+    career: false
+    descriptor: "adequate — you pay others to be truly watchful"
+
+talents:
+  - name: "Adversary"
+    ranks: 2
+    description: "Upgrade the difficulty of all combat checks targeting Bargos twice."
+  - name: "Scathing Tirade"
+    ranks: 1
+    description: >
+      Bargos may take a Coercion action; all enemies in short range suffer strain equal
+      to net successes.
+  - name: "Improved Scathing Tirade"
+    ranks: 1
+    description: >
+      When Scathing Tirade succeeds, each affected target is also Staggered until the
+      end of their next turn.
+  - name: "Inspiring Rhetoric"
+    ranks: 1
+    description: >
+      Bargos may take a Leadership action; all allies in short range recover strain equal
+      to net successes.
+  - name: "Plausible Deniability"
+    ranks: 1
+    description: >
+      When Bargos makes a Coercion or Deception check, he may spend Advantage to remove
+      one piece of incriminating evidence against him from the scene narrative.
+
+equipment:
+  weapons: []   # Bargos does not fight personally; that is what bodyguards are for
+  armor: []
+  gear:
+    - name: "Holdout Blaster"
+      encumbrance: 1
+      quantity: 1
+      notes: "Concealed under his robes. Last resort only."
+    - name: "Comlink (encrypted)"
+      encumbrance: 0
+      quantity: 1
+    - name: "Datacards — Gavos mine deed and financial records"
+      encumbrance: 0
+      quantity: 1
+
+resources:
+  credits: 0                   # Bargos's personal liquid credits not tracked by PCs
+  encumbrance_threshold: 7     # brawn 2 + 5
+
+# --- Updated by Scribe during play; do not edit manually ---
+status:
+  wounds: 0
+  strain: 0
+  critical_injuries: []

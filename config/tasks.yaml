@@ -1,0 +1,45 @@
+# CrewAI task definitions — one entry per recurring task type.
+# TODO(Phase 2): Implement task sequences for the full turn loop.
+
+assess_scene:
+  description: >
+    Review current scene_state.yaml and party_stats.yaml. Decide the next beat:
+    which NPC should act, whether a player decision is needed, whether a skill check
+    is triggered, and whether any ticking clocks have advanced.
+  expected_output: >
+    A structured beat decision: next actor (player/npc name), action type
+    (narration/dialogue/check/clock), and any parameters the downstream agents need.
+  agent: narrator
+
+narrate_scene:
+  description: >
+    Narrate the current beat to the player. Describe what they see, hear, and sense.
+    Make it atmospheric and specific. Do not decide outcomes.
+  expected_output: >
+    2-4 sentences of vivid narration, ending on the player's decision point.
+  agent: world_runner
+
+voice_npc:
+  description: >
+    Respond as the specified NPC character given the rendered actor prompt and
+    the current situation.
+  expected_output: >
+    The NPC's spoken dialogue and/or physical action, in first person, in character.
+  agent: actors
+
+resolve_check:
+  description: >
+    Given the action and character stats, determine: (1) is a check needed?
+    (2) what skill and difficulty? (3) what is the dice pool? (4) interpret the result.
+  expected_output: >
+    Check ruling: skill, difficulty, pool description, and interpretation of rolled symbols.
+  agent: referee
+
+record_action:
+  description: >
+    Write the resolved action to session_log.md. Update party_stats.yaml with any
+    changes to wounds, strain, credits, or inventory. Update scene_state.yaml with
+    any changes to location, NPCs present, or ticking clock status.
+  expected_output: >
+    Confirmation that all state files have been updated.
+  agent: scribe
