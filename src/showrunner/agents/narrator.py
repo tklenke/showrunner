@@ -113,7 +113,7 @@ def create_narrator() -> Agent:
         goal=cfg["goal"],
         backstory=cfg["backstory"],
         llm=cfg["llm"],
-        tools=[ask_player],
+        tools=[],
         allow_delegation=cfg["allow_delegation"],
         verbose=cfg["verbose"],
     )

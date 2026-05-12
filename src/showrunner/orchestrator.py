@@ -26,22 +26,25 @@ def run_turn_loop(scene: dict) -> None:
     print(f"\n=== {scene['title']} ===")
     print(scene["location"]["read_aloud"])
 
+    last_action = ""
     while True:
         scene_state = load_scene_state()
         party_stats = load_party_stats()
         current_beat = scene_state.get("current_beat", "")
 
-        narrator_ctx = render_narrator_context(scene, scene_state, party_stats, "")
+        narrator_ctx = render_narrator_context(scene, scene_state, party_stats, last_action)
 
         print(f"\n--- Beat: {current_beat} ---")
         crew = build_crew(narrator_ctx)
         result = crew.kickoff()
         print(f"\n{result}")
 
-        cont = input("\nContinue to next beat? (beat ID, enter to stay, 'quit' to stop): ").strip().lower()
-        if cont in ("quit", "exit", "q"):
+        last_action = prompt_player_action("Z-4P0")
+        if last_action.strip().lower() in ("quit", "exit", "q"):
             print("Session ended.")
             break
-        elif cont:
+
+        cont = input("Advance to beat (enter to stay on current beat): ").strip().lower()
+        if cont:
             from showrunner.tools.state_writer import advance_beat
             advance_beat(cont)
