@@ -40,6 +40,7 @@ skills:
     characteristic: string   # the linked characteristic (e.g. "Agility")
     ranks: int               # 0–5 trained ranks
     career: bool             # true = career skill (half XP cost)
+    descriptor: string       # natural language for render_actor_prompt (e.g. "your strongest suit")
 
 talents:
   - name: string
@@ -75,6 +76,35 @@ status:
   strain: 0
   critical_injuries: []        # list of active critical injury names
 ```
+
+## render_actor_prompt — Output Order
+
+The renderer assembles the Actors agent's full context by combining the persona file
+and a dynamically generated mechanical summary. **Sort from most static to least static**
+so the stable content sits at the top of the prompt where it caches and where the model
+weights it most heavily. Volatile state at the bottom gets re-evaluated every call.
+
+Render order (top → bottom):
+
+1. **Name, species, career** — identity never changes
+2. **Persona file content** (`[name].md`) — personality, voice, backstory, motivations, relationships
+3. **Characteristics** — change only with rare advancement (between sessions at earliest)
+4. **Skills with descriptors** — change only when XP is spent between sessions
+5. **Talents** — same cadence as skills
+6. **Base derived stats** — wound/strain thresholds, soak, defense (change only with advancement)
+7. **Equipment** — changes during play (items used, lost, or found)
+8. **Credits** — changes frequently
+9. **Current wounds / strain** — changes every combat round
+10. **Active critical injuries** — changes during play
+11. **Last action taken** — most volatile; changes every turn
+
+The dividing line between "cached" and "re-evaluated" falls roughly between item 6 and 7.
+Everything above that line should be identical call-to-call unless the session ended and
+XP was spent. Everything below can change within a single scene.
+
+The renderer is a deterministic Python function — not an LLM call. Fast, cheap, testable.
+The `descriptor` field on each skill (`"your strongest suit"`) is what lets it produce
+natural language rather than raw numbers.
 
 ## Pool Construction (for reference)
 
