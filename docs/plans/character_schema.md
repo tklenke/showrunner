@@ -93,10 +93,10 @@ Render order (top → bottom):
 5. **Talents** — same cadence as skills
 6. **Base derived stats** — wound/strain thresholds, soak, defense (change only with advancement)
 7. **Equipment** — changes during play (items used, lost, or found)
-8. **Credits** — changes frequently
-9. **Current wounds / strain** — changes every combat round
-10. **Active critical injuries** — changes during play
-11. **Last action taken** — most volatile; changes every turn
+8. **Credits** — changes frequently during play
+9. **Current scene plan** — from `scene_state.yaml`; changes when the character reassesses their approach, but typically stable across several turns
+10. **Active critical injuries** — acquired during play; persists until treated
+11. **Current wounds / strain** — most volatile; can change every combat round
 
 The dividing line between "cached" and "re-evaluated" falls roughly between item 6 and 7.
 Everything above that line should be identical call-to-call unless the session ended and
