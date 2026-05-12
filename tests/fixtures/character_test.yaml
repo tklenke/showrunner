@@ -1,0 +1,67 @@
+identity:
+  name: "Rix Vardan"
+  species: "Human"
+  career: "Hired Gun"
+  specialization: "Mercenary Soldier"
+  player: "ai"
+
+characteristics:
+  brawn: 3
+  agility: 3
+  intellect: 2
+  cunning: 2
+  willpower: 2
+  presence: 2
+
+derived:
+  wound_threshold: 13
+  strain_threshold: 12
+  soak: 4
+  defense:
+    melee: 0
+    ranged: 1
+
+skills:
+  - name: "Ranged (Heavy)"
+    characteristic: "Agility"
+    ranks: 2
+    career: true
+    descriptor: "you can put rounds on target in any conditions"
+  - name: "Athletics"
+    characteristic: "Brawn"
+    ranks: 1
+    career: true
+    descriptor: "built for field work"
+
+talents:
+  - name: "Toughened"
+    ranks: 2
+    description: "Gain +2 wound threshold per rank."
+
+equipment:
+  weapons:
+    - name: "Blaster Rifle"
+      skill: "Ranged (Heavy)"
+      damage: 9
+      critical: 3
+      range: "Long"
+      encumbrance: 4
+      special: ""
+  armor:
+    - name: "Laminate Armor"
+      defense: 1
+      soak_bonus: 1
+      encumbrance: 3
+  gear:
+    - name: "Comlink"
+      encumbrance: 0
+      quantity: 1
+
+resources:
+  credits: 750
+  encumbrance_threshold: 8
+
+status:
+  wounds: 0
+  strain: 0
+  critical_injuries: []

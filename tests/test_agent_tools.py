@@ -40,13 +40,13 @@ def test_consult_narrator_raises():
         consult_narrator.run("Should the Gamorreans attack?")
 
 
-def test_read_state_raises():
+def test_read_state_missing_file_raises():
     from showrunner.tools.agent_tools import read_state
-    with pytest.raises(NotImplementedError):
-        read_state.run("scene_state.yaml")
+    with pytest.raises(FileNotFoundError):
+        read_state.run("nonexistent_file.yaml")
 
 
-def test_write_state_raises():
+def test_write_state_unknown_file_raises():
     from showrunner.tools.agent_tools import write_state
-    with pytest.raises(NotImplementedError):
-        write_state.run("party_stats.yaml", {})
+    with pytest.raises(ValueError):
+        write_state.run("unknown_file.yaml", {})

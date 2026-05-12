@@ -1,0 +1,7 @@
+location: "Receiving Hall, Bargos Estate, Gavos"
+npcs_present:
+  - "Gamorrean Guard"
+  - "Bargos the Hutt"
+ticking_clocks: []
+character_plans:
+  Rix Vardan: "Stay alert and cover the exits while the others talk"

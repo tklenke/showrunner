@@ -212,7 +212,7 @@ tasks.
 
 Do not begin Phase 3 until Phase 2 agents can communicate end-to-end.
 
-### 3.1 — State Reader
+### [x] 3.1 — State Reader
 
 File: `src/showrunner/tools/state_reader.py`
 
@@ -228,7 +228,7 @@ Tests to write (in `tests/test_state_reader.py`):
 Use fixture YAML files in `tests/fixtures/` for tests — do not read from `characters/` or
 `state/` in tests.
 
-### 3.2 — State Writer
+### [x] 3.2 — State Writer
 
 File: `src/showrunner/tools/state_writer.py`
 
@@ -243,7 +243,7 @@ Tests to write (in `tests/test_state_writer.py`):
 
 Use `tmp_path` (pytest fixture) for all file writes in tests.
 
-### 3.3 — render_actor_prompt
+### [x] 3.3 — render_actor_prompt
 
 File: `src/showrunner/agents/actors.py`
 

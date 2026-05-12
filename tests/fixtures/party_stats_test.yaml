@@ -1,0 +1,9 @@
+characters:
+  rix_vardan:
+    wounds: 0
+    strain: 0
+    credits: 750
+  kaelen:
+    wounds: 3
+    strain: 1
+    credits: 500

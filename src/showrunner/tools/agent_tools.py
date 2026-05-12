@@ -1,11 +1,16 @@
 # ABOUTME: CrewAI tool definitions for showrunner agents — dice rolling, state I/O, player input.
-# ABOUTME: Tools that wrap Phase 3 state management raise NotImplementedError until Phase 3 is complete.
+# ABOUTME: Wraps dice_roller, state_reader, and state_writer for use by CrewAI agents.
 
 import json
+from pathlib import Path
 
 from crewai.tools import tool
 
 from showrunner.tools.dice_roller import roll_pool
+from showrunner.tools.state_reader import load_party_stats, load_scene_state
+from showrunner.tools.state_writer import append_session_log, update_party_stats, update_scene_state
+
+_STATE_DIR = Path("state")
 
 
 @tool("roll_dice")
@@ -56,14 +61,26 @@ def read_state(filename: str) -> str:
 
     Returns the file contents as a string. Available to all agents.
     """
-    raise NotImplementedError("read_state not yet implemented — Phase 3")
+    path = _STATE_DIR / filename
+    with open(path) as f:
+        return f.read()
 
 
 @tool("write_state")
 def write_state(file: str, updates: dict) -> str:
     """Write updates to a state file. Scribe agent only.
 
-    file: the state filename (e.g. party_stats.yaml, scene_state.yaml).
+    file: the state filename (party_stats.yaml or scene_state.yaml).
     updates: dict of key/value changes to merge into the file.
     """
-    raise NotImplementedError("write_state not yet implemented — Phase 3")
+    path = str(_STATE_DIR / file)
+    if "party_stats" in file:
+        update_party_stats(updates, path=path)
+    elif "scene_state" in file:
+        update_scene_state(updates, path=path)
+    elif "session_log" in file:
+        entry = updates.get("entry", "")
+        append_session_log(entry, path=path)
+    else:
+        raise ValueError(f"Unknown state file: {file}")
+    return f"Updated {file}"
