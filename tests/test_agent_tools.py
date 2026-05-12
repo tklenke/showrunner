@@ -60,6 +60,20 @@ def test_consult_narrator_schema_wrapped_question_extracted():
     assert m.question == "Attack?"
 
 
+def test_consult_narrator_top_level_schema_unwrapped():
+    from showrunner.tools.agent_tools import _ConsultNarratorInput
+    # 3B model wraps entire args dict as JSON Schema (question nested under properties)
+    m = _ConsultNarratorInput(**{"properties": {"question": "Is EV-8D3 escorting the PCs?"}, "additionalProperties": False})
+    assert m.question == "Is EV-8D3 escorting the PCs?"
+
+
+def test_read_state_top_level_schema_unwrapped():
+    from showrunner.tools.agent_tools import _ReadStateInput
+    # 3B model wraps entire args dict as JSON Schema
+    m = _ReadStateInput(**{"properties": {"filename": "scene_state.yaml"}, "additionalProperties": False})
+    assert m.filename == "scene_state.yaml"
+
+
 def test_write_state_unknown_file_raises():
     from showrunner.tools.agent_tools import write_state
     with pytest.raises(ValueError):

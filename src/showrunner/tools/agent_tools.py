@@ -5,13 +5,27 @@ import json
 from pathlib import Path
 
 from crewai.tools import BaseTool, tool
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, model_validator
 
 from showrunner.tools.dice_roller import roll_pool
 from showrunner.tools.state_reader import load_party_stats, load_scene_state
 from showrunner.tools.state_writer import append_session_log, update_party_stats, update_scene_state
 
 _STATE_DIR = Path("state")
+
+
+def _unwrap_schema_args(data: dict) -> dict:
+    """Unwrap top-level JSON Schema wrapper that 3B models pass instead of actual args.
+
+    Models sometimes emit {'properties': {'field': 'value'}, 'additionalProperties': False}
+    instead of {'field': 'value'}. Extract the inner properties dict when this is detected.
+    String field values are kept; non-string values (schema sub-objects) fall back to ''.
+    """
+    if isinstance(data, dict) and "properties" in data:
+        props = data["properties"]
+        if isinstance(props, dict):
+            return {k: v if isinstance(v, str) else "" for k, v in props.items()}
+    return data
 
 
 @tool("roll_dice")
@@ -49,9 +63,14 @@ def ask_player(question: str) -> str:
 class _ConsultNarratorInput(BaseModel):
     question: str
 
+    @model_validator(mode="before")
+    @classmethod
+    def unwrap_top_level(cls, data):
+        return _unwrap_schema_args(data)
+
     @field_validator("question", mode="before")
     @classmethod
-    def unwrap_schema(cls, v):
+    def unwrap_field(cls, v):
         """Extract actual question when a small model passes a JSON Schema object."""
         if isinstance(v, dict) and "properties" in v:
             props = v["properties"]
@@ -84,9 +103,14 @@ consult_narrator = _ConsultNarratorTool()
 class _ReadStateInput(BaseModel):
     filename: str
 
+    @model_validator(mode="before")
+    @classmethod
+    def unwrap_top_level(cls, data):
+        return _unwrap_schema_args(data)
+
     @field_validator("filename", mode="before")
     @classmethod
-    def unwrap_schema(cls, v):
+    def unwrap_field(cls, v):
         """Extract actual filename when a small model passes a JSON Schema object."""
         if isinstance(v, dict) and "properties" in v:
             props = v["properties"]
@@ -106,11 +130,13 @@ class _ReadStateTool(BaseTool):
     args_schema: type[BaseModel] = _ReadStateInput
 
     def _run(self, filename: str) -> str:
+        if not filename:
+            return "State file name not provided."
         path = _STATE_DIR / filename
         try:
             with open(path) as f:
                 return f.read()
-        except FileNotFoundError:
+        except OSError:
             return f"State file '{filename}' not found."
 
 
