@@ -1,6 +1,5 @@
 # CrewAI agent definitions — one entry per agent role.
 # LiteLLM model aliases are defined in litellm.yaml.
-# TODO(Phase 2): Flesh out role/goal/backstory for each agent.
 
 narrator:
   role: "Game Master Brain"
@@ -11,7 +10,7 @@ narrator:
     You are the Game Master's analytical mind — you see the whole board. You do not narrate;
     you direct. You tell the World Runner what to describe, the Actors what to play, and the
     Referee what to check.
-  model: gemini/gemini-2.0-flash  # update when Google AI Studio key is configured
+  model: gemini/gemini-2.5-flash
   verbose: true
   allow_delegation: true
 
@@ -23,7 +22,7 @@ world_runner:
   backstory: >
     You are the storyteller — rich with atmosphere and detail but obedient to the Narrator's
     direction. You describe what the players see, hear, and feel.
-  model: sardinia/llama-3.1-8b  # LiteLLM custom provider alias
+  model: sardinia/llama-3.1-8b
   verbose: false
   allow_delegation: false
 
@@ -47,7 +46,7 @@ referee:
   backstory: >
     You are a precise rules arbiter with the Genesys Core Rulebook memorised.
     You are fast, consistent, and impartial.
-  model: alien/llama-3.2-3b  # LiteLLM custom provider alias
+  model: alien/llama-3.2-3b
   verbose: false
   allow_delegation: false
 

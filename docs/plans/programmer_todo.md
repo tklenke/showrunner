@@ -167,7 +167,7 @@ Use LiteLLM directly; no CrewAI yet.
 
 If any endpoint fails, stop and fix before proceeding.
 
-### 2.2 — Agent Implementation
+### [x] 2.2 — Agent Implementation
 
 File: `src/showrunner/agents/narrator.py` (and the others)
 
@@ -181,7 +181,7 @@ Order of implementation:
 4. World Runner (Sardinia)
 5. Actors (Sardinia)
 
-### 2.3 — Tool Stubs
+### [x] 2.3 — Tool Stubs
 
 Wire the following tool stubs so agents can call them (even if they raise NotImplementedError
 for now — the wiring should be correct):
