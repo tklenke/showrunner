@@ -330,7 +330,7 @@ Use `tmp_path` for all file writes.
 
 ---
 
-### [ ] 4.3 — Narrator Context Builder
+### [x] 4.3 — Narrator Context Builder
 
 File: `src/showrunner/agents/narrator.py`
 
