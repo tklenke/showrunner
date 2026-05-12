@@ -54,7 +54,7 @@ def _next_beat_id(scene: dict, current_beat_id: str) -> str | None:
 
 
 def _beat_prompt(scene: dict, current_beat_id: str) -> str:
-    """Prompt for beat advancement, showing available options."""
+    """Prompt for beat advancement; returns 'stay', 'advance', a beat ID, or 'quit'."""
     beats = scene.get("beats", [])
     beat_ids = [b["id"] for b in beats]
     next_id = _next_beat_id(scene, current_beat_id)
@@ -62,10 +62,15 @@ def _beat_prompt(scene: dict, current_beat_id: str) -> str:
     print(f"\n  Current beat : {current_beat_id}")
     print(f"  All beats    : {' → '.join(beat_ids)}")
     if next_id:
-        prompt = f"  Next beat? [Enter = '{next_id}', or type a beat ID, 'quit' to stop] > "
+        prompt = f"  [Enter] stay on '{current_beat_id}'  |  [a] advance to '{next_id}'  |  [beat ID] jump  |  [q] quit > "
     else:
-        prompt = f"  Last beat reached. [Enter to end session, or type a beat ID to revisit] > "
-    return input(prompt).strip().lower()
+        prompt = f"  Last beat. [Enter] stay on '{current_beat_id}'  |  [beat ID] jump  |  [q] quit > "
+    choice = input(prompt).strip().lower()
+    if choice == "":
+        return "stay"
+    if choice == "a" and next_id:
+        return "advance"
+    return choice
 
 
 def run_turn_loop(scene: dict) -> None:
@@ -109,7 +114,9 @@ def run_turn_loop(scene: dict) -> None:
             print("Session ended.")
             log.info("Session ended by player.")
             break
-        elif choice == "":
+        elif choice == "stay":
+            log.info(f"Staying on beat: {current_beat}")
+        elif choice == "advance":
             next_id = _next_beat_id(scene, current_beat)
             if next_id:
                 advance_beat(next_id)
