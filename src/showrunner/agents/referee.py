@@ -48,7 +48,7 @@ def create_referee() -> Agent:
     return Agent(
         role=cfg["role"],
         goal=cfg["goal"],
-        backstory=cfg["backstory"],
+        backstory=build_referee_backstory(),
         llm=cfg["llm"],
         tools=[roll_dice, read_state, consult_narrator],
         allow_delegation=cfg["allow_delegation"],

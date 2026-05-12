@@ -433,7 +433,7 @@ Tests to write (in `tests/test_orchestrator.py`):
 
 ---
 
-### [ ] 4.8 — End-to-End Scene Playthrough
+### [~] 4.8 — End-to-End Scene Playthrough
 
 No tests for this task — this is exploratory play. Run `src/showrunner/main.py` and
 play through `state/scene_0.yaml` (Bargos mansion) from entry to exit condition.

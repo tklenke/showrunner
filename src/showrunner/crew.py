@@ -10,11 +10,12 @@ from showrunner.agents.scribe import create_scribe
 from showrunner.agents.world_runner import create_world_runner
 
 
-def build_crew(scene_description: str) -> Crew:
-    """Assemble the full agent crew for a scene run.
+def build_crew(narrator_context: str) -> Crew:
+    """Assemble the full agent crew for a scene beat.
 
-    Narrator manages the hierarchical process and delegates to the four worker agents.
-    scene_description is injected into the opening task so the Narrator has context.
+    narrator_context is the rendered scene + runtime state string from
+    render_narrator_context(). Injected into the task description so the
+    Narrator has full scene and state context before delegating.
     """
     narrator = create_narrator()
     world_runner = create_world_runner()
@@ -25,8 +26,8 @@ def build_crew(scene_description: str) -> Crew:
     tasks = [
         Task(
             description=(
-                f"Scene context: {scene_description}\n\n"
-                "Run a single scene beat: assess the situation, direct the World Runner to "
+                f"{narrator_context}\n\n"
+                "Run a single scene beat: assess the current beat, direct the World Runner to "
                 "narrate, handle any player or NPC action, call the Referee if a check is "
                 "triggered, and have the Scribe record the outcome."
             ),

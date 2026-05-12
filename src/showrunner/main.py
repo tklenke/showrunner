@@ -3,11 +3,12 @@
 
 import os
 import sys
-from pathlib import Path
 
 from dotenv import load_dotenv
 
 from showrunner.orchestrator import run_turn_loop
+from showrunner.tools.state_reader import load_adventure_scene
+from showrunner.tools.state_writer import initialize_scene_state
 
 
 def main() -> None:
@@ -18,10 +19,9 @@ def main() -> None:
         print("Error: GEMINI_API_KEY not set. Add it to .env or export it.")
         sys.exit(1)
 
-    scene = " ".join(sys.argv[1:]) if len(sys.argv) > 1 else (
-        "The party stands in the receiving hall of Bargos the Hutt's estate on Gavos. "
-        "The air reeks of sulfur from the gas mines. A Gamorrean guard eyes you from the corner."
-    )
+    n = int(sys.argv[1]) if len(sys.argv) > 1 else 0
+    scene = load_adventure_scene(n)
+    initialize_scene_state(n, scene["beats"][0]["id"])
 
     run_turn_loop(scene)
 
