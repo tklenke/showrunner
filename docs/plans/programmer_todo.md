@@ -267,6 +267,9 @@ Tests to write (in `tests/test_render_actor_prompt.py`):
 
 Do not begin Phase 4 until Phase 3 state management is tested and working.
 
+**Phases 5 and 6 are not required for Phase 4.** The Referee uses inline rules for the
+Bargos mansion scene. `rules_lookup()` stays stubbed. NPC stats live in the scene YAML.
+
 Full brief is in `architect_todo.md` Phase 4. The programmer's job here is execution:
 convert the architect's scene design into running code and play the scene.
 
@@ -274,7 +277,50 @@ At the start of Phase 4, the architect should have provided:
 - At least one PC character YAML + MD in `characters/`
 - Scene YAML format specification
 - Bargos mansion scenes converted to YAML (`state/scene_0.yaml`, `state/scene_1.yaml`)
+  - Scene YAMLs include inline Gamorrean guard stats (no OggDude lookup needed)
 
-The programmer implements and plays through. Issues found during play are bugs; fix them.
-Document anything that requires an architectural decision and raise it with Tom before
-implementing a workaround.
+### Referee in Phase 4
+
+The Referee's system prompt for this scene must include inline:
+- Pool construction rule (already in `dice_roller.py` comments — copy to prompt)
+- Vigilance check: Average difficulty (2 purple), opposed by Stealth if Gamorreans are hiding
+- Brawl/Melee combat: difficulty = target's defense rating, +1 purple per range band beyond engaged
+- Soak: damage - soak = wounds taken (minimum 0)
+- Critical injuries: triggered on Advantage spend or when wounds exceed threshold
+
+Do NOT wire `rules_lookup()` in Phase 4. Leave it raising `NotImplementedError`.
+
+### What to do when you hit an issue
+
+Issues found during play are bugs — fix them. If something requires an architectural
+decision, document it and raise it with Tom before implementing a workaround.
+
+---
+
+## Phase 5 — Genesys Rules Parser
+
+Do not begin Phase 5 until Phase 4 has been played through successfully.
+
+This phase delivers the data that `rules_lookup()` queries. It unblocks Phase 7.
+
+- [ ] Write a PDF extraction script: `tools/parse_rulebook.py`
+  - Input: `docs/references/Genesys_Core_Rulebook.pdf`
+  - Output: section files in `swskin/rules/` (dice.md, combat.md, skills.md, talents.md)
+  - Use `pymupdf` (already installed)
+- [ ] Write `swskin/rules/index.md` — section list with page references
+- [ ] Implement `rules_lookup(keyword: str) -> str` in `src/showrunner/tools/rules_lookup.py`
+  - Keyword search against indexed sections; returns most relevant section text
+- [ ] Wire `rules_lookup()` into the Referee agent
+- [ ] Smoke test: Referee can retrieve the correct rule for "critical injury", "soak", "Brawl"
+
+---
+
+## Phase 6 — OggDude Data Ingestion
+
+Do not begin Phase 6 until Phase 5 is complete.
+
+This phase replaces inline NPC stats with a proper data source for Phase 7.
+
+- [ ] Write `tools/xml_to_md.py` — convert OggDude XML exports to structured Markdown
+- [ ] Output to `swskin/data/`: `weapons.md`, `skills.md`, `talents.md`, `careers.md`
+- [ ] Smoke test: Referee can look up Gamorrean vibro-ax damage, crit, range, special from `weapons.md`

@@ -100,12 +100,18 @@ Target: run the full Bargos mansion scene from *Debts to Pay* end-to-end.
 Scene covers: arrival, audience with Bargos, the Gamorrean Rumble combat encounter.
 Reference: `swskin/Game_masters_kit.pdf` Acts 1–2.
 
+Phases 5 and 6 are **not required** for this phase. The Referee operates with the specific
+rules and NPC stats for this scene baked inline — no `rules_lookup()` tool needed.
+
 - [ ] Adventure scene format: `state/scene_[n].yaml` (location, NPCs present, triggers, read-aloud text)
 - [ ] Convert Bargos mansion scenes (Acts 1–2) to YAML format
+  - Include inline stats for Gamorrean guards (weapon, damage, skills) directly in scene YAML
 - [ ] Narrator: load scene, decide beats, manage the Gamorrean arrival ticking clock
 - [ ] World Runner: narrate scene descriptions and outcomes
 - [ ] Actors: voice Bargos, Genko, C3-P9, Gamorreans — using `render_actor_prompt()`
 - [ ] Referee: handle Vigilance check (spotting Gamorreans), Brawl/Melee combat checks
+  - Referee system prompt includes the specific rules needed for this scene inline
+  - `rules_lookup()` tool stub exists but is not wired; defer to Phase 5
 - [ ] CLI: player turn prompt, `!` directive injection, manual dice input option
 - [ ] Play through the scene; identify and fix issues
 
@@ -113,14 +119,26 @@ Reference: `swskin/Game_masters_kit.pdf` Acts 1–2.
 
 ## Phase 5: Genesys Rules Parser (swskin)
 
+Needed before Phase 7. Not blocking Phase 4.
+
+The Referee's `rules_lookup()` tool is stubbed in Phase 2 but unimplemented. This phase
+delivers the data it queries. Without it the Referee must have rules hard-coded per scene,
+which becomes unmanageable across the full 15-room Gavos adventure.
+
 - [ ] Script to extract sections from Genesys Core Rulebook PDF → `swskin/rules/`
 - [ ] `rules/index.md` — section list with page references
 - [ ] Priority sections: `rules/dice.md`, `rules/combat.md`, `rules/skills.md`, `rules/talents.md`
-- [ ] Referee `rules_lookup()` tool: retrieves relevant section by keyword
+- [ ] Wire `rules_lookup()` tool in Referee agent — keyword search against indexed sections
 
 ---
 
 ## Phase 6: OggDude Data Ingestion (swskin)
+
+Needed before Phase 7. Not blocking Phase 4.
+
+Provides structured weapon, skill, talent, and career data. Without it, NPC and weapon stats
+must be hand-transcribed into scene or character files — manageable for the MVP scene,
+not for a full adventure.
 
 - [ ] `tools/xml_to_md.py` — converts OggDude XML exports to structured Markdown
 - [ ] Output: `swskin/data/weapons.md`, `skills.md`, `talents.md`, `careers.md`
