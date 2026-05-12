@@ -192,7 +192,7 @@ for now — the wiring should be correct):
 - `read_state(file: str) -> dict` — wraps `state_reader`
 - `write_state(file: str, updates: dict)` — wraps `state_writer`
 
-### 2.4 — Basic Turn Loop
+### [x] 2.4 — Basic Turn Loop
 
 File: `src/showrunner/orchestrator.py`
 
