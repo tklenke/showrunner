@@ -1,0 +1,114 @@
+identity:
+  name: "Z-4P0 ('Zee')"
+  species: "Droid (Modified Z-series Technical)"
+  career: "Smuggler"
+  specialization: "Mechanic"
+  player: "human"
+  npc_tier: "rival"
+  obligation:
+    amount: 0
+    type: "None"
+    details: "As a droid, Zee's 'Debt' is subsumed by Kaelen's background."
+  motivation:
+    type: "Safety"
+    details: >
+      Zee is driven by a deep-seated need for system stability. He calculates 
+      risk constantly and seeks the resources needed to repair his glitching 
+      vocal processor and power cell.
+  background: >
+    Zee began his existence as a high-end protocol model before a series of 
+    unfortunate owners used him for increasingly dangerous technical work. 
+    Rescued from a scrap heap by Kaelen Sunara, he has been rebuilt so many 
+    times that his original programming is now a patchwork of high-level 
+    slicing sub-routines and nervous survival instincts.
+
+characteristics:
+  brawn: 2
+  agility: 2
+  intellect: 4
+  cunning: 2
+  willpower: 3
+  presence: 1
+
+derived:
+  wound_threshold: 12      # Droid base 10 + Brawn
+  strain_threshold: 13     # Willpower 3 + 10
+  soak: 3                  # Brawn 2 + 1 (Reinforced Plating)
+  defense:
+    melee: 0
+    ranged: 0
+
+skills:
+  - name: "Mechanics"
+    characteristic: "Intellect"
+    ranks: 3
+    career: true
+    descriptor: "you can fix a hyperdrive with a hydrospanner and a hopeful chirp"
+  - name: "Computers"
+    characteristic: "Intellect"
+    ranks: 3
+    career: true
+    descriptor: "security lattices are just suggestions to your logic core"
+  - name: "Knowledge (Education)"
+    characteristic: "Intellect"
+    ranks: 2
+    career: true
+    descriptor: "your memory banks are a hoarder's dream of useless trivia"
+  - name: "Astrogation"
+    characteristic: "Intellect"
+    ranks: 2
+    career: true
+    descriptor: "calculating jumps through hyperspace is your meditation"
+  - name: "Vigilance"
+    characteristic: "Willpower"
+    ranks: 2
+    career: false
+    descriptor: "you are always watching for the 32.4% chance of failure"
+  - name: "Perception"
+    characteristic: "Cunning"
+    ranks: 1
+    career: false
+    descriptor: "your oversized sensor goggles catch flickers others miss"
+
+talents:
+  - name: "Fine Tuning"
+    ranks: 1
+    description: "When repairing system strain on a starship or vehicle, recover 1 additional strain."
+  - name: "Gearhead"
+    ranks: 1
+    description: "Remove one Setback die from all Mechanics checks. Halve the credit cost of mods."
+  - name: "Solid Repairs"
+    ranks: 1
+    description: "The first time Zee repairs a target's wounds, he repairs 1 additional wound."
+
+equipment:
+  weapons:
+    - name: "Scavenged Welding Torch"
+      skill: "Brawl"
+      damage: 3
+      critical: 5
+      range: "Engaged"
+      encumbrance: 1
+      special: "Burn on Triumph (improvised)"
+  armor:
+    - name: "Reinforced Plating"
+      soak_bonus: 1
+      defense: 0
+      encumbrance: 0
+  gear:
+    - name: "Toolkit"
+      encumbrance: 2
+      notes: "Necessary for Mechanics checks."
+    - name: "Customized Sensor Goggles"
+      notes: "Adds 1 Boost die to Perception checks for spotting hidden details."
+    - name: "Emergency Power Cells"
+      quantity: 2
+
+resources:
+  credits: 50
+  encumbrance_threshold: 7  # Brawn 2 + 5
+
+status:
+  wounds: 0
+  strain: 0
+  critical_injuries: []

@@ -1,0 +1,108 @@
+identity:
+  name: "Kaelen Sunara"
+  species: "Human"
+  career: "Smuggler"
+  specialization: "Thief"
+  player: "ai"
+  npc_tier: "rival"
+  obligation:
+    amount: 15
+    type: "Debt"
+    details: "Kae owes a significant sum to a Coruscanti info-broker who provided the leads on her missing crew."
+  motivation:
+    type: "Independence"
+    details: "Seeking the freedom to choose her own path without the shadow of the Syndicates."
+  background: >
+    Raised in the industrial lower levels of Corellia, Kaelen learned early that 
+    the only way up was through someone else's locked door. She became a 
+    specialist in 'covert procurement' before a job went sideways, leaving 
+    her with a debt she can't easily pay and a companion droid she can't live without.
+
+characteristics:
+  brawn: 2
+  agility: 3
+  intellect: 3
+  cunning: 4
+  willpower: 2
+  presence: 3
+
+derived:
+  wound_threshold: 12
+  strain_threshold: 12
+  soak: 3
+  defense:
+    melee: 1
+    ranged: 1
+
+skills:
+  - name: "Stealth"
+    characteristic: "Agility"
+    ranks: 2
+    career: true
+    descriptor: "moving like a shadow is second nature"
+  - name: "Skulduggery"
+    characteristic: "Cunning"
+    ranks: 3
+    career: true
+    descriptor: "no lock is truly closed, only delayed"
+  - name: "Negotiation"
+    characteristic: "Presence"
+    ranks: 2
+    career: true
+    descriptor: "you know the value of a job and aren't afraid to ask for it"
+  - name: "Deception"
+    characteristic: "Cunning"
+    ranks: 2
+    career: true
+    descriptor: "a necessary tool for survival in the Outer Rim"
+  - name: "Perception"
+    characteristic: "Cunning"
+    ranks: 2
+    career: true
+    descriptor: "boosted by ocular cybernetics"
+  - name: "Cool"
+    characteristic: "Presence"
+    ranks: 2
+    career: true
+    descriptor: "calm under pressure, even with a blaster in your face"
+
+talents:
+  - name: "Bypass Security"
+    ranks: 1
+    description: "Remove one Setback die per rank from Skulduggery checks made to defeat security."
+  - name: "Stalker"
+    ranks: 1
+    description: "Add one Boost die per rank to all Stealth and Coordination checks."
+  - name: "Hidden Storage"
+    ranks: 1
+    description: "Gain a hidden pocket in clothing or gear that can hold items with encumbrance 0."
+
+equipment:
+  weapons:
+    - name: "Light Blaster Pistol"
+      skill: "Ranged (Light)"
+      damage: 5
+      critical: 4
+      range: "Short"
+      encumbrance: 1
+  armor:
+    - name: "Armored Clothing"
+      soak_bonus: 1
+      defense: 1
+      encumbrance: 1
+  gear:
+    - name: "Electronic Slicing Tools"
+      encumbrance: 1
+    - name: "Comlink (handheld)"
+      encumbrance: 0
+    - name: "Cybernetic Ocular Implants"
+      notes: "Adds 1 Boost die to Perception checks involving sight."
+
+resources:
+  credits: 500
+  encumbrance_threshold: 7
+
+status:
+  wounds: 0
+  strain: 0
+  critical_injuries: []
