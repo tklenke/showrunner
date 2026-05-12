@@ -37,9 +37,13 @@ def is_human_character(character_yaml: dict) -> bool:
     return character_yaml.get("identity", {}).get("player") == "human"
 
 
+_DIVIDER = "─" * 60
+
+
 def prompt_player_action(character_name: str) -> str:
     """Prompt the CLI for the human player's action and return their input."""
-    return input(f"What does {character_name} do? > ")
+    print(f"\n{_DIVIDER}")
+    return input(f"  What does {character_name} do? > ")
 
 
 def _next_beat_id(scene: dict, current_beat_id: str) -> str | None:
@@ -59,12 +63,12 @@ def _beat_prompt(scene: dict, current_beat_id: str) -> str:
     beat_ids = [b["id"] for b in beats]
     next_id = _next_beat_id(scene, current_beat_id)
 
-    print(f"\n  Current beat : {current_beat_id}")
-    print(f"  All beats    : {' → '.join(beat_ids)}")
+    print(f"\n{_DIVIDER}")
+    print(f"  Beat: {current_beat_id}  ({' → '.join(beat_ids)})")
     if next_id:
-        prompt = f"  [Enter] stay on '{current_beat_id}'  |  [a] advance to '{next_id}'  |  [beat ID] jump  |  [q] quit > "
+        prompt = f"  [Enter] stay  |  [a] advance to '{next_id}'  |  [beat ID] jump  |  [q] quit > "
     else:
-        prompt = f"  Last beat. [Enter] stay on '{current_beat_id}'  |  [beat ID] jump  |  [q] quit > "
+        prompt = f"  Last beat.  [Enter] stay  |  [beat ID] jump  |  [q] quit > "
     choice = input(prompt).strip().lower()
     if choice == "":
         return "stay"
