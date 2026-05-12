@@ -119,6 +119,27 @@ do?` The response is fed to the Referee (if a check is triggered) and the World 
 
 ---
 
+## Narrative Hierarchy
+
+The engine organises play into four nested levels:
+
+| Level | Definition | Example |
+|-------|-----------|---------|
+| **Session** | One continuous play session from startup to quit | An evening playing *Debts to Pay* |
+| **Scene** | A self-contained event at a location, loaded from `state/scene_N.yaml` | The Bargos mansion visit |
+| **Beat** | A dramatic sub-unit within a scene with a specific purpose and trigger | The Gamorrean guards burst in |
+| **Turn** | One `crew.kickoff()` — Narrator assesses, agents act, Referee resolves, Scribe records | One round of combat |
+
+A beat may take **multiple turns** to resolve. The `gamorrean_rumble` beat, for example, spans
+as many turns as it takes to defeat all six Gamorrean guards. The beat does not advance until
+its exit condition is met. A simpler beat like `summons` might resolve in a single turn.
+
+The Narrator is responsible for recognising when a beat is complete and what the next beat
+should be. In the current Phase 4 implementation the human player advances beats manually
+via the CLI; automatic beat progression by the Narrator is a future milestone.
+
+---
+
 ## Turn Loop
 
 ```
@@ -139,7 +160,7 @@ Referee    → interpret symbols → determine outcome
 World Runner → narrate result
 Scribe     → update state files
   ↓
-[loop]
+[loop — repeat until beat exits]
 ```
 
 ---
