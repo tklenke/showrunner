@@ -98,11 +98,11 @@ def build_pool(characteristic: int, skill_ranks: int, difficulty: int,
 
     Pool construction: max(char, skill) Ability dice, min(char, skill) upgraded to Proficiency.
     """
-    ability = max(characteristic, skill_ranks)
     proficiency = min(characteristic, skill_ranks)
+    ability = max(characteristic, skill_ranks) - proficiency
 
     # Additional upgrades (Triumph talents, etc.) convert Ability → Proficiency
-    extra_upgrades = min(upgrades, ability - proficiency)
+    extra_upgrades = min(upgrades, ability)
     proficiency += extra_upgrades
     ability -= extra_upgrades
 
@@ -116,6 +116,60 @@ def build_pool(characteristic: int, skill_ranks: int, difficulty: int,
     }
 
 
+def cancel_symbols(raw: dict) -> DiceResult:
+    """Apply Genesys cancellation rules to a raw symbol count dict.
+
+    Tr and De each contribute +1 to their respective S/F totals before
+    cancellation but are preserved independently in the result.
+    """
+    triumphs = raw.get("Tr", 0)
+    despairs = raw.get("De", 0)
+    net_successes = raw.get("S", 0) + triumphs - raw.get("F", 0) - despairs
+    net_advantage = raw.get("A", 0) - raw.get("T", 0)
+    return DiceResult(net_successes, net_advantage, triumphs, despairs)
+
+
+_FACE_TABLES = {
+    "proficiency": PROFICIENCY_FACES,
+    "ability": ABILITY_FACES,
+    "difficulty": DIFFICULTY_FACES,
+    "challenge": CHALLENGE_FACES,
+    "boost": BOOST_FACES,
+    "setback": SETBACK_FACES,
+}
+
+
 def roll_pool(pool: dict) -> DiceResult:
     """Roll a dice pool and return the net DiceResult."""
-    raise NotImplementedError("Phase 1 implementation pending")
+    import random
+    raw: dict[str, int] = {}
+    for die_type, count in pool.items():
+        faces = _FACE_TABLES[die_type]
+        for _ in range(count):
+            face = random.choice(faces)
+            for symbol, qty in face.items():
+                raw[symbol] = raw.get(symbol, 0) + qty
+    return cancel_symbols(raw)
+
+
+_SYMBOL_CODES = {"s": "S", "f": "F", "a": "A", "t": "T", "tr": "Tr", "de": "De"}
+
+
+def parse_manual_input(text: str) -> DiceResult:
+    """Parse a space-separated string of symbol tokens into a DiceResult.
+
+    Each token is an integer followed by a symbol code (s, f, a, t, tr, de).
+    Raises ValueError on unrecognised codes.
+    """
+    raw: dict[str, int] = {}
+    for token in text.split():
+        # Split numeric prefix from alphabetic suffix
+        i = 0
+        while i < len(token) and (token[i].isdigit() or (i == 0 and token[i] == "-")):
+            i += 1
+        qty_str, code = token[:i], token[i:].lower()
+        if code not in _SYMBOL_CODES or not qty_str:
+            raise ValueError(f"Unrecognised token: {token!r}")
+        symbol = _SYMBOL_CODES[code]
+        raw[symbol] = raw.get(symbol, 0) + int(qty_str)
+    return cancel_symbols(raw)

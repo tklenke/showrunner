@@ -27,7 +27,7 @@ All tests: `pytest tests/`
 
 ---
 
-### 1.1 — Face Table Coverage Tests
+### [x] 1.1 — Face Table Coverage Tests
 
 File: `tests/test_dice_roller.py`
 
@@ -49,7 +49,7 @@ Tests to write:
 
 ---
 
-### 1.2 — Pool Construction Tests
+### [x] 1.2 — Pool Construction Tests
 
 File: `tests/test_dice_roller.py`
 
@@ -69,7 +69,7 @@ Tests to write:
 
 ---
 
-### 1.3 — DiceResult and Symbol Cancellation Tests
+### [x] 1.3 — DiceResult and Symbol Cancellation Tests
 
 File: `tests/test_dice_roller.py`
 
@@ -92,7 +92,7 @@ Tests to write:
 
 ---
 
-### 1.4 — Implement roll_pool()
+### [x] 1.4 — Implement roll_pool()
 
 File: `src/showrunner/tools/dice_roller.py`
 
@@ -112,7 +112,7 @@ random; unit tests for cancellation logic should call the cancellation function 
 
 ---
 
-### 1.5 — Manual Dice Input Parser
+### [x] 1.5 — Manual Dice Input Parser
 
 File: `src/showrunner/tools/dice_roller.py`
 
