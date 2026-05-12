@@ -51,3 +51,35 @@ def test_update_scene_state(tmp_path):
     with open(outfile) as f:
         data = yaml.safe_load(f)
     assert data["location"] == "Hangar Bay"
+
+
+def test_initialize_scene_state_writes_correct_fields(tmp_path):
+    from showrunner.tools.state_writer import initialize_scene_state
+    initialize_scene_state(0, "opening", state_dir=str(tmp_path))
+    with open(tmp_path / "scene_state.yaml") as f:
+        data = yaml.safe_load(f)
+    assert data["current_scene"] == 0
+    assert data["current_beat"] == "opening"
+    assert data["ticking_clocks"] == []
+    assert data["character_plans"] == {}
+
+
+def test_advance_beat_updates_current_beat(tmp_path):
+    from showrunner.tools.state_writer import initialize_scene_state, advance_beat
+    initialize_scene_state(0, "opening", state_dir=str(tmp_path))
+    advance_beat("audience", state_dir=str(tmp_path))
+    with open(tmp_path / "scene_state.yaml") as f:
+        data = yaml.safe_load(f)
+    assert data["current_beat"] == "audience"
+
+
+def test_advance_beat_preserves_other_fields(tmp_path):
+    from showrunner.tools.state_writer import initialize_scene_state, advance_beat, update_scene_state
+    initialize_scene_state(0, "opening", state_dir=str(tmp_path))
+    outfile = str(tmp_path / "scene_state.yaml")
+    update_scene_state({"ticking_clocks": [{"id": "storm_barriers", "destroyed": 1}]}, path=outfile)
+    advance_beat("audience", state_dir=str(tmp_path))
+    with open(tmp_path / "scene_state.yaml") as f:
+        data = yaml.safe_load(f)
+    assert data["current_beat"] == "audience"
+    assert data["ticking_clocks"][0]["destroyed"] == 1

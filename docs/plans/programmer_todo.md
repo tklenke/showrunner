@@ -305,7 +305,7 @@ Use a fixture scene YAML in `tests/fixtures/` — do not read from `state/` in t
 
 ---
 
-### [ ] 4.2 — Scene State Initialization
+### [x] 4.2 — Scene State Initialization
 
 File: `src/showrunner/tools/state_writer.py`
 
