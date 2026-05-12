@@ -149,7 +149,7 @@ Tests to write (in `tests/test_dice_roller.py`):
 
 Do not begin Phase 2 until Phase 1 tests are all green.
 
-### 2.1 — Endpoint Connectivity
+### [x] 2.1 — Endpoint Connectivity
 
 Before writing any agent code, verify the LAN endpoints are reachable.
 Write a minimal connectivity script (not a full test — just a smoke test):
