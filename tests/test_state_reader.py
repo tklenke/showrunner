@@ -38,3 +38,22 @@ def test_load_missing_file_raises():
     from showrunner.tools.state_reader import load_character
     with pytest.raises(FileNotFoundError):
         load_character("nonexistent_character", characters_dir=str(FIXTURES))
+
+
+def test_load_adventure_scene_returns_dict():
+    from showrunner.tools.state_reader import load_adventure_scene
+    result = load_adventure_scene(0, state_dir=str(FIXTURES))
+    assert isinstance(result, dict)
+
+
+def test_load_adventure_scene_has_required_keys():
+    from showrunner.tools.state_reader import load_adventure_scene
+    result = load_adventure_scene(0, state_dir=str(FIXTURES))
+    for key in ("scene_id", "title", "location", "beats", "exit"):
+        assert key in result, f"missing key: {key}"
+
+
+def test_load_adventure_scene_missing_file_raises():
+    from showrunner.tools.state_reader import load_adventure_scene
+    with pytest.raises(FileNotFoundError):
+        load_adventure_scene(99, state_dir=str(FIXTURES))

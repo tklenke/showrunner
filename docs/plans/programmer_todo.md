@@ -289,7 +289,7 @@ At the start of Phase 4, the architect should have provided:
 
 ---
 
-### [ ] 4.1 — Adventure Scene Loader
+### [x] 4.1 — Adventure Scene Loader
 
 File: `src/showrunner/tools/state_reader.py`
 

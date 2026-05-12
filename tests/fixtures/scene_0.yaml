@@ -1,0 +1,26 @@
+scene_id: "test_scene"
+title: "Test Scene"
+
+location:
+  name: "Test Location"
+  atmosphere: "A quiet test environment."
+  read_aloud: |
+    You are in a test.
+
+npcs_present:
+  - "character_test"
+
+inline_npcs: []
+minion_groups: []
+
+beats:
+  - id: "opening"
+    title: "Opening Beat"
+    trigger: "Scene entry."
+    narrator_notes: "Run the opening."
+    world_runner_notes: "Describe the room."
+    checks: []
+
+exit:
+  condition: "Test complete."
+  next_scene: null
