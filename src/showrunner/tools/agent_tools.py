@@ -46,17 +46,39 @@ def ask_player(question: str) -> str:
     return input(f"\n[Player] {question}\n> ")
 
 
-@tool("consult_narrator")
-def consult_narrator(question: str) -> str:
-    """Escalate an ambiguous decision to the Narrator (Gemini).
+class _ConsultNarratorInput(BaseModel):
+    question: str
 
-    Use sparingly — only for genuine plot or rules ambiguity that the local model
-    cannot resolve confidently. Each call incurs a Gemini API request.
-    """
-    return (
-        "The Narrator is not available for direct consultation at this time. "
-        "Proceed with your best judgment based on the scene context provided."
+    @field_validator("question", mode="before")
+    @classmethod
+    def unwrap_schema(cls, v):
+        """Extract actual question when a small model passes a JSON Schema object."""
+        if isinstance(v, dict) and "properties" in v:
+            props = v["properties"]
+            if isinstance(props, dict) and "question" in props:
+                inner = props["question"]
+                if isinstance(inner, str):
+                    return inner
+        return v
+
+
+class _ConsultNarratorTool(BaseTool):
+    name: str = "consult_narrator"
+    description: str = (
+        "Escalate an ambiguous decision to the Narrator (Gemini). "
+        "Use sparingly — only for genuine plot or rules ambiguity that the local model "
+        "cannot resolve confidently. Each call incurs a Gemini API request."
     )
+    args_schema: type[BaseModel] = _ConsultNarratorInput
+
+    def _run(self, question: str) -> str:
+        return (
+            "The Narrator is not available for direct consultation at this time. "
+            "Proceed with your best judgment based on the scene context provided."
+        )
+
+
+consult_narrator = _ConsultNarratorTool()
 
 
 class _ReadStateInput(BaseModel):

@@ -53,6 +53,13 @@ def test_read_state_schema_wrapped_filename_extracted():
     assert m.filename == "scene_state.yaml"
 
 
+def test_consult_narrator_schema_wrapped_question_extracted():
+    from showrunner.tools.agent_tools import _ConsultNarratorInput
+    # 3B model passes JSON Schema structure instead of the actual value
+    m = _ConsultNarratorInput(question={"properties": {"question": "Attack?"}})
+    assert m.question == "Attack?"
+
+
 def test_write_state_unknown_file_raises():
     from showrunner.tools.agent_tools import write_state
     with pytest.raises(ValueError):
