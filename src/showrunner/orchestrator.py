@@ -4,6 +4,16 @@
 from showrunner.crew import build_crew
 
 
+def is_human_character(character_yaml: dict) -> bool:
+    """Return True if this character is driven by the human player."""
+    return character_yaml.get("identity", {}).get("player") == "human"
+
+
+def prompt_player_action(character_name: str) -> str:
+    """Prompt the CLI for the human player's action and return their input."""
+    return input(f"What does {character_name} do? > ")
+
+
 def run_turn_loop(scene_description: str) -> None:
     """Run the agent turn loop starting from the given scene description.
 

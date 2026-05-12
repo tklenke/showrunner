@@ -355,7 +355,7 @@ Tests to write (in a new `tests/test_narrator.py`):
 
 ---
 
-### [ ] 4.4 — Actors: Scene Character Loading
+### [x] 4.4 — Actors: Scene Character Loading
 
 File: `src/showrunner/agents/actors.py`
 
@@ -370,7 +370,7 @@ Tests to write (in `tests/test_actors.py` or `tests/test_render_actor_prompt.py`
 
 ---
 
-### [ ] 4.5 — Referee Phase 4 System Prompt
+### [x] 4.5 — Referee Phase 4 System Prompt
 
 File: `src/showrunner/agents/referee.py`
 
@@ -399,7 +399,7 @@ Tests to write (in `tests/test_referee.py`):
 
 ---
 
-### [ ] 4.6 — World Runner Read-Aloud
+### [x] 4.6 — World Runner Read-Aloud
 
 File: `src/showrunner/agents/world_runner.py`
 
@@ -415,7 +415,7 @@ Tests to write (in `tests/test_world_runner.py`):
 
 ---
 
-### [ ] 4.7 — CLI Human Player Turn
+### [x] 4.7 — CLI Human Player Turn
 
 File: `src/showrunner/orchestrator.py`
 

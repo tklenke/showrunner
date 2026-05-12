@@ -118,6 +118,31 @@ def render_actor_prompt(character_yaml: dict, persona_md: str, scene_state: dict
     return "\n".join(lines)
 
 
+def load_scene_characters(scene: dict, scene_state: dict, characters_dir: str = "characters") -> dict:
+    """Return {id: rendered_prompt} for all NPCs in the scene.
+
+    Full character files are loaded and rendered for npcs_present.
+    Inline NPCs use their key_traits string directly.
+    """
+    import yaml as pyyaml
+    from pathlib import Path
+
+    result = {}
+
+    for name in scene.get("npcs_present", []):
+        yaml_path = Path(characters_dir) / f"{name}.yaml"
+        md_path = Path(characters_dir) / f"{name}.md"
+        with open(yaml_path) as f:
+            char_yaml = pyyaml.safe_load(f)
+        persona_md = md_path.read_text() if md_path.exists() else ""
+        result[name] = render_actor_prompt(char_yaml, persona_md, scene_state)
+
+    for npc in scene.get("inline_npcs", []):
+        result[npc["id"]] = npc["key_traits"]
+
+    return result
+
+
 def create_actors() -> Agent:
     """Return the Actors agent (Sardinia)."""
     cfg = load_agent_configs()["actors"]
