@@ -4,7 +4,8 @@
 import json
 from pathlib import Path
 
-from crewai.tools import tool
+from crewai.tools import BaseTool, tool
+from pydantic import BaseModel, field_validator
 
 from showrunner.tools.dice_roller import roll_pool
 from showrunner.tools.state_reader import load_party_stats, load_scene_state
@@ -52,18 +53,46 @@ def consult_narrator(question: str) -> str:
     Use sparingly — only for genuine plot or rules ambiguity that the local model
     cannot resolve confidently. Each call incurs a Gemini API request.
     """
-    raise NotImplementedError("consult_narrator not yet wired to Narrator agent")
+    return (
+        "The Narrator is not available for direct consultation at this time. "
+        "Proceed with your best judgment based on the scene context provided."
+    )
 
 
-@tool("read_state")
-def read_state(filename: str) -> str:
-    """Read a state file (scene_state.yaml, party_stats.yaml, or session_log.md).
+class _ReadStateInput(BaseModel):
+    filename: str
 
-    Returns the file contents as a string. Available to all agents.
-    """
-    path = _STATE_DIR / filename
-    with open(path) as f:
-        return f.read()
+    @field_validator("filename", mode="before")
+    @classmethod
+    def unwrap_schema(cls, v):
+        """Extract actual filename when a small model passes a JSON Schema object."""
+        if isinstance(v, dict) and "properties" in v:
+            props = v["properties"]
+            if isinstance(props, dict) and "filename" in props:
+                inner = props["filename"]
+                if isinstance(inner, str):
+                    return inner
+        return v
+
+
+class _ReadStateTool(BaseTool):
+    name: str = "read_state"
+    description: str = (
+        "Read a state file (scene_state.yaml, party_stats.yaml, or session_log.md). "
+        "Returns the file contents as a string. Available to all agents."
+    )
+    args_schema: type[BaseModel] = _ReadStateInput
+
+    def _run(self, filename: str) -> str:
+        path = _STATE_DIR / filename
+        try:
+            with open(path) as f:
+                return f.read()
+        except FileNotFoundError:
+            return f"State file '{filename}' not found."
+
+
+read_state = _ReadStateTool()
 
 
 @tool("write_state")

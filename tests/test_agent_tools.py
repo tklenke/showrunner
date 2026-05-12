@@ -34,16 +34,23 @@ def test_ask_player_returns_input(monkeypatch):
     assert result == "I attack the guard"
 
 
-def test_consult_narrator_raises():
+def test_consult_narrator_returns_fallback():
     from showrunner.tools.agent_tools import consult_narrator
-    with pytest.raises(NotImplementedError):
-        consult_narrator.run("Should the Gamorreans attack?")
+    result = consult_narrator.run("Should the Gamorreans attack?")
+    assert isinstance(result, str) and len(result) > 0
 
 
-def test_read_state_missing_file_raises():
+def test_read_state_missing_file_returns_message():
     from showrunner.tools.agent_tools import read_state
-    with pytest.raises(FileNotFoundError):
-        read_state.run("nonexistent_file.yaml")
+    result = read_state.run("nonexistent_file.yaml")
+    assert "not found" in result.lower()
+
+
+def test_read_state_schema_wrapped_filename_extracted():
+    from showrunner.tools.agent_tools import _ReadStateInput
+    # 3B model passes JSON Schema structure instead of the actual value
+    m = _ReadStateInput(filename={"properties": {"filename": "scene_state.yaml"}})
+    assert m.filename == "scene_state.yaml"
 
 
 def test_write_state_unknown_file_raises():

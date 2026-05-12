@@ -4,7 +4,7 @@
 from crewai import Agent
 
 from showrunner.config import load_agent_configs
-from showrunner.tools.agent_tools import consult_narrator, read_state
+from showrunner.tools.agent_tools import consult_narrator
 
 
 def render_world_runner_context(scene: dict, beat_id: str) -> str:
@@ -38,7 +38,7 @@ def create_world_runner() -> Agent:
         goal=cfg["goal"],
         backstory=cfg["backstory"],
         llm=cfg["llm"],
-        tools=[read_state, consult_narrator],
+        tools=[consult_narrator],
         allow_delegation=cfg["allow_delegation"],
         verbose=cfg["verbose"],
     )
