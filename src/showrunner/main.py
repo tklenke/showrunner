@@ -1,10 +1,14 @@
 # ABOUTME: CLI entry point — starts a session, loads state, hands off to the turn loop.
 # ABOUTME: Supports player input, ! directives, and manual dice entry.
 
+import logging
 import os
 import sys
 
 from dotenv import load_dotenv
+
+logging.getLogger("opentelemetry").setLevel(logging.ERROR)
+logging.getLogger("crewai.telemetry").setLevel(logging.ERROR)
 
 from showrunner.orchestrator import run_turn_loop
 from showrunner.tools.state_reader import load_adventure_scene

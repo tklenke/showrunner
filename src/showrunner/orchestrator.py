@@ -21,6 +21,7 @@ def _setup_session_log() -> logging.Logger:
 
     logger = logging.getLogger("showrunner.session")
     logger.setLevel(logging.DEBUG)
+    logger.propagate = False
     logger.handlers.clear()
 
     file_handler = logging.FileHandler(log_path)
