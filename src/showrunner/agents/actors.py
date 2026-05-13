@@ -1,9 +1,5 @@
 # ABOUTME: Actors agent — voices NPCs with decisions, dialogue, and physical responses.
-# ABOUTME: Runs on Sardinia (Llama 3.1 8B); receives rendered character prompt from render_actor_prompt().
-
-from crewai import Agent
-
-from showrunner.config import load_agent_configs
+# ABOUTME: Receives rendered character prompt from render_actor_prompt().
 
 
 def render_actor_prompt(character_yaml: dict, persona_md: str, scene_state: dict) -> str:
@@ -182,15 +178,3 @@ def load_scene_yamls(
     return result
 
 
-def create_actors() -> Agent:
-    """Return the Actors agent (Sardinia)."""
-    cfg = load_agent_configs()["actors"]
-    return Agent(
-        role=cfg["role"],
-        goal=cfg["goal"],
-        backstory=cfg["backstory"],
-        llm=cfg["llm"],
-        tools=[],
-        allow_delegation=cfg["allow_delegation"],
-        verbose=cfg["verbose"],
-    )

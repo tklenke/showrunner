@@ -1,9 +1,5 @@
 # ABOUTME: Show Runner agent — adventure state, scene beat decisions, ticking clocks, NPC knowledge.
-# ABOUTME: Runs on Gemini; acts as CrewAI manager agent; consulted at scene transitions and major decisions.
-
-from crewai import Agent
-
-from showrunner.config import load_agent_configs
+# ABOUTME: Renders context strings for the show runner from current scene and session state.
 
 
 def render_show_runner_context(
@@ -114,15 +110,3 @@ def render_show_runner_context(
     return "\n".join(lines)
 
 
-def create_show_runner() -> Agent:
-    """Return the Show Runner agent (Gemini, manager)."""
-    cfg = load_agent_configs()["show_runner"]
-    return Agent(
-        role=cfg["role"],
-        goal=cfg["goal"],
-        backstory=cfg["backstory"],
-        llm=cfg["llm"],
-        tools=[],
-        allow_delegation=cfg["allow_delegation"],
-        verbose=cfg["verbose"],
-    )

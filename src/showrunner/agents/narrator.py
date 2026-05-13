@@ -1,10 +1,5 @@
 # ABOUTME: Narrator agent — GM voice for prose narration, atmosphere, scene descriptions.
-# ABOUTME: Runs on Sardinia (Llama 3.1 8B); receives beat decisions from Show Runner.
-
-from crewai import Agent
-
-from showrunner.config import load_agent_configs
-from showrunner.tools.agent_tools import consult_show_runner
+# ABOUTME: Receives beat decisions from Show Runner; renders context strings for the narrator.
 
 
 def render_narrator_context(
@@ -45,15 +40,3 @@ def render_narrator_context(
     return "\n".join(lines)
 
 
-def create_narrator() -> Agent:
-    """Return the Narrator agent (Sardinia)."""
-    cfg = load_agent_configs()["narrator"]
-    return Agent(
-        role=cfg["role"],
-        goal=cfg["goal"],
-        backstory=cfg["backstory"],
-        llm=cfg["llm"],
-        tools=[consult_show_runner],
-        allow_delegation=cfg["allow_delegation"],
-        verbose=cfg["verbose"],
-    )

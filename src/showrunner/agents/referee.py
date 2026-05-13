@@ -1,10 +1,5 @@
 # ABOUTME: Referee agent — rules engine for dice pool construction, skill check difficulty, combat.
-# ABOUTME: Runs on Alien (Llama 3.2 3B); uses dice_roller tool and rules_lookup tool.
-
-from crewai import Agent
-
-from showrunner.config import load_agent_configs
-from showrunner.tools.agent_tools import consult_show_runner, read_state, roll_dice
+# ABOUTME: Renders backstory and scene context strings for referee LLM calls.
 
 
 def build_referee_backstory() -> str:
@@ -85,15 +80,3 @@ def render_referee_context(scene: dict, beat_id: str) -> str:
     return "\n".join(lines)
 
 
-def create_referee() -> Agent:
-    """Return the Referee agent (Alien)."""
-    cfg = load_agent_configs()["referee"]
-    return Agent(
-        role=cfg["role"],
-        goal=cfg["goal"],
-        backstory=build_referee_backstory(),
-        llm=cfg["llm"],
-        tools=[roll_dice, read_state, consult_show_runner],
-        allow_delegation=cfg["allow_delegation"],
-        verbose=cfg["verbose"],
-    )

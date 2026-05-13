@@ -39,22 +39,6 @@ def test_inline_npc_uses_key_traits():
     assert "Deferential" in result["c3p9"]
 
 
-def test_create_actors_has_static_backstory():
-    import os
-    os.environ.setdefault("GEMINI_API_KEY", "test-key")
-    from showrunner.agents.actors import create_actors
-    actor = create_actors()
-    assert actor.backstory
-
-
-def test_create_actors_has_no_tools():
-    import os
-    os.environ.setdefault("GEMINI_API_KEY", "test-key")
-    from showrunner.agents.actors import create_actors
-    actor = create_actors()
-    assert not actor.tools
-
-
 # --- player_filter tests ---
 
 SCENE_MIXED = {

@@ -36,13 +36,6 @@ def test_narrator_notes_passed_per_beat():
     assert "Bargos speaks slowly" in output
 
 
-def test_narrator_backstory_is_static(monkeypatch):
-    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
-    from showrunner.agents.narrator import create_narrator
-    agent1 = create_narrator()
-    agent2 = create_narrator()
-    assert agent1.backstory == agent2.backstory
-
 
 def test_narrator_context_includes_last_actions():
     from showrunner.agents.narrator import render_narrator_context

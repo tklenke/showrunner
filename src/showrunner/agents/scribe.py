@@ -1,9 +1,5 @@
 # ABOUTME: Scribe agent — state keeper; writes session log and party stats after each resolved action.
-# ABOUTME: Runs on Alien (Llama 3.2 3B); has exclusive write access to state/ files.
-
-from crewai import Agent
-
-from showrunner.config import load_agent_configs
+# ABOUTME: Renders context strings for the scribe from current scene and party state.
 
 
 def render_scribe_context(scene_state: dict, party_stats: dict) -> str:
@@ -38,15 +34,3 @@ def render_scribe_context(scene_state: dict, party_stats: dict) -> str:
     return "\n".join(lines)
 
 
-def create_scribe() -> Agent:
-    """Return the Scribe agent (Alien)."""
-    cfg = load_agent_configs()["scribe"]
-    return Agent(
-        role=cfg["role"],
-        goal=cfg["goal"],
-        backstory=cfg["backstory"],
-        llm=cfg["llm"],
-        tools=[],
-        allow_delegation=cfg["allow_delegation"],
-        verbose=cfg["verbose"],
-    )
