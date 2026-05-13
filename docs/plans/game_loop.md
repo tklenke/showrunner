@@ -105,13 +105,14 @@ Narrator →  NPC_2 full output  →  compact summary  →  written to summaries
 
 | | |
 |---|---|
-| Agent | Narrator (sardinia 8B), one call per non-NPC character that acted |
-| Input | One character's action text (User action, Companion outputs) |
+| Agent | Narrator (sardinia 8B), one call per party member that acted |
+| Input | One character's action text (User action or Companion output) |
 | Output | 1–2 sentence plain-language summary of what they did |
 | Writes | `logs/turn_{ts}_{beat}_summaries.txt` (appended; NPC summaries already written in Step 3) |
 
-NPC summaries are generated inline during Step 3. This step covers the User action and
-any Companions. Uses the same Narrator agent and same log file for a consistent pipeline.
+- One `call_llm()` per party member that acted (User + any Companions).
+- NPC summaries are generated inline during Step 3; this step covers the party only.
+- Same Narrator agent and same log file as Step 3 for a consistent pipeline.
 
 ---
 
