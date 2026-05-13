@@ -5,6 +5,8 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
+import litellm
+
 from showrunner.agents.narrator import render_narrator_context
 from showrunner.agents.referee import render_referee_context
 from showrunner.agents.scribe import render_scribe_context
@@ -88,7 +90,7 @@ def run_turn_loop(scene: dict) -> None:
     """
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     log = _setup_session_log(timestamp)
-    verbose_path, prompts_path = setup_instrumentation(timestamp)
+    verbose_path, prompts_path, prompt_logger = setup_instrumentation(timestamp)
     print(f"Verbose log: logs/verbose_{timestamp}.log  (tail -f to watch)")
     print(f"Prompt log:  logs/prompts_{timestamp}.log")
 
@@ -110,6 +112,7 @@ def run_turn_loop(scene: dict) -> None:
 
         print(f"\n--- Beat: {current_beat} ---")
         crew = build_crew(show_runner_ctx, narrator_ctx, referee_ctx, scribe_ctx)
+        litellm.callbacks = [prompt_logger]
         with verbose_to_file(verbose_path):
             result = crew.kickoff()
         result_str = str(result)

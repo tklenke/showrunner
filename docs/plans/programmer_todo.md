@@ -12,7 +12,7 @@ Reference documents:
 
 ## Current Priority: Phase 4 — MVP Scene
 
-### [ ] 4.8c — Fix LiteLLM Prompt/Response Logging
+### [x] 4.8c — Fix LiteLLM Prompt/Response Logging
 
 The `prompts_TIMESTAMP.log` file is never created during real sessions. The `_PromptLogger`
 CustomLogger is registered via `litellm.callbacks` in `setup_instrumentation()`, but the

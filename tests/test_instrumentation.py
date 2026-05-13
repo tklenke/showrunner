@@ -3,6 +3,8 @@
 
 import sys
 import pytest
+import litellm
+from unittest.mock import MagicMock, patch
 
 
 FIXTURE_CONFIG = """
@@ -141,3 +143,56 @@ def test_verbose_redirect_restores_stdout_on_exception(tmp_path):
     except ValueError:
         pass
     assert sys.stdout is real_stdout
+
+
+def _make_mock_litellm_response():
+    msg = MagicMock()
+    msg.content = "hello"
+    msg.role = "assistant"
+    msg.function_call = None
+    msg.tool_calls = None
+    choice = MagicMock()
+    choice.message = msg
+    choice.finish_reason = "stop"
+    choice.index = 0
+    resp = MagicMock()
+    resp.choices = [choice]
+    resp.usage = MagicMock(prompt_tokens=5, completion_tokens=5, total_tokens=10)
+    resp.id = "test-id"
+    resp.created = 1234567890
+    resp.object = "chat.completion"
+    resp.model = "openai/test"
+    return resp
+
+
+def test_prompt_logger_fires_after_crewai_callback_reset(tmp_path, config_path):
+    """Prompts file is written even after CrewAI resets litellm.callbacks during agent creation."""
+    from showrunner.instrumentation import setup_instrumentation
+
+    original_callbacks = list(litellm.callbacks)
+    try:
+        verbose_path, prompts_path, logger = setup_instrumentation("test_ts", logs_dir=tmp_path)
+
+        # Simulate CrewAI resetting callbacks during LLM._init_litellm()
+        litellm.callbacks = []
+
+        # Orchestrator re-registers after build_crew()
+        litellm.callbacks = [logger]
+
+        with patch(
+            "litellm.main.openai_chat_completions.completion",
+            return_value=_make_mock_litellm_response(),
+        ):
+            litellm.completion(
+                model="openai/test",
+                messages=[{"role": "user", "content": "hi"}],
+                api_key="x",
+                api_base="http://localhost:9",
+            )
+
+        assert prompts_path.exists(), "prompts file not created"
+        content = prompts_path.read_text()
+        assert "response" in content
+        assert "hello" in content
+    finally:
+        litellm.callbacks = original_callbacks

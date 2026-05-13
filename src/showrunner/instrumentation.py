@@ -77,9 +77,16 @@ def verbose_to_file(log_path: Path):
         f.close()
 
 
-def setup_instrumentation(timestamp: str) -> tuple[Path, Path]:
-    """Register LiteLLM prompt logger and return (verbose_path, prompts_path)."""
-    logs_dir = Path("logs")
+def setup_instrumentation(
+    timestamp: str, logs_dir: Path | None = None
+) -> tuple[Path, Path, "_PromptLogger"]:
+    """Create log paths and prompt logger; return (verbose_path, prompts_path, logger).
+
+    The caller is responsible for registering the logger via litellm.callbacks = [logger]
+    after CrewAI agent creation, which resets litellm.callbacks during LLM initialisation.
+    """
+    if logs_dir is None:
+        logs_dir = Path("logs")
     logs_dir.mkdir(exist_ok=True)
 
     verbose_path = logs_dir / f"verbose_{timestamp}.log"
@@ -88,6 +95,7 @@ def setup_instrumentation(timestamp: str) -> tuple[Path, Path]:
     config_path = Path("config/litellm.yaml")
     server_map = _build_server_map(config_path)
 
-    litellm.callbacks = [_PromptLogger(server_map, prompts_path)]
+    logger = _PromptLogger(server_map, prompts_path)
+    litellm.callbacks = [logger]
 
-    return verbose_path, prompts_path
+    return verbose_path, prompts_path, logger
