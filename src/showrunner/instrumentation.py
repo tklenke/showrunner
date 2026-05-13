@@ -1,13 +1,8 @@
-# ABOUTME: Session instrumentation — CrewAI event bus prompt/response logging and verbose stdout capture.
-# ABOUTME: Subscribes to LLMCallCompletedEvent on CrewAI's event bus; provides a context manager for stdout redirection.
+# ABOUTME: Session instrumentation — prompt/response logging and log path setup.
+# ABOUTME: _PromptLogger is used by llm.py to write prompt/response pairs to a log file.
 
-import sys
-from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
-
-from crewai.events.event_bus import crewai_event_bus
-from crewai.events.types.llm_events import LLMCallCompletedEvent
 
 
 def _build_server_map(config_path: Path) -> dict[str, str]:
@@ -54,46 +49,11 @@ class _PromptLogger:
         with self._log_path.open("a") as f:
             f.write(block)
 
-    def _on_completed(self, source, event: LLMCallCompletedEvent) -> None:
-        server = self._server_for(event.model or "")
-        prompt_text = self._format_messages(event.messages or [])
-        self._write(server, "prompt", prompt_text)
-        response_text = event.response if isinstance(event.response, str) else str(event.response)
-        self._write(server, "response", response_text)
-
-
-@contextmanager
-def verbose_to_file(log_path: Path):
-    """Redirect stdout and CrewAI Rich console to log_path; restore both on exit.
-
-    CrewAI's EventListener holds a Rich Console created at import time that bypasses
-    sys.stdout redirection. We swap it for a file-backed Console so that task boxes,
-    crew-completion panels, and plain Printer output all land in the log file only.
-    """
-    from crewai.events.event_listener import event_listener
-    from rich.console import Console
-
-    real_stdout = sys.stdout
-    log_path.parent.mkdir(parents=True, exist_ok=True)
-    f = log_path.open("a")
-
-    old_rich_console = event_listener.formatter.console
-    file_console = Console(file=f, width=200)
-
-    sys.stdout = f
-    event_listener.formatter.console = file_console
-    try:
-        yield
-    finally:
-        event_listener.formatter.console = old_rich_console
-        sys.stdout = real_stdout
-        f.close()
-
 
 def setup_instrumentation(
     timestamp: str, logs_dir: Path | None = None, config_path: Path | None = None
-) -> tuple[Path, Path, "_PromptLogger"]:
-    """Create log paths, subscribe prompt logger to CrewAI event bus, return (verbose_path, prompts_path, logger)."""
+) -> tuple[Path, Path]:
+    """Create log paths, wire LLM prompt logging, return (verbose_path, prompts_path)."""
     if logs_dir is None:
         logs_dir = Path("logs")
     logs_dir.mkdir(exist_ok=True)
@@ -101,7 +61,6 @@ def setup_instrumentation(
     verbose_path = logs_dir / f"verbose_{timestamp}.log"
     prompts_path = logs_dir / f"prompts_{timestamp}.log"
 
-    server_map = _build_server_map(config_path) if config_path and config_path.exists() else {}
-    logger = _PromptLogger(prompts_path, server_map=server_map)
-    crewai_event_bus.on(LLMCallCompletedEvent)(logger._on_completed)
-    return verbose_path, prompts_path, logger
+    import showrunner.llm
+    showrunner.llm.setup_llm_logging(prompts_path)
+    return verbose_path, prompts_path
