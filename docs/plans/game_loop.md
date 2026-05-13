@@ -150,7 +150,10 @@ dice pool without further lookups.
 
 - The orchestrator parses the checks log, builds each dice pool, and calls `roll_pool()` — deterministic.
 - One `call_llm()` per check; the LLM receives the pre-computed roll result and rules on it.
-- Each `call_llm()` receives all prior rulings as context. Skipped entirely if `NO_CHECKS`.
+- Each `call_llm()` receives current `party_stats` (updated after each ruling) as context,
+  not the prior ruling text — avoids CW blowout in large combats.
+- Ruling output is parsed by the orchestrator using the **Structured Output Chain** (see Ref C).
+- Orchestrator updates `party_stats.yaml` after each successful parse. Skipped entirely if `NO_CHECKS`.
 
 ---
 
@@ -250,3 +253,42 @@ The `referee` agent is configured in `config/agents.yaml` but not called by the 
 | `logs/turn_{ts}_{beat}_checks.txt` | Orchestrator | 5 |
 | `logs/turn_{ts}_{beat}_results.txt` | Orchestrator | 6 |
 | `logs/turn_{ts}_{beat}_sr_plan.txt` | Orchestrator | 9 |
+
+---
+
+## Ref C — Structured Output Chain
+
+Used wherever the orchestrator must extract structured data from LLM or User output.
+Any step that parses LLM output should reference this pattern rather than define its own.
+
+The orchestrator never parses free-form text cold — it always leads with a programmatic
+best-guess (regex, keyword extraction) and hands that to an LLM to confirm or correct.
+
+```
+Orch parses structured output
+  ├── success  →  proceed
+  └── fail     →  Orch makes programmatic best-guess (regex / keyword extraction)
+                    → call_llm() Narrator: raw output + best-guess → corrected structured output
+                      → Orch parses
+                        ├── success  →  proceed, log recovery
+                        └── fail     →  Orch makes new best-guess
+                                          → call_llm() SR: raw + best-guess → structured output
+                                            → Orch parses
+                                              ├── success  →  proceed, log escalation
+                                              └── fail     →  prompt User (free-form text)
+                                                                → Orch makes best-guess from User input
+                                                                  → call_llm() Narrator: User input + best-guess → structured
+                                                                    → Orch parses
+                                                                      ├── success  →  proceed, log
+                                                                      └── fail     →  re-prompt User (max 2 attempts)
+                                                                                      → zero fallback + loud log warning
+```
+
+**Zero fallback** is only reached if the User explicitly skips or all attempts fail — the
+User has been informed and made an active choice to accept the gap.
+
+**Logging** — every recovery and escalation is written to the session log so the User can
+review what was auto-corrected or guessed after the session.
+
+**call_llm() cost** — worst case: 2 extra calls per parse failure (Narrator + SR), plus
+up to 2 calls per User re-prompt. In practice the chain should rarely go past level 1.

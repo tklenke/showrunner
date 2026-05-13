@@ -283,6 +283,29 @@ entry as a string; the orchestrator appends it to `state/session_log.md`.
 
 ---
 
+## Structured Output Chain
+
+Whenever the orchestrator needs to extract structured data from LLM or User output, it
+uses the **Structured Output Chain** — a graduated repair loop that avoids hard failures.
+
+The key principle: the orchestrator never parses free-form text cold. It always makes a
+programmatic best-guess first (regex, keyword extraction), then hands that to an LLM to
+confirm or correct. This applies whether the input came from an LLM or a human.
+
+Repair levels in order:
+1. Orchestrator parses directly
+2. Orchestrator best-guess → Narrator reformats → re-parse
+3. Orchestrator best-guess → SR extracts → re-parse
+4. User prompted (free-form) → Orchestrator best-guess → Narrator interprets → re-parse (max 2×)
+5. Zero fallback + loud log warning (only if User skips or all attempts fail)
+
+Every recovery and escalation is logged. The zero fallback is a last resort — by the time
+it is reached the User has been informed and has chosen to accept the gap.
+
+See **game_loop.md Ref C** for the full annotated chain.
+
+---
+
 ## Design Principles
 
 **Skin-agnostic engine** — showrunner knows nothing about Star Wars. World assets (weapons,
