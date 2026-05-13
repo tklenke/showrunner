@@ -369,7 +369,7 @@ Remove `build_crew()`. Replace with:
 
 ---
 
-### [ ] 4.14 — Five-Step Resolution Pipeline
+### [~] 4.14 — Five-Step Resolution Pipeline
 
 Replace Phase 3 (the current `build_resolution_crew` + Show Runner review) with the
 decomposed five-step pipeline. See `docs/plans/architect_todo.md` — "Resolved Decisions:

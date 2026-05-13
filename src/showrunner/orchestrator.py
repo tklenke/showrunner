@@ -202,19 +202,21 @@ def run_turn_loop(scene: dict) -> None:
             f"[{npc_id}]: {text}" for npc_id, text in npc_outputs.items()
         )
 
-        pc_crew = build_pc_crew(npc_wave_text, ai_pc_chars, player_action, sr_ctx)
-        with verbose_to_file(verbose_path):
-            pc_crew.kickoff()
-
-        ai_pc_outputs = _collect_wave_outputs(pc_crew, "NPC Voice Actor")
-        review_output = _get_task_output(pc_crew, "Show Runner")
+        pc_crew = build_pc_crew(npc_wave_text, ai_pc_chars, player_action)
+        if pc_crew is not None:
+            with verbose_to_file(verbose_path):
+                pc_crew.kickoff()
+            ai_pc_outputs = _collect_wave_outputs(pc_crew, "NPC Voice Actor")
+        else:
+            ai_pc_outputs = {}
 
         for pc_id, text in ai_pc_outputs.items():
             if text:
                 print(f"\n[{pc_id}]\n{text}")
 
-        check_specs = _parse_check_specs(review_output)
-        log.info(f"Phase 2 complete: {len(check_specs)} checks identified")
+        # Check identification moved to Phase 3b (4.14d); empty for now
+        check_specs = []
+        log.info(f"Phase 2 complete: {len(ai_pc_outputs)} AI PCs voiced")
 
         # ── Phase 3: Resolution ───────────────────────────────────────────────
         full_turn_summary = (

@@ -79,15 +79,16 @@ def build_pc_crew(
     npc_wave_text: str,
     ai_pc_contexts: dict[str, str],
     player_action: str,
-    sr_review_context: str,
-) -> Crew:
-    """Phase 2: AI party members act, then Show Runner identifies checks needed.
+) -> Crew | None:
+    """Phase 2: AI party members act.
 
-    AI PC tasks receive the NPC wave text and player action so each AI PC
-    sees the full context before acting. The Show Runner review task at the
-    end reads all outputs and emits a structured check list for Phase 3.
+    Each AI PC task receives the full NPC wave text and player action so
+    each character sees the complete context before responding.
+    Returns None when ai_pc_contexts is empty (orchestrator skips kickoff).
+    Check identification has moved to Phase 3b (build_check_crew).
     """
-    show_runner = create_show_runner()
+    if not ai_pc_contexts:
+        return None
 
     ai_pc_tasks = []
     for pc_id, pc_prompt in ai_pc_contexts.items():
@@ -108,33 +109,9 @@ def build_pc_crew(
         )
         ai_pc_tasks.append(pc_task)
 
-    task_sr_review = Task(
-        description=(
-            f"{sr_review_context}\n\n"
-            "## NPC Actions This Beat:\n"
-            f"{npc_wave_text}\n\n"
-            f"## Player Action: {player_action}\n\n"
-            "Review every action taken this beat. List every skill check, opposed roll, "
-            "or combat attack that was triggered. Use this exact format:\n\n"
-            "CHECKS:\n"
-            "1. {actor} | {skill} | {characteristic} | {difficulty} | {notes}\n"
-            "CHECKS_END\n\n"
-            "If no mechanical checks are needed, output exactly: NO_CHECKS"
-        ),
-        expected_output=(
-            "Either NO_CHECKS, or a CHECKS:/CHECKS_END block listing every check "
-            "triggered this beat."
-        ),
-        agent=show_runner,
-        context=ai_pc_tasks,
-    )
-
-    all_agents = [t.agent for t in ai_pc_tasks] + [show_runner]
-    all_tasks = ai_pc_tasks + [task_sr_review]
-
     return Crew(
-        agents=all_agents,
-        tasks=all_tasks,
+        agents=[t.agent for t in ai_pc_tasks],
+        tasks=ai_pc_tasks,
         process=Process.sequential,
         verbose=True,
     )

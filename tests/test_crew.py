@@ -99,59 +99,40 @@ def test_npc_crew_narrator_sees_sr_plan():
 
 def test_build_pc_crew_returns_crew():
     from showrunner.crew import build_pc_crew
-    crew = build_pc_crew("NPC wave text.", {}, "Player ran.", "SR review context.")
+    crew = build_pc_crew("NPC wave text.", {"kaelen": "Kaelen data"}, "Player ran.")
     assert isinstance(crew, Crew)
 
 
-def test_pc_crew_with_no_ai_pcs_has_one_task():
+def test_pc_crew_with_no_ai_pcs_returns_none():
     from showrunner.crew import build_pc_crew
-    crew = build_pc_crew("NPC wave.", {}, "Player ran.", "SR ctx.")
-    # No AI PCs → only Show Runner review task
+    assert build_pc_crew("NPC wave.", {}, "Player ran.") is None
+
+
+def test_pc_crew_with_one_ai_pc_has_one_task():
+    from showrunner.crew import build_pc_crew
+    crew = build_pc_crew("NPC wave.", {"kaelen": "Kaelen data"}, "Player ran.")
     assert len(crew.tasks) == 1
-
-
-def test_pc_crew_with_one_ai_pc_has_two_tasks():
-    from showrunner.crew import build_pc_crew
-    crew = build_pc_crew("NPC wave.", {"kaelen": "Kaelen data"}, "Player ran.", "SR ctx.")
-    assert len(crew.tasks) == 2
 
 
 def test_pc_crew_kaelen_sees_npc_wave():
     from showrunner.crew import build_pc_crew
-    crew = build_pc_crew(
-        "Bargos said hello.", {"kaelen": "Kaelen data"}, "I sprint left.", "SR ctx."
-    )
+    crew = build_pc_crew("Bargos said hello.", {"kaelen": "Kaelen data"}, "I sprint left.")
     kaelen_task = crew.tasks[0]
     assert "Bargos said hello." in kaelen_task.description
 
 
 def test_pc_crew_kaelen_sees_player_action():
     from showrunner.crew import build_pc_crew
-    crew = build_pc_crew("NPC wave.", {"kaelen": "Kaelen data"}, "I sprint left.", "SR ctx.")
+    crew = build_pc_crew("NPC wave.", {"kaelen": "Kaelen data"}, "I sprint left.")
     kaelen_task = crew.tasks[0]
     assert "I sprint left." in kaelen_task.description
 
 
-def test_pc_crew_show_runner_review_is_last_task():
+def test_pc_crew_has_no_show_runner_task():
     from showrunner.crew import build_pc_crew
-    crew = build_pc_crew("NPC wave.", {"kaelen": "Kaelen data"}, "Player ran.", "SR ctx.")
-    last_task = crew.tasks[-1]
-    assert last_task.agent.role == "Show Runner"
-
-
-def test_pc_crew_sr_review_context_in_task():
-    from showrunner.crew import build_pc_crew
-    crew = build_pc_crew("NPC wave.", {}, "Player ran.", "Beat plan here.")
-    sr_task = crew.tasks[-1]
-    assert "Beat plan here." in sr_task.description
-
-
-def test_pc_crew_sr_review_sees_kaelen_output():
-    from showrunner.crew import build_pc_crew
-    crew = build_pc_crew("NPC wave.", {"kaelen": "Kaelen data"}, "Player ran.", "SR ctx.")
-    kaelen_task = crew.tasks[0]
-    sr_task = crew.tasks[-1]
-    assert kaelen_task in sr_task.context
+    crew = build_pc_crew("NPC wave.", {"kaelen": "Kaelen data"}, "Player ran.")
+    roles = [t.agent.role for t in crew.tasks]
+    assert "Show Runner" not in roles
 
 
 # ---------------------------------------------------------------------------
