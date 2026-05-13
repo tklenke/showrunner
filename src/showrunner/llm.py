@@ -55,7 +55,7 @@ def build_system_prompt(agent_name: str) -> str:
     return f"{world}\n\n{agent}"
 
 
-def call_llm(agent_name: str, system_prompt: str, user_message: str) -> str:
+def call_llm(agent_name: str, system_prompt: str, user_message: str, label: str = "") -> str:
     """Call litellm with the given agent's model params; return the response content."""
     cfg = load_agent_configs()[agent_name]
     params = cfg["litellm_params"]
@@ -81,6 +81,6 @@ def call_llm(agent_name: str, system_prompt: str, user_message: str) -> str:
     if _prompt_logger is not None:
         server = cfg["model_alias"].split("/")[0]
         step = inspect.currentframe().f_back.f_code.co_name
-        _prompt_logger.log(agent_name, server, step, len(system_prompt) + len(user_message), len(content))
+        _prompt_logger.log(agent_name, server, step, len(system_prompt) + len(user_message), len(content), label=label)
 
     return content

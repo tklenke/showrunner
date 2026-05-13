@@ -32,12 +32,12 @@ def run_npc_wave(
         if prior_summaries:
             msg += f"\n\n## Earlier NPC actions this turn:\n{prior_summaries}"
 
-        full_output = call_llm("actors", build_system_prompt("actors"), msg)
+        full_output = call_llm("actors", build_system_prompt("actors"), msg, label=npc_id)
         print(f"\n=== {npc_id} ===\n{full_output}")
         npc_outputs[npc_id] = full_output
 
         summary_msg = f"Summarize in 1-2 sentences what {npc_id} just did:\n{full_output}"
-        summary = call_llm("narrator", build_system_prompt("narrator"), summary_msg)
+        summary = call_llm("narrator", build_system_prompt("narrator"), summary_msg, label=npc_id)
         with open(summaries_log_path, "a") as f:
             f.write(f"{npc_id}: {summary}\n")
         prior_summaries += f"\n{npc_id}: {summary}"
@@ -64,7 +64,7 @@ def run_companion_wave(
             f"{beat_ctx}\n\n"
             f"## Player action:\n{player_action}"
         )
-        output = call_llm("actors", build_system_prompt("actors"), msg)
+        output = call_llm("actors", build_system_prompt("actors"), msg, label=pc_id)
         print(f"\n=== {pc_id} ===\n{output}")
         outputs[pc_id] = output
     return outputs
@@ -85,7 +85,7 @@ def run_checks(char_summaries: dict[str, str], char_stats: dict[str, str]) -> st
     for char_id, summary in char_summaries.items():
         stats = char_stats.get(char_id, "")
         msg = load_task_prompt("run_checks").format(char_id=char_id, summary=summary, stats=stats)
-        output = call_llm("show_runner", build_system_prompt("show_runner"), msg)
+        output = call_llm("show_runner", build_system_prompt("show_runner"), msg, label=char_id)
         if "NO_CHECKS" not in output:
             check_lines.append(output.strip())
     return "\n".join(check_lines) if check_lines else "NO_CHECKS"
@@ -135,7 +135,7 @@ def run_last_actions(actor_summaries: dict[str, str]) -> dict[str, str]:
     last_actions: dict[str, str] = {}
     for actor_id, summary in actor_summaries.items():
         msg = load_task_prompt("run_last_actions").format(actor_id=actor_id, summary=summary)
-        last_actions[actor_id] = call_llm("narrator", build_system_prompt("narrator"), msg)
+        last_actions[actor_id] = call_llm("narrator", build_system_prompt("narrator"), msg, label=actor_id)
     return last_actions
 
 
@@ -169,7 +169,7 @@ def run_plan_update(
         msg = load_task_prompt("run_plan_update_individual").format(
             overall_plan=overall_plan, char_id=char_id, char_context=char_context
         )
-        individual_plans[char_id] = call_llm("show_runner", build_system_prompt("show_runner"), msg)
+        individual_plans[char_id] = call_llm("show_runner", build_system_prompt("show_runner"), msg, label=char_id)
 
     return individual_plans
 

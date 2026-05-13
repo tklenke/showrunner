@@ -8,10 +8,13 @@ from pathlib import Path
 class _PromptLogger:
     def __init__(self, log_path: Path):
         self._log_path = log_path
+        self._call_id = 0
 
-    def log(self, agent: str, server: str, step: str, prompt_len: int, response_len: int) -> None:
+    def log(self, agent: str, server: str, step: str, prompt_len: int, response_len: int, label: str = "") -> None:
+        self._call_id += 1
+        step_col = f"{step}[{label}]" if label else step
         timestamp = datetime.now().strftime("%H:%M:%S")
-        line = f"{timestamp}  {agent}  {server}  {step}  {prompt_len}p → {response_len}r\n"
+        line = f"{self._call_id:04d}  {timestamp}  {agent}  {server}  {step_col}  {prompt_len}p → {response_len}r\n"
         with self._log_path.open("a") as f:
             f.write(line)
 

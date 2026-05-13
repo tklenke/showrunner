@@ -110,6 +110,15 @@ def test_call_llm_log_line_contains_caller_function_name(tmp_path):
     assert "my_known_runner" in line
 
 
+def test_call_llm_label_appears_in_log(tmp_path):
+    from showrunner.llm import setup_llm_logging, call_llm
+    log_file = tmp_path / "prompts.log"
+    setup_llm_logging(log_file)
+    with patch("litellm.completion", return_value=_mock_response("ok")):
+        call_llm("narrator", "sys", "user", label="bargos_the_hutt")
+    assert "bargos_the_hutt" in log_file.read_text()
+
+
 def test_build_system_prompt_contains_role():
     from showrunner.llm import build_system_prompt
     prompt = build_system_prompt("narrator")

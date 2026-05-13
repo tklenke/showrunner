@@ -16,7 +16,7 @@ Reference documents:
 
 ---
 
-### [ ] 4.34 — Prompts log: call ID and character label
+### [x] 4.34 — Prompts log: call ID and character label
 
 Improves the per-call log line with a sequential ID and an optional character label so
 loops like the NPC wave show which character each call belongs to.
