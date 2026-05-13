@@ -6,6 +6,8 @@ from datetime import datetime
 from pathlib import Path
 
 from showrunner.agents.narrator import render_narrator_context
+from showrunner.agents.referee import render_referee_context
+from showrunner.agents.scribe import render_scribe_context
 from showrunner.agents.show_runner import render_show_runner_context
 from showrunner.crew import build_crew
 from showrunner.instrumentation import setup_instrumentation, verbose_to_file
@@ -101,11 +103,13 @@ def run_turn_loop(scene: dict) -> None:
         current_beat = scene_state.get("current_beat", "")
 
         show_runner_ctx = render_show_runner_context(scene, scene_state, party_stats, last_action)
-        narrator_ctx = render_narrator_context(scene, current_beat)
+        narrator_ctx = render_narrator_context(scene, current_beat, last_action, party_stats)
+        referee_ctx = render_referee_context(scene, current_beat)
+        scribe_ctx = render_scribe_context(scene_state, party_stats)
         log.debug(f"Beat: {current_beat}  last_action: {last_action!r}")
 
         print(f"\n--- Beat: {current_beat} ---")
-        crew = build_crew(show_runner_ctx, narrator_ctx)
+        crew = build_crew(show_runner_ctx, narrator_ctx, referee_ctx, scribe_ctx)
         with verbose_to_file(verbose_path):
             result = crew.kickoff()
         result_str = str(result)

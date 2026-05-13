@@ -42,13 +42,63 @@ TRIUMPH / DESPAIR:
 Do NOT call rules_lookup() — it is not implemented in Phase 4."""
 
 
-def create_referee() -> Agent:
-    """Return the Referee agent (Alien)."""
+def render_referee_context(scene: dict, beat_id: str) -> str:
+    """Build scene-specific context for the Referee for the given beat.
+
+    Includes the current beat's checks and all scene minion group stats.
+    Appended to build_referee_backstory() — does not replace the rules.
+    """
+    lines = ["## Checks This Beat"]
+    beat = next((b for b in scene.get("beats", []) if b["id"] == beat_id), None)
+    checks = beat.get("checks", []) if beat else []
+    for check in checks:
+        header = (
+            f"- Skill: {check['skill']} | Characteristic: {check['characteristic']}"
+            f" | Difficulty: {check['difficulty']}"
+        )
+        if check.get("opposed_skill"):
+            header += f" | Opposed: {check['opposed_skill']}"
+        lines.append(header)
+        if check.get("notes"):
+            lines.append(f"  Notes: {check['notes'].strip()}")
+
+    lines.append("")
+    lines.append("## Minion Groups")
+    for group in scene.get("minion_groups", []):
+        characteristics = group.get("characteristics", {})
+        char_str = ", ".join(f"{k.capitalize()} {v}" for k, v in characteristics.items())
+        skills = group.get("skills", {})
+        skill_str = ", ".join(f"{k.capitalize()} {v}" for k, v in skills.items())
+        stats_str = ", ".join(filter(None, [char_str, skill_str]))
+        lines.append(
+            f"{group['name']} (count: {group['count']}, soak: {group['soak']},"
+            f" wound threshold: {group['wound_threshold']} per minion)"
+        )
+        if stats_str:
+            lines.append(f"  {stats_str}")
+        for weapon in group.get("weapons", []):
+            lines.append(
+                f"  {weapon['name']}: damage {weapon['damage']}, crit {weapon['critical']},"
+                f" {weapon['range']}, {weapon['special']}"
+            )
+
+    return "\n".join(lines)
+
+
+def create_referee(context: str = "") -> Agent:
+    """Return the Referee agent (Alien).
+
+    context is rendered beat/scene data from render_referee_context(); appended
+    to backstory so the Referee has it regardless of the Show Runner's delegation.
+    """
     cfg = load_agent_configs()["referee"]
+    backstory = build_referee_backstory()
+    if context:
+        backstory = f"{backstory}\n\n{context}"
     return Agent(
         role=cfg["role"],
         goal=cfg["goal"],
-        backstory=build_referee_backstory(),
+        backstory=backstory,
         llm=cfg["llm"],
         tools=[roll_dice, read_state, consult_show_runner],
         allow_delegation=cfg["allow_delegation"],

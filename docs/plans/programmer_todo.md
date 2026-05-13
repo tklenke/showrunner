@@ -96,7 +96,7 @@ resolve the server label from the model string LiteLLM passes to the callback.
 
 ---
 
-### [ ] 4.8b — Worker Agent Context Enrichment
+### [x] 4.8b — Worker Agent Context Enrichment
 
 **Problem**: Worker agents (Narrator, Referee, Scribe) have thin backstories. When the
 Show Runner delegates a task and the worker lacks context to complete it, CrewAI's

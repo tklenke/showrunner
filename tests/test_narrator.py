@@ -53,3 +53,30 @@ def test_narrator_backstory_unchanged_without_context(monkeypatch):
     agent_no_ctx = create_narrator()
     agent_with_ctx = create_narrator(context="extra info")
     assert agent_no_ctx.backstory in agent_with_ctx.backstory
+
+
+def test_narrator_context_includes_last_action():
+    from showrunner.agents.narrator import render_narrator_context
+    output = render_narrator_context(SCENE, "summons", "Z-4P0 scans the exits.", {})
+    assert "Z-4P0 scans the exits." in output
+
+
+def test_narrator_context_no_action_shows_placeholder():
+    from showrunner.agents.narrator import render_narrator_context
+    output = render_narrator_context(SCENE, "summons", "", {})
+    assert "None yet." in output
+
+
+def test_narrator_context_includes_party_status():
+    from showrunner.agents.narrator import render_narrator_context
+    party = {"characters": {"kaelen_sunara": {"wounds": 2, "strain": 1}}}
+    output = render_narrator_context(SCENE, "summons", "", party)
+    assert "kaelen_sunara" in output
+    assert "wounds 2" in output
+    assert "strain 1" in output
+
+
+def test_narrator_context_empty_party_stats_renders_cleanly():
+    from showrunner.agents.narrator import render_narrator_context
+    output = render_narrator_context(SCENE, "summons", "", {})
+    assert "Party Status" in output
