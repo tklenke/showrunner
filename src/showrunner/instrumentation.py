@@ -64,14 +64,28 @@ class _PromptLogger:
 
 @contextmanager
 def verbose_to_file(log_path: Path):
-    """Redirect stdout to log_path for the duration of the block, then restore."""
+    """Redirect stdout and CrewAI Rich console to log_path; restore both on exit.
+
+    CrewAI's EventListener holds a Rich Console created at import time that bypasses
+    sys.stdout redirection. We swap it for a file-backed Console so that task boxes,
+    crew-completion panels, and plain Printer output all land in the log file only.
+    """
+    from crewai.events.event_listener import event_listener
+    from rich.console import Console
+
     real_stdout = sys.stdout
     log_path.parent.mkdir(parents=True, exist_ok=True)
     f = log_path.open("w")
+
+    old_rich_console = event_listener.formatter.console
+    file_console = Console(file=f, width=200)
+
     sys.stdout = f
+    event_listener.formatter.console = file_console
     try:
         yield
     finally:
+        event_listener.formatter.console = old_rich_console
         sys.stdout = real_stdout
         f.close()
 

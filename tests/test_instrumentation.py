@@ -145,6 +145,29 @@ def test_verbose_redirect_restores_stdout_on_exception(tmp_path):
     assert sys.stdout is real_stdout
 
 
+def test_verbose_redirect_swaps_rich_console(tmp_path):
+    from crewai.events.event_listener import event_listener
+    from showrunner.instrumentation import verbose_to_file
+    log_file = tmp_path / "verbose.log"
+    original_console = event_listener.formatter.console
+    with verbose_to_file(log_file):
+        assert event_listener.formatter.console is not original_console
+    assert event_listener.formatter.console is original_console
+
+
+def test_verbose_redirect_restores_rich_console_on_exception(tmp_path):
+    from crewai.events.event_listener import event_listener
+    from showrunner.instrumentation import verbose_to_file
+    log_file = tmp_path / "verbose.log"
+    original_console = event_listener.formatter.console
+    try:
+        with verbose_to_file(log_file):
+            raise ValueError("test error")
+    except ValueError:
+        pass
+    assert event_listener.formatter.console is original_console
+
+
 def test_setup_instrumentation_maps_server_names_from_config(tmp_path, config_path):
     """When config_path given, litellm model IDs are resolved to server names."""
     from crewai.events.event_bus import crewai_event_bus
