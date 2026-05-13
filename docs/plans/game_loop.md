@@ -18,7 +18,27 @@ end of each turn. Multiple turns can execute within the same beat.
 
 ---
 
-## Per-Turn Setup (orchestrator, before any LLM calls)
+## Step 0 — Beat Initialization (turn 1 of each beat only)
+
+Fires when `current_beat` differs from the previous turn's beat. Skipped on all
+subsequent turns within the same beat.
+
+1. Look up the current beat dict in the scene YAML by `id`
+2. Append `show_runner_notes` and `narrator_notes` to the context strings passed
+   into Step 1, prefixed as authoritative direction:
+   ```
+   ## Beat Director Notes:
+   {beat["show_runner_notes"]}
+   ```
+3. If `--verbose`: print `=== {beat["title"]} ===` to terminal
+4. Log the transition regardless: `Beat transition: {beat_id}`
+
+Purely programmatic — no LLM call. Agents in Steps 1–8 then operate within the
+correctly-established beat frame.
+
+---
+
+## Per-Turn Setup (every turn, before any LLM calls)
 
 The orchestrator reads current state and renders context strings passed into each step:
 
