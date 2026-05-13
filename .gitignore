@@ -217,3 +217,9 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 logs/*.log
+
+# Copyrighted reference materials
+docs/references/copyrighted/
+
+# Runtime state (regenerated each session)
+state/scene_state.yaml
