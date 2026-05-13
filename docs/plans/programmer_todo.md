@@ -189,7 +189,7 @@ All turn log files must use the zero-padded naming scheme from `game_loop.md`:
 
 ---
 
-### [ ] 4.22 — Step 3: NPC wave with inline Narrator summaries (2N call pattern)
+### [x] 4.22 — Step 3: NPC wave with inline Narrator summaries (2N call pattern)
 
 Per `game_loop.md` Step 3: each NPC call is immediately followed by a Narrator call that
 produces a compact 1–2 sentence summary. The next NPC receives the summary, not the full

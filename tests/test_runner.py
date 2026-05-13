@@ -16,62 +16,61 @@ def _mock_call_llm(responses: list[str]):
 
 
 # ---------------------------------------------------------------------------
-# run_npc_wave
+# run_npc_wave  (2N call pattern: actors + narrator per NPC)
 # ---------------------------------------------------------------------------
 
-def test_run_npc_wave_calls_show_runner_once():
+def test_run_npc_wave_makes_2n_calls_for_n_npcs(tmp_path):
     from showrunner.runner import run_npc_wave
-    with patch("showrunner.runner.call_llm", side_effect=["beat plan", "narration", "npc out"]) as mock:
-        run_npc_wave("sr ctx", "narrator ctx", {"bargos": "Bargos is here."})
-    sr_calls = [c for c in mock.call_args_list if c.args[0] == "show_runner"]
-    assert len(sr_calls) == 1
+    log_path = tmp_path / "summaries.txt"
+    # 2 NPCs → 4 calls: actors, narrator, actors, narrator
+    with patch("showrunner.runner.call_llm", side_effect=["npc1 out", "sum1", "npc2 out", "sum2"]) as mock:
+        run_npc_wave({"a": "ctx a", "b": "ctx b"}, "beat ctx", "player action", {}, log_path)
+    assert mock.call_count == 4
 
 
-def test_run_npc_wave_calls_narrator_once():
+def test_run_npc_wave_second_npc_receives_summary_not_full_output(tmp_path):
     from showrunner.runner import run_npc_wave
-    with patch("showrunner.runner.call_llm", side_effect=["beat plan", "narration", "npc out"]) as mock:
-        run_npc_wave("sr ctx", "narrator ctx", {"bargos": "Bargos is here."})
-    narrator_calls = [c for c in mock.call_args_list if c.args[0] == "narrator"]
-    assert len(narrator_calls) == 1
-
-
-def test_run_npc_wave_calls_actors_once_per_npc():
-    from showrunner.runner import run_npc_wave
-    with patch("showrunner.runner.call_llm", side_effect=["beat", "narr", "out1", "out2"]) as mock:
-        run_npc_wave("sr", "nar", {"a": "A context", "b": "B context"})
-    actors_calls = [c for c in mock.call_args_list if c.args[0] == "actors"]
-    assert len(actors_calls) == 2
-
-
-def test_run_npc_wave_second_npc_sees_first_npc_output():
-    from showrunner.runner import run_npc_wave
-    with patch("showrunner.runner.call_llm", side_effect=["beat plan", "narration", "first npc out", "second npc out"]) as mock:
-        run_npc_wave("sr", "nar", {"first": "first ctx", "second": "second ctx"})
+    log_path = tmp_path / "summaries.txt"
+    with patch("showrunner.runner.call_llm", side_effect=["FULL_OUTPUT_LONG", "short summary", "npc2 out", "sum2"]) as mock:
+        run_npc_wave({"first": "ctx", "second": "ctx"}, "beat ctx", "action", {}, log_path)
     second_npc_call = [c for c in mock.call_args_list if c.args[0] == "actors"][1]
-    user_message = second_npc_call.args[2]
-    assert "first npc out" in user_message
+    user_msg = second_npc_call.args[2]
+    assert "short summary" in user_msg
+    assert "FULL_OUTPUT_LONG" not in user_msg
 
 
-def test_run_npc_wave_returns_narrator_and_npc_outputs():
+def test_run_npc_wave_appends_summaries_to_log_file(tmp_path):
     from showrunner.runner import run_npc_wave
-    with patch("showrunner.runner.call_llm", side_effect=["beat plan", "my narration", "bargos says hi"]):
-        result = run_npc_wave("sr", "nar", {"bargos": "ctx"})
-    assert result["_narrator"] == "my narration"
-    assert result["bargos"] == "bargos says hi"
+    log_path = tmp_path / "summaries.txt"
+    with patch("showrunner.runner.call_llm", side_effect=["out1", "summary1", "out2", "summary2"]):
+        run_npc_wave({"npc_a": "ctx", "npc_b": "ctx"}, "beat ctx", "action", {}, log_path)
+    content = log_path.read_text()
+    assert "summary1" in content
+    assert "summary2" in content
 
 
-def test_run_npc_wave_prints_narrator_output(capsys):
+def test_run_npc_wave_returns_full_outputs_not_summaries(tmp_path):
     from showrunner.runner import run_npc_wave
-    with patch("showrunner.runner.call_llm", side_effect=["beat", "narrator prose", "npc line"]):
-        run_npc_wave("sr", "nar", {"bargos": "ctx"})
-    captured = capsys.readouterr()
-    assert "narrator prose" in captured.out
+    log_path = tmp_path / "summaries.txt"
+    with patch("showrunner.runner.call_llm", side_effect=["FULL1", "sum1"]):
+        result = run_npc_wave({"bargos": "ctx"}, "beat ctx", "action", {}, log_path)
+    assert result == {"bargos": "FULL1"}
 
 
-def test_run_npc_wave_prints_npc_output_with_id(capsys):
+def test_run_npc_wave_empty_npcs_returns_empty_dict(tmp_path):
     from showrunner.runner import run_npc_wave
-    with patch("showrunner.runner.call_llm", side_effect=["beat", "narr", "bargos speaks"]):
-        run_npc_wave("sr", "nar", {"bargos": "ctx"})
+    log_path = tmp_path / "summaries.txt"
+    with patch("showrunner.runner.call_llm") as mock:
+        result = run_npc_wave({}, "beat ctx", "action", {}, log_path)
+    assert result == {}
+    mock.assert_not_called()
+
+
+def test_run_npc_wave_prints_npc_output_with_id(tmp_path, capsys):
+    from showrunner.runner import run_npc_wave
+    log_path = tmp_path / "summaries.txt"
+    with patch("showrunner.runner.call_llm", side_effect=["bargos speaks", "summary"]):
+        run_npc_wave({"bargos": "ctx"}, "beat ctx", "action", {}, log_path)
     captured = capsys.readouterr()
     assert "bargos" in captured.out
     assert "bargos speaks" in captured.out
@@ -83,38 +82,38 @@ def test_run_npc_wave_prints_npc_output_with_id(capsys):
 
 def test_run_companion_wave_empty_returns_empty_dict():
     from showrunner.runner import run_companion_wave
-    result = run_companion_wave("npc wave text", {}, "player did something")
+    result = run_companion_wave({}, "beat ctx", "player did something")
     assert result == {}
 
 
-def test_run_companion_wave_calls_actors_once_per_ai_pc():
+def test_run_companion_wave_calls_actors_once_per_companion():
     from showrunner.runner import run_companion_wave
     with patch("showrunner.runner.call_llm", side_effect=["kaelen out"]) as mock:
-        run_companion_wave("npc wave", {"kaelen": "kaelen ctx"}, "player action")
+        run_companion_wave({"kaelen": "kaelen ctx"}, "beat ctx", "player action")
     actors_calls = [c for c in mock.call_args_list if c.args[0] == "actors"]
     assert len(actors_calls) == 1
 
 
-def test_run_companion_wave_user_message_contains_npc_wave_text():
+def test_run_companion_wave_user_message_contains_beat_ctx():
     from showrunner.runner import run_companion_wave
     with patch("showrunner.runner.call_llm", side_effect=["kaelen out"]) as mock:
-        run_companion_wave("NPC wave text here", {"kaelen": "kaelen ctx"}, "player action")
+        run_companion_wave({"kaelen": "kaelen ctx"}, "BEAT_CONTEXT_HERE", "player action")
     user_msg = mock.call_args_list[0].args[2]
-    assert "NPC wave text here" in user_msg
+    assert "BEAT_CONTEXT_HERE" in user_msg
 
 
 def test_run_companion_wave_user_message_contains_player_action():
     from showrunner.runner import run_companion_wave
     with patch("showrunner.runner.call_llm", side_effect=["kaelen out"]) as mock:
-        run_companion_wave("npc wave", {"kaelen": "kaelen ctx"}, "player does X")
+        run_companion_wave({"kaelen": "kaelen ctx"}, "beat ctx", "player does X")
     user_msg = mock.call_args_list[0].args[2]
     assert "player does X" in user_msg
 
 
-def test_run_companion_wave_returns_pc_outputs():
+def test_run_companion_wave_returns_companion_outputs():
     from showrunner.runner import run_companion_wave
     with patch("showrunner.runner.call_llm", side_effect=["kaelen out"]):
-        result = run_companion_wave("npc wave", {"kaelen": "ctx"}, "action")
+        result = run_companion_wave({"kaelen": "ctx"}, "beat ctx", "action")
     assert result == {"kaelen": "kaelen out"}
 
 

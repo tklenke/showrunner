@@ -329,12 +329,7 @@ def run_turn_loop(scene: dict, verbose: bool = False) -> None:
         log.debug(f"Beat: {current_beat} turn: {_turn_num}  npcs: {list(npc_chars)}  companions: {list(companion_chars)}")
         print(f"\n--- Beat: {current_beat} (turn {_turn_num}) ---")
 
-        # ── Phase 1: NPC wave ────────────────────────────────────────────────
-        npc_wave = run_npc_wave(sr_ctx, narrator_ctx, npc_chars)
-        npc_outputs = {k: v for k, v in npc_wave.items() if k != "_narrator"}
-        log.info(f"Phase 1 complete: {len(npc_outputs)} NPCs voiced")
-
-        # ── Player input ─────────────────────────────────────────────────────
+        # ── Step 1: Player input ─────────────────────────────────────────────
         player_action = prompt_player_action("Z-4P0")
         log.info(f"Player action: {player_action!r}")
 
@@ -343,45 +338,50 @@ def run_turn_loop(scene: dict, verbose: bool = False) -> None:
             log.info("Session ended by player.")
             break
 
-        # ── Phase 2: PC wave ─────────────────────────────────────────────────
-        npc_wave_text = "\n\n".join(
-            f"[{npc_id}]: {text}" for npc_id, text in npc_outputs.items()
-        )
-        companion_outputs = run_companion_wave(npc_wave_text, companion_chars, player_action)
-        log.info(f"Phase 2 complete: {len(companion_outputs)} Companions voiced")
+        # ── Step 2: Companion wave ───────────────────────────────────────────
+        companion_outputs = run_companion_wave(companion_chars, sr_ctx, player_action)
+        log.info(f"Step 2 complete: {len(companion_outputs)} Companions voiced")
 
-        # ── Phase 3: Resolution pipeline ─────────────────────────────────────
-        action_map = {**npc_outputs, **companion_outputs, "Z-4P0": player_action}
+        # ── Step 3: NPC wave with inline summaries ───────────────────────────
+        summaries_log_path = logs_dir / f"{scene_num:02d}_{_beat_num:02d}_{current_beat}_{_turn_num:04d}_summaries.txt"
+        npc_outputs = run_npc_wave(npc_chars, sr_ctx, player_action, companion_outputs, summaries_log_path)
+        log.info(f"Step 3 complete: {len(npc_outputs)} NPCs voiced")
 
-        # 3a — action summaries
-        actor_summaries = run_summaries(action_map)
+        # ── Step 4: Party action summaries ───────────────────────────────────
+        party_actions = {"Z-4P0": player_action, **companion_outputs}
+        actor_summaries = run_summaries(party_actions)
         summaries_text = "\n".join(f"{k}: {v}" for k, v in actor_summaries.items())
-        _write_turn_file(logs_dir, scene_num, _beat_num, current_beat, _turn_num, "summaries", summaries_text)
 
-        # 3b — check identification
+        # Append party summaries to the same summaries log
+        with summaries_log_path.open("a") as f:
+            f.write(summaries_text + "\n")
+
+        # ── Step 5: Check identification ─────────────────────────────────────
+        all_summaries = (summaries_log_path.read_text() if summaries_log_path.exists() else summaries_text)
         stats_text = _build_stats_text(scene_yamls)
-        check_output = run_checks(summaries_text, stats_text)
+        check_output = run_checks(all_summaries, stats_text)
         checks_text = _write_turn_file(logs_dir, scene_num, _beat_num, current_beat, _turn_num, "checks", check_output)
         ruling_specs = _parse_ruling_specs(checks_text)
-        log.info(f"Phase 3b complete: {len(ruling_specs)} checks identified")
+        log.info(f"Step 5 complete: {len(ruling_specs)} checks identified")
 
-        # 3c — dice rolling + rulings
+        # ── Step 6: Dice rolling + rulings ──────────────────────────────────
         _roll_specs(ruling_specs)
         rulings = run_rulings(ruling_specs)
         results_text = "\n".join(f"{k}: {v}" for k, v in rulings.items()) if rulings else "No checks this turn."
         _write_turn_file(logs_dir, scene_num, _beat_num, current_beat, _turn_num, "results", results_text)
-        log.info(f"Phase 3c complete: {len(ruling_specs)} checks resolved")
+        log.info(f"Step 6 complete: {len(ruling_specs)} checks resolved")
 
-        # 3d — resolution narrative (printed to player)
-        narrative = run_narrative(summaries_text, checks_text, results_text)
+        # ── Step 7: Resolution narrative (printed to player) ─────────────────
+        narrative = run_narrative(all_summaries, checks_text, results_text)
         if narrative:
             print(f"\n{narrative}")
 
-        # 3e — last-action extraction
-        last_actions_extracted = run_last_actions(actor_summaries)
+        # ── Step 8: Last-action extraction ───────────────────────────────────
+        all_actors = {**{k: v for npc in [npc_outputs] for k, v in npc.items()}, **actor_summaries}
+        last_actions_extracted = run_last_actions(all_actors)
         if not last_actions_extracted:
-            last_actions_extracted = actor_summaries
-        log.info("Phase 3 complete")
+            last_actions_extracted = all_actors
+        log.info("Turn complete")
 
         # ── State writes ──────────────────────────────────────────────────────
         update_scene_state({"last_actions": last_actions_extracted})

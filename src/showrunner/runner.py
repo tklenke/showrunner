@@ -5,40 +5,54 @@ from showrunner.llm import build_system_prompt, call_llm
 
 
 def run_npc_wave(
-    sr_context: str,
-    narrator_context: str,
-    npc_contexts: dict[str, str],
+    npcs: dict[str, str],
+    beat_ctx: str,
+    user_action: str,
+    companion_outputs: dict[str, str],
+    summaries_log_path,
 ) -> dict[str, str]:
-    """Phase 1: Show Runner plans the beat, Narrator narrates, each NPC acts in order.
+    """Step 3: Each NPC acts, then Narrator summarizes (2N calls for N NPCs).
 
-    Returns {"_narrator": narration_text, npc_id: output, ...}.
+    Each NPC receives beat context, user action, companion outputs, and compact
+    summaries of prior NPCs. Summaries are appended to summaries_log_path.
+    Returns {npc_id: full_output}.
     """
-    beat_plan = call_llm("show_runner", build_system_prompt("show_runner"), sr_context)
-
-    narrator_msg = f"{narrator_context}\n\n## Beat Plan:\n{beat_plan}"
-    narration = call_llm("narrator", build_system_prompt("narrator"), narrator_msg)
-    print(narration)
-
+    prior_summaries = ""
     npc_outputs: dict[str, str] = {}
-    for npc_id, npc_context in npc_contexts.items():
-        prior = "\n\n".join(f"[{nid}]: {out}" for nid, out in npc_outputs.items())
-        npc_msg = f"{npc_context}\n\n## Beat Plan:\n{beat_plan}"
-        if prior:
-            npc_msg += f"\n\n## Earlier NPC actions this beat:\n{prior}"
-        output = call_llm("actors", build_system_prompt("actors"), npc_msg)
-        print(f"[{npc_id}] {output}")
-        npc_outputs[npc_id] = output
 
-    return {"_narrator": narration, **npc_outputs}
+    for npc_id, npc_context in npcs.items():
+        msg = f"{npc_context}\n\n{beat_ctx}"
+        if user_action:
+            msg += f"\n\n## Player action:\n{user_action}"
+        if companion_outputs:
+            companions_text = "\n\n".join(
+                f"[{cid}]: {out}" for cid, out in companion_outputs.items()
+            )
+            msg += f"\n\n## Companion actions:\n{companions_text}"
+        if prior_summaries:
+            msg += f"\n\n## Earlier NPC actions this turn:\n{prior_summaries}"
+
+        full_output = call_llm("actors", build_system_prompt("actors"), msg)
+        print(f"[{npc_id}] {full_output}")
+        npc_outputs[npc_id] = full_output
+
+        summary_msg = f"Summarize in 1-2 sentences what {npc_id} just did:\n{full_output}"
+        summary = call_llm("narrator", build_system_prompt("narrator"), summary_msg)
+        with open(summaries_log_path, "a") as f:
+            f.write(f"{npc_id}: {summary}\n")
+        prior_summaries += f"\n{npc_id}: {summary}"
+
+    return npc_outputs
 
 
 def run_companion_wave(
-    npc_wave_text: str,
     companion_contexts: dict[str, str],
+    beat_ctx: str,
     player_action: str,
 ) -> dict[str, str]:
-    """Phase 2: Each Companion responds to the NPC wave and player action.
+    """Step 2: Each Companion responds to the beat context and player action.
 
+    Companions act before the NPC wave and do not see NPC outputs.
     Returns {} for empty companion_contexts.
     """
     if not companion_contexts:
@@ -47,7 +61,7 @@ def run_companion_wave(
     for pc_id, pc_context in companion_contexts.items():
         msg = (
             f"{pc_context}\n\n"
-            f"## What just happened:\n{npc_wave_text}\n\n"
+            f"{beat_ctx}\n\n"
             f"## Player action:\n{player_action}"
         )
         output = call_llm("actors", build_system_prompt("actors"), msg)
