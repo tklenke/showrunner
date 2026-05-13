@@ -143,23 +143,64 @@ class _ReadStateTool(BaseTool):
 read_state = _ReadStateTool()
 
 
-@tool("write_state")
-def write_state(file: str, updates: dict) -> str:
-    """Write updates to a state file. Scribe agent only.
+class _WriteStateInput(BaseModel):
+    file: str
+    updates: dict = {}
 
-    file: the state filename (party_stats.yaml or scene_state.yaml).
-    updates: dict of key/value changes to merge into the file.
-    """
-    path = str(_STATE_DIR / file)
-    if "party_stats" in file:
-        update_party_stats(updates, path=path)
-    elif "scene_state" in file:
-        safe_updates = {k: v for k, v in updates.items() if k != "current_beat"}
-        if safe_updates:
-            update_scene_state(safe_updates, path=path)
-    elif "session_log" in file:
-        entry = updates.get("entry", "")
-        append_session_log(entry, path=path)
-    else:
-        raise ValueError(f"Unknown state file: {file}")
-    return f"Updated {file}"
+    @model_validator(mode="before")
+    @classmethod
+    def unwrap_top_level(cls, data):
+        return _unwrap_schema_args(data)
+
+    @field_validator("file", mode="before")
+    @classmethod
+    def unwrap_field(cls, v):
+        """Extract actual filename when a small model passes a JSON Schema object."""
+        if isinstance(v, dict) and "properties" in v:
+            props = v["properties"]
+            if isinstance(props, dict) and "file" in props:
+                inner = props["file"]
+                if isinstance(inner, str):
+                    return inner
+        return v
+
+    @field_validator("updates", mode="before")
+    @classmethod
+    def parse_updates(cls, v):
+        """Accept a JSON string in place of a dict when a model serialises args as strings."""
+        if isinstance(v, str):
+            try:
+                import json
+                parsed = json.loads(v)
+                return parsed if isinstance(parsed, dict) else {}
+            except (json.JSONDecodeError, TypeError):
+                return {}
+        return v if isinstance(v, dict) else {}
+
+
+class _WriteStateTool(BaseTool):
+    name: str = "write_state"
+    description: str = (
+        "Write updates to a state file. Scribe agent only. "
+        "file: the state filename (party_stats.yaml, scene_state.yaml, or session_log.md). "
+        "updates: dict of key/value changes to merge into the file."
+    )
+    args_schema: type[BaseModel] = _WriteStateInput
+
+    def _run(self, file: str, updates: dict = {}) -> str:
+        path = str(_STATE_DIR / file)
+        if "party_stats" in file:
+            update_party_stats(updates, path=path)
+        elif "scene_state" in file:
+            safe_updates = {k: v for k, v in updates.items() if k != "current_beat"}
+            if safe_updates:
+                update_scene_state(safe_updates, path=path)
+        elif "session_log" in file:
+            entry = updates.get("entry", "")
+            append_session_log(entry, path=path)
+        else:
+            raise ValueError(f"Unknown state file: {file}")
+        return f"Updated {file}"
+
+
+write_state = _WriteStateTool()

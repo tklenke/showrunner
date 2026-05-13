@@ -73,6 +73,30 @@ def test_advance_beat_updates_current_beat(tmp_path):
     assert data["current_beat"] == "audience"
 
 
+def test_update_party_stats_deep_merge_preserves_other_characters(tmp_path):
+    from showrunner.tools.state_writer import update_party_stats
+    outfile = str(tmp_path / "party_stats.yaml")
+    initial = {"characters": {"Z-4P0": {"wounds": 0, "strain": 0}, "Kae": {"wounds": 0, "strain": 0}}}
+    update_party_stats(initial, path=outfile)
+    update_party_stats({"characters": {"Z-4P0": {"wounds": 3}}}, path=outfile)
+    with open(outfile) as f:
+        data = yaml.safe_load(f)
+    assert data["characters"]["Z-4P0"]["wounds"] == 3
+    assert "Kae" in data["characters"], "Kae was wiped by shallow merge"
+
+
+def test_update_scene_state_deep_merge_preserves_other_clocks(tmp_path):
+    from showrunner.tools.state_writer import update_scene_state
+    outfile = str(tmp_path / "scene_state.yaml")
+    initial = {"ticking_clocks": [{"id": "storm", "destroyed": 0}], "character_plans": {"Kae": "find cover"}}
+    update_scene_state(initial, path=outfile)
+    update_scene_state({"character_plans": {"Z-4P0": "beep frantically"}}, path=outfile)
+    with open(outfile) as f:
+        data = yaml.safe_load(f)
+    assert data["character_plans"]["Z-4P0"] == "beep frantically"
+    assert "Kae" in data["character_plans"], "Kae's plan was wiped by shallow merge"
+
+
 def test_advance_beat_preserves_other_fields(tmp_path):
     from showrunner.tools.state_writer import initialize_scene_state, advance_beat, update_scene_state
     initialize_scene_state(0, "opening", state_dir=str(tmp_path))

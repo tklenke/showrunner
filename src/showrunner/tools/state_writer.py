@@ -6,26 +6,37 @@ from pathlib import Path
 import yaml
 
 
+def _deep_merge(base: dict, update: dict) -> dict:
+    """Recursively merge update into base. Nested dicts are merged, not replaced."""
+    result = dict(base)
+    for key, value in update.items():
+        if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+            result[key] = _deep_merge(result[key], value)
+        else:
+            result[key] = value
+    return result
+
+
 def update_party_stats(updates: dict, path: str = "state/party_stats.yaml") -> None:
-    """Merge updates into party_stats.yaml. Existing keys not in updates are preserved."""
+    """Deep-merge updates into party_stats.yaml. Existing keys not in updates are preserved."""
     p = Path(path)
     current: dict = {}
     if p.exists():
         with open(p) as f:
             current = yaml.safe_load(f) or {}
-    current.update(updates)
+    current = _deep_merge(current, updates)
     with open(p, "w") as f:
         yaml.dump(current, f, allow_unicode=True, sort_keys=False)
 
 
 def update_scene_state(updates: dict, path: str = "state/scene_state.yaml") -> None:
-    """Merge updates into scene_state.yaml. Existing keys not in updates are preserved."""
+    """Deep-merge updates into scene_state.yaml. Existing keys not in updates are preserved."""
     p = Path(path)
     current: dict = {}
     if p.exists():
         with open(p) as f:
             current = yaml.safe_load(f) or {}
-    current.update(updates)
+    current = _deep_merge(current, updates)
     with open(p, "w") as f:
         yaml.dump(current, f, allow_unicode=True, sort_keys=False)
 

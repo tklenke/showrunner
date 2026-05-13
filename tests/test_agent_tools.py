@@ -80,6 +80,14 @@ def test_write_state_unknown_file_raises():
         write_state.run("unknown_file.yaml", {})
 
 
+def test_write_state_top_level_schema_unwrapped(tmp_path):
+    import yaml
+    from showrunner.tools.agent_tools import _WriteStateInput
+    # 3B model wraps entire args dict as JSON Schema
+    m = _WriteStateInput(**{"properties": {"file": "party_stats.yaml", "updates": {}}, "additionalProperties": False})
+    assert m.file == "party_stats.yaml"
+
+
 def test_write_state_cannot_change_current_beat(tmp_path):
     import yaml
     from showrunner.tools.agent_tools import write_state

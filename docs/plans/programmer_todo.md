@@ -54,7 +54,7 @@ the rendered context contains NPC identity and persona data.
 
 ---
 
-### [ ] 4.8e — Fix write_state Tool for 3B Model Reliability + Deep Merge
+### [x] 4.8e — Fix write_state Tool for 3B Model Reliability + Deep Merge
 
 Two bugs in `write_state` (`src/showrunner/tools/agent_tools.py`):
 
