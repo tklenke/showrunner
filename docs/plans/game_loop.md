@@ -227,19 +227,19 @@ The `referee` agent is configured in `config/agents.yaml` but not called by the 
 
 ---
 
-## Ref B — State Files Changed Per Turn
+## Ref B — State File Changes Per Turn
 
-| File | Changed by | Step |
+| Step | File | Changed by |
 |---|---|---|
-| `state/scene_state.yaml` `character_plans` | Orchestrator | 0 (beat init), 9 |
-| `state/scene_state.yaml` `last_actions` | Orchestrator | 8 |
-| `state/scene_state.yaml` `current_beat` | `advance_beat()` | Beat advancement |
-| `state/session_log.md` | Orchestrator (Step 7 narrative output) | 7 |
-| `state/party_stats.yaml` | Orchestrator *(not yet implemented)* | 6 |
-| `logs/turn_{ts}_{beat}_summaries.txt` | Orchestrator | 4 |
-| `logs/turn_{ts}_{beat}_checks.txt` | Orchestrator | 5 |
-| `logs/turn_{ts}_{beat}_results.txt` | Orchestrator | 6 |
-| `logs/turn_{ts}_{beat}_sr_plan.txt` | Orchestrator | 9 |
+| 0 (beat init), 9 | `state/scene_state.yaml` `character_plans` | Orchestrator |
+| 4 | `logs/turn_{ts}_{beat}_summaries.txt` | Orchestrator |
+| 5 | `logs/turn_{ts}_{beat}_checks.txt` | Orchestrator |
+| 6 | `logs/turn_{ts}_{beat}_results.txt` | Orchestrator |
+| 6 | `state/party_stats.yaml` | Orchestrator *(not yet implemented)* |
+| 7 | `state/session_log.md` | Orchestrator |
+| 8 | `state/scene_state.yaml` `last_actions` | Orchestrator |
+| 9 | `logs/turn_{ts}_{beat}_sr_plan.txt` | Orchestrator |
+| 10 | `state/scene_state.yaml` `current_beat` | `advance_beat()` |
 
 ---
 
