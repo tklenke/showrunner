@@ -12,7 +12,7 @@ Reference documents:
 
 ## Current Priority: Phase 4 — Remove CrewAI
 
-### [ ] 4.15 — Replace CrewAI with Direct LiteLLM Calls
+### [~] 4.15 — Replace CrewAI with Direct LiteLLM Calls
 
 **Rationale:** CrewAI's value is the ReAct tool loop. We have stripped tools from every
 agent. What remains is an expensive abstraction that has caused: ReAct loop crashes on small
@@ -32,7 +32,7 @@ new files `llm.py` and `runner.py`.
 
 ---
 
-#### [ ] 4.15a — Update `config.py`: remove `crewai.LLM`; expose raw litellm call params
+#### [x] 4.15a — Update `config.py`: remove `crewai.LLM`; expose raw litellm call params
 
 `load_agent_configs()` currently returns `{"llm": crewai.LLM(...), ...}` per agent.
 Replace the `"llm"` key with `"litellm_params": {"model": str, "api_base": str | None,
@@ -52,7 +52,7 @@ Tests:
 
 ---
 
-#### [ ] 4.15b — New `src/showrunner/llm.py`: `call_llm()` + prompt logging
+#### [x] 4.15b — New `src/showrunner/llm.py`: `call_llm()` + prompt logging
 
 ```python
 def call_llm(agent_name: str, system_prompt: str, user_message: str) -> str:
@@ -88,7 +88,7 @@ Tests (mock `litellm.completion`):
 
 ---
 
-#### [ ] 4.15c — New `src/showrunner/runner.py`, part 1: NPC/PC waves
+#### [x] 4.15c — New `src/showrunner/runner.py`, part 1: NPC/PC waves
 
 ```python
 def run_npc_wave(
@@ -124,7 +124,7 @@ Tests (mock `call_llm`):
 
 ---
 
-#### [ ] 4.15d — New `src/showrunner/runner.py`, part 2: five-step pipeline
+#### [x] 4.15d — New `src/showrunner/runner.py`, part 2: five-step pipeline
 
 ```python
 def run_summary_phase(action_map: dict[str, str]) -> dict[str, str]:
@@ -155,7 +155,7 @@ Tests (mock `call_llm`):
 
 ---
 
-#### [ ] 4.15e — Update `agents/*.py`: remove `create_*()` functions
+#### [x] 4.15e — Update `agents/*.py`: remove `create_*()` functions
 
 Remove from each module:
 - `actors.py`: `create_actors()` and `from crewai import Agent`
@@ -171,7 +171,7 @@ delete tests that only verified `create_*()` boilerplate.
 
 ---
 
-#### [ ] 4.15f — Delete `src/showrunner/tools/agent_tools.py` and `tests/test_agent_tools.py`
+#### [ ] 4.15f — Delete `src/showrunner/tools/agent_tools.py` and `tests/test_agent_tools.py` *(deferred — requires file deletion)*
 
 All tools (`read_state`, `write_state`, `roll_dice`, `consult_show_runner`) are dead code.
 They were stripped from all agents. Their `BaseTool` + `_unwrap_schema_args` pattern is
@@ -186,7 +186,7 @@ no `BaseTool` wrapper needed.
 
 ---
 
-#### [ ] 4.15g — Update `orchestrator.py`: call runner functions directly
+#### [x] 4.15g — Update `orchestrator.py`: call runner functions directly
 
 Replace all `build_*_crew()` + `crew.kickoff()` + output-extraction patterns with direct
 `run_*()` calls. The runner functions return plain dicts/strings — no `.output.raw`, no
@@ -216,7 +216,7 @@ instead.
 
 ---
 
-#### [ ] 4.15h — Update `instrumentation.py`: remove CrewAI hooks
+#### [x] 4.15h — Update `instrumentation.py`: remove CrewAI hooks
 
 Remove:
 - `from crewai.events.event_bus import crewai_event_bus`
@@ -238,7 +238,7 @@ Update `tests/test_instrumentation.py`: remove event-bus subscription tests; add
 
 ---
 
-#### [ ] 4.15i — Remove `crew.py`; remove crewai from dependencies; final cleanup
+#### [~] 4.15i — Remove `crew.py`; remove crewai from dependencies; final cleanup
 
 1. Delete `src/showrunner/crew.py`
 2. Delete `tests/test_crew.py` (replaced by `tests/test_runner.py` written in 4.15c/d)
