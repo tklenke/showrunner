@@ -369,7 +369,7 @@ Remove `build_crew()`. Replace with:
 
 ---
 
-### [~] 4.14 — Five-Step Resolution Pipeline
+### [x] 4.14 — Five-Step Resolution Pipeline
 
 Replace Phase 3 (the current `build_resolution_crew` + Show Runner review) with the
 decomposed five-step pipeline. See `docs/plans/architect_todo.md` — "Resolved Decisions:
@@ -377,7 +377,7 @@ Resolution Pipeline" for full rationale and data flow.
 
 ---
 
-#### 4.14a — Remove Show Runner review from Phase 2
+#### [x] 4.14a — Remove Show Runner review from Phase 2
 
 In `crew.py`: remove `task_sr_review` from `build_pc_crew()`. The crew now contains only
 AI PC tasks. Update the return to exclude the Show Runner agent from `all_agents`.
@@ -390,7 +390,7 @@ is no Show Runner task in the PC crew.
 
 ---
 
-#### 4.14b — `load_scene_yamls()` helper
+#### [x] 4.14b — `load_scene_yamls()` helper
 
 Add `load_scene_yamls(scene: dict, characters_dir: str = "characters") -> dict[str, dict]`
 to `src/showrunner/agents/actors.py`.
@@ -405,7 +405,7 @@ Tests:
 
 ---
 
-#### 4.14c — Step 3a: action summary tasks
+#### [x] 4.14c — Step 3a: action summary tasks
 
 Add `build_summary_crew(action_map: dict[str, str]) -> Crew` to `crew.py`.
 
@@ -427,7 +427,7 @@ Tests:
 
 ---
 
-#### 4.14d — Step 3b: check identification task
+#### [x] 4.14d — Step 3b: check identification task
 
 Add `build_check_crew(summaries_text: str, stats_text: str) -> Crew` to `crew.py`.
 
@@ -465,7 +465,7 @@ Tests:
 
 ---
 
-#### 4.14e — Step 3c: dice rolling + ruling tasks
+#### [x] 4.14e — Step 3c: dice rolling + ruling tasks
 
 Add `build_ruling_crew(check_specs: list[dict]) -> Crew` to `crew.py`.
 
@@ -499,7 +499,7 @@ Tests:
 
 ---
 
-#### 4.14f — Step 3d: resolution narrative
+#### [x] 4.14f — Step 3d: resolution narrative
 
 Add `build_narrative_crew(summaries: str, checks: str, results: str) -> Crew` to `crew.py`.
 
@@ -515,7 +515,7 @@ Tests:
 
 ---
 
-#### 4.14g — Step 3e: last action extraction
+#### [x] 4.14g — Step 3e: last action extraction
 
 Add `build_last_action_crew(actor_ids: list[str], summaries: str, checks: str, results: str) -> Crew`
 to `crew.py`.
@@ -544,7 +544,7 @@ Tests:
 
 ---
 
-#### 4.14h — Wire everything in orchestrator
+#### [x] 4.14h — Wire everything in orchestrator
 
 Replace the current Phase 3 block in `run_turn_loop()` with the five-step pipeline:
 
