@@ -111,7 +111,7 @@ Tests:
 
 ---
 
-#### 4.9b — Sequential Crew with Explicit Tasks
+#### [x] 4.9b — Sequential Crew with Explicit Tasks
 
 Rewrite `build_crew()` in `src/showrunner/crew.py`:
 
@@ -141,7 +141,7 @@ Tests:
 
 ---
 
-#### 4.9c — Move Dynamic Context from Backstories to Tasks
+#### [~] 4.9c — Move Dynamic Context from Backstories to Tasks
 
 Currently all per-turn data (scene state, beat info, NPC list) is injected into
 agent backstories. Backstories should be static role descriptions only.

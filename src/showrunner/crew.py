@@ -1,5 +1,5 @@
-# ABOUTME: CrewAI crew assembly — wires agents, tasks, and LiteLLM routing together.
-# ABOUTME: Show Runner is the hierarchical manager; Narrator, Actors, Referee, Scribe are workers.
+# ABOUTME: CrewAI crew assembly — wires agents and tasks into a sequential pipeline.
+# ABOUTME: Show Runner plans; Narrator, Actors, Referee, Scribe execute in order each turn.
 
 from crewai import Crew, Process, Task
 
@@ -17,38 +17,80 @@ def build_crew(
     referee_context: str = "",
     scribe_context: str = "",
 ) -> Crew:
-    """Assemble the full agent crew for a scene beat.
+    """Assemble the sequential agent crew for a scene beat.
 
-    show_runner_context is passed to the Show Runner's task. The *_context params
-    are injected into each worker's backstory so they have scene-specific data
-    regardless of what the Show Runner delegates to them.
+    Each *_context string is injected into the corresponding agent's task description
+    so agents have per-turn scene data without it being baked into their backstories.
     """
     show_runner = create_show_runner()
-    narrator = create_narrator(context=narrator_context)
-    actors = create_actors(context=actors_context)
-    referee = create_referee(context=referee_context)
-    scribe = create_scribe(context=scribe_context)
+    narrator = create_narrator()
+    actors = create_actors()
+    referee = create_referee()
+    scribe = create_scribe()
 
-    tasks = [
-        Task(
-            description=(
-                f"{show_runner_context}\n\n"
-                "Run a single scene beat: assess the current beat, direct the Narrator to "
-                "narrate, handle any player or NPC action, call the Referee if a check is "
-                "triggered, and have the Scribe record the outcome."
-            ),
-            expected_output=(
-                "A complete scene beat: narration delivered to the player, any check resolved, "
-                "and state updated."
-            ),
-            agent=narrator,
+    task_plan = Task(
+        description=(
+            f"{show_runner_context}\n\n"
+            "Plan this beat: decide what the Narrator should describe, which NPCs are "
+            "active and what they do, whether any skill or combat check is required, "
+            "and what state changes the Scribe should record."
         ),
-    ]
+        expected_output=(
+            "A beat plan: narration brief, active NPCs and their intended actions, "
+            "any check to resolve, and state changes to record."
+        ),
+        agent=show_runner,
+    )
+
+    task_narrate = Task(
+        description=(
+            f"{narrator_context}\n\n"
+            "Deliver the narration for this beat based on the beat plan. "
+            "Write in second person. Describe what the player sees, hears, and feels."
+        ),
+        expected_output="Narration text delivered to the player.",
+        agent=narrator,
+        context=[task_plan],
+    )
+
+    task_act = Task(
+        description=(
+            f"{actors_context}\n\n"
+            "Voice the NPCs active this beat per the beat plan. "
+            "Write each NPC's dialogue and actions in character."
+        ),
+        expected_output="NPC dialogue and actions for each active NPC this beat.",
+        agent=actors,
+        context=[task_plan],
+    )
+
+    task_referee = Task(
+        description=(
+            f"{referee_context}\n\n"
+            "Resolve any skill or combat checks triggered this beat per the beat plan. "
+            'If no check is required, output "No check required."'
+        ),
+        expected_output="Check result with dice outcome, or 'No check required.'",
+        agent=referee,
+        context=[task_plan, task_narrate, task_act],
+    )
+
+    task_scribe = Task(
+        description=(
+            f"{scribe_context}\n\n"
+            "Record the outcomes of this beat. Update scene_state.yaml with the current "
+            "beat progression, any NPC knowledge changes, and last_actions for each actor "
+            "who acted this beat. Update party_stats.yaml for any wounds, strain, or "
+            "resource changes."
+        ),
+        expected_output="State files updated; last_actions recorded for each active actor.",
+        agent=scribe,
+        context=[task_plan, task_narrate, task_act, task_referee],
+    )
 
     return Crew(
-        agents=[narrator, actors, referee, scribe],
-        tasks=tasks,
-        manager_agent=show_runner,
-        process=Process.hierarchical,
+        agents=[show_runner, narrator, actors, referee, scribe],
+        tasks=[task_plan, task_narrate, task_act, task_referee, task_scribe],
+        process=Process.sequential,
         verbose=True,
     )
