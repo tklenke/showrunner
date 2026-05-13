@@ -30,13 +30,20 @@ def render_narrator_context(scene: dict, beat_id: str) -> str:
     return "\n".join(lines)
 
 
-def create_narrator() -> Agent:
-    """Return the Narrator agent (Sardinia)."""
+def create_narrator(context: str = "") -> Agent:
+    """Return the Narrator agent (Sardinia).
+
+    context is the rendered beat context from render_narrator_context(); injected
+    into backstory so the Narrator has it regardless of the Show Runner's delegation.
+    """
     cfg = load_agent_configs()["narrator"]
+    backstory = cfg["backstory"]
+    if context:
+        backstory = f"{backstory}\n\n{context}"
     return Agent(
         role=cfg["role"],
         goal=cfg["goal"],
-        backstory=cfg["backstory"],
+        backstory=backstory,
         llm=cfg["llm"],
         tools=[consult_show_runner],
         allow_delegation=cfg["allow_delegation"],

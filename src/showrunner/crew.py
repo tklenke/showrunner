@@ -10,15 +10,15 @@ from showrunner.agents.scribe import create_scribe
 from showrunner.agents.show_runner import create_show_runner
 
 
-def build_crew(show_runner_context: str) -> Crew:
+def build_crew(show_runner_context: str, narrator_context: str = "") -> Crew:
     """Assemble the full agent crew for a scene beat.
 
-    show_runner_context is the rendered scene + runtime state string from
-    render_show_runner_context(). Injected into the task description so the
-    Show Runner has full scene and state context before delegating.
+    show_runner_context is the rendered scene + runtime state string passed to
+    the Show Runner's task. narrator_context is the beat-specific prose context
+    injected into the Narrator's backstory so it has it regardless of delegation.
     """
     show_runner = create_show_runner()
-    narrator = create_narrator()
+    narrator = create_narrator(context=narrator_context)
     actors = create_actors()
     referee = create_referee()
     scribe = create_scribe()

@@ -5,6 +5,7 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
+from showrunner.agents.narrator import render_narrator_context
 from showrunner.agents.show_runner import render_show_runner_context
 from showrunner.crew import build_crew
 from showrunner.tools.state_reader import load_party_stats, load_scene_state
@@ -96,10 +97,11 @@ def run_turn_loop(scene: dict) -> None:
         current_beat = scene_state.get("current_beat", "")
 
         show_runner_ctx = render_show_runner_context(scene, scene_state, party_stats, last_action)
+        narrator_ctx = render_narrator_context(scene, current_beat)
         log.debug(f"Beat: {current_beat}  last_action: {last_action!r}")
 
         print(f"\n--- Beat: {current_beat} ---")
-        crew = build_crew(show_runner_ctx)
+        crew = build_crew(show_runner_ctx, narrator_ctx)
         result = crew.kickoff()
         result_str = str(result)
         print(f"\n{result_str}")
