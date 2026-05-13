@@ -3,7 +3,6 @@ identity:
   species: "Hutt"
   career: "Crime Lord"
   specialization: "Manipulator"
-  player: "ai"
   npc_tier: "nemesis"           # minion | rival | nemesis
   obligation:
     amount: 0
