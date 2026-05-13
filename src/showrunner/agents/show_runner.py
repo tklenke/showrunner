@@ -56,22 +56,28 @@ def render_show_runner_context(
                 )
         lines.append("")
 
-    lines.append("## Scene Beats")
-    for beat in scene.get("beats", []):
-        lines.append(f"[{beat['id']}] {beat['title']}")
-        lines.append(f"  Trigger: {beat['trigger']}")
-        lines.append(f"  Show Runner: {beat['show_runner_notes']}")
-        for check in beat.get("checks", []):
-            lines.append(
-                f"  Check: {check['skill']} difficulty {check['difficulty']}"
-                + (f" — {check['notes']}" if check.get("notes") else "")
-            )
+    beat_ids = [b["id"] for b in scene.get("beats", [])]
+    lines.append(f"## Beat Sequence: {' → '.join(beat_ids)}")
     lines.append("")
 
     # --- Dynamic block (re-evaluated each turn) ---
 
+    current_beat_id = scene_state["current_beat"]
+    lines.append(f"## Current Beat: {current_beat_id}")
+    current_beat = next((b for b in scene.get("beats", []) if b["id"] == current_beat_id), None)
+    if current_beat:
+        lines.append(f"Title: {current_beat['title']}")
+        lines.append(f"Trigger: {current_beat['trigger']}")
+        lines.append(f"Direction: {current_beat['show_runner_notes']}")
+        for check in current_beat.get("checks", []):
+            lines.append(
+                f"Check: {check['skill']} difficulty {check['difficulty']}"
+                + (f" — {check['notes']}" if check.get("notes") else "")
+            )
+    lines.append("")
+
     lines.append("## Current State")
-    lines.append(f"Current Beat: {scene_state['current_beat']}")
+    lines.append(f"Current Beat: {current_beat_id}")
     plans = scene_state.get("character_plans", {})
     if plans:
         lines.append("Character Plans:")
