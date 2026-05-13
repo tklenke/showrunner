@@ -58,7 +58,30 @@ and decides the actual delegation sequence.
 
 ---
 
-## Known Weaknesses
+---
+
+## Target Architecture (4.9 refactor)
+
+```
+Orchestrator: initialize_scene_state() if needed
+              write player's action into last_actions before kickoff
+
+Sequential crew:
+  Task 1 — Show Runner    plan this beat
+  Task 2 — Narrator       narrate (sees task 1)
+  Task 3 — Actors         voice NPCs (sees task 1)
+  Task 4 — Referee        resolve checks (sees tasks 1–3)
+  Task 5 — Scribe         write state (sees tasks 1–4)
+
+Orchestrator: read last_actions back from scene_state for next turn
+```
+
+Dynamic context (beat, state, last_actions) lives in **Task descriptions**.
+Backstories revert to static role definitions only.
+
+---
+
+## Known Weaknesses (current — pre-4.9)
 
 **1. Context is stale within a turn**
 Scene state is baked into agent backstories at crew-build time. If the Scribe writes state

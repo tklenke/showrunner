@@ -79,6 +79,108 @@ Add tests:
 
 ---
 
+### [ ] 4.9 — Sequential Crew Refactor
+
+**Goal:** replace the fragile hierarchical crew with a sequential pipeline where all five
+agents execute in a guaranteed order every turn, each receiving proper per-turn context
+in their task (not baked into backstory).
+
+See `docs/plans/game_loop.md` for the current architecture and known weaknesses this fixes.
+
+---
+
+#### 4.9a — Scene Initialization
+
+Currently `scene_state.yaml` must be pre-populated manually. Initialize it
+programmatically from the scene YAML at session start — no LLM involved.
+
+Add `initialize_scene_state(scene: dict) -> None` to `src/showrunner/tools/state_writer.py`:
+- Sets `current_beat` to `scene["beats"][0]["id"]`
+- Sets `scene_id` from the scene
+- Initializes `npc_knowledge: {}`, `flags: {}`, `last_actions: {}`
+- Writes to `state/scene_state.yaml`
+- Only runs if scene_state does not already exist OR if `scene_id` has changed
+  (so a mid-session restart doesn't wipe state)
+
+Call it from `run_turn_loop()` in `orchestrator.py` before the loop starts.
+
+Tests:
+- New scene → state file created with correct first beat and empty collections
+- Same scene already initialized → existing state is preserved (no overwrite)
+- Different scene_id → state is re-initialized
+
+---
+
+#### 4.9b — Sequential Crew with Explicit Tasks
+
+Rewrite `build_crew()` in `src/showrunner/crew.py`:
+
+**Process:** `Process.sequential` (remove `manager_agent`, remove `Process.hierarchical`)
+
+**Five tasks in order**, each with a focused description carrying dynamic context:
+
+| # | Agent | Task description carries | Expected output |
+|---|---|---|---|
+| 1 | Show Runner | scene state, beat, last_actions, party stats | Beat plan: what to narrate, which NPCs act, any check needed |
+| 2 | Narrator | Show Runner output (via `context=[task1]`) | Read-aloud narration for the player |
+| 3 | Actors | Show Runner output + NPC data | NPC dialogue and actions for this beat |
+| 4 | Referee | Show Runner + Narrator + Actors output | Check result, or "no check required" |
+| 5 | Scribe | All prior outputs | Writes state files; records last_actions per actor |
+
+Wire task context chaining: `Task(context=[prior_task, ...])` so each agent sees
+relevant prior outputs without the Show Runner having to pass them manually.
+
+`build_crew()` signature stays the same from the orchestrator's perspective —
+it still receives the context strings, they just go into Task descriptions now
+instead of agent backstories.
+
+Tests:
+- `build_crew()` returns a `Crew` with `Process.sequential`
+- Crew has exactly 5 tasks in the correct agent order
+- Task 5 (Scribe) has context referencing all 4 prior tasks
+
+---
+
+#### 4.9c — Move Dynamic Context from Backstories to Tasks
+
+Currently all per-turn data (scene state, beat info, NPC list) is injected into
+agent backstories. Backstories should be static role descriptions only.
+
+For each agent (`create_narrator`, `create_actors`, `create_referee`, `create_scribe`,
+`create_show_runner`):
+- Remove the `context` parameter and the backstory-append logic
+- Backstory reverts to the static text from `config/agents.yaml` only
+
+The dynamic context now lives exclusively in task descriptions (wired in 4.9b).
+The `*_context` params move from `build_crew()` into the Task description strings
+built inside `build_crew()`.
+
+Tests: update existing tests that pass context strings to agent constructors.
+
+---
+
+#### 4.9d — last_actions Tracking
+
+Add `last_actions` to the scene state schema: a dict of `{actor_name: action_summary}`.
+
+The Scribe's task description instructs it to call `write_state` with `last_actions`
+containing one entry per actor who acted this beat (player character + any active NPCs).
+
+In `orchestrator.py`:
+- Remove the `last_action: str` variable
+- After `kickoff()`, read `last_actions` from `load_scene_state()`
+- Pass `last_actions` dict into the Show Runner task description next turn
+
+The player's action is still collected via `prompt_player_action()`, but it is written
+into `last_actions` by the orchestrator directly (not by the Scribe) under the PC's name
+before the next `crew.kickoff()`.
+
+Tests:
+- `initialize_scene_state` produces `last_actions: {}` 
+- After the Scribe writes, `last_actions` contains expected actor entries
+
+---
+
 ### [~] 4.8 — End-to-End Scene Playthrough
 
 No tests for this task — this is exploratory play. Run `src/showrunner/main.py` and
