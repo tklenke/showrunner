@@ -10,12 +10,10 @@ Play is organised into four nested levels:
 | **Session** | One continuous run from startup to quit |
 | **Scene** | A self-contained event at a location (`state/scene_N.yaml`) |
 | **Beat** | A dramatic sub-unit within a scene — arrival, negotiation, combat, debrief |
-| **Turn** | One agent cycle: Narrator assesses → agents act → Referee resolves → Scribe records |
+| **Turn** | One agent cycle: player acts → companions and NPCs respond → Show Runner identifies and resolves checks → Narrator delivers the outcome |
 
 A beat can span multiple turns. A combat beat runs one turn per round until the fight ends.
-A simple arrival beat might resolve in a single turn. The CLI beat prompt lets you advance to
-the next beat once the current one feels complete. Press Enter to move to the next beat in
-sequence, or type a beat ID to jump to a specific one.
+A simple arrival beat might resolve in a single turn.
 
 ---
 
@@ -37,6 +35,8 @@ export GEMINI_API_KEY=your_key_here
 echo "GEMINI_API_KEY=your_key_here" > .env
 ```
 
+---
+
 ## Running a Session
 
 ```bash
@@ -44,11 +44,29 @@ source venv/bin/activate
 python -m showrunner.main
 ```
 
-Loads `state/scene_0.yaml` by default (Bargos mansion, Act 1). To start on a different scene:
+Loads `state/scene_0.yaml` by default (Bargos mansion, Act 1).
+
+**Options:**
 
 ```bash
-python -m showrunner.main 1   # scene_1.yaml
+python -m showrunner.main          # scene 0 (default)
+python -m showrunner.main 1        # scene 1
+python -m showrunner.main -v       # verbose: labels each output block by step
+python -m showrunner.main 1 -v     # scene 1, verbose
 ```
+
+**During a session:**
+
+At the end of each turn you are prompted for beat advancement:
+
+```
+[Enter]       stay on the current beat
+a             advance to the next beat
+<beat-id>     jump to a specific beat (e.g. gamorrean_rumble)
+q             quit the session
+```
+
+---
 
 ## Running Tests
 
