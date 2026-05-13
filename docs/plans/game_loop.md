@@ -18,27 +18,7 @@ end of each turn. Multiple turns can execute within the same beat.
 
 ---
 
-## Step 0a — Beat Initialization (turn 1 of each beat only)
-
-Fires when `current_beat` differs from the previous turn's beat. Skipped on all
-subsequent turns within the same beat.
-
-1. Look up the current beat dict in the scene YAML by `id`
-2. Append `show_runner_notes` and `narrator_notes` to the context strings passed
-   into Step 1, prefixed as authoritative direction:
-   ```
-   ## Beat Director Notes:
-   {beat["show_runner_notes"]}
-   ```
-3. If `--verbose`: print `=== {beat["title"]} ===` to terminal
-4. Log the transition regardless: `Beat transition: {beat_id}`
-
-Purely programmatic — no LLM call. Agents in Steps 1–8 then operate within the
-correctly-established beat frame.
-
----
-
-## Step 0b — State Loading (every turn, before any LLM calls)
+## Step 0 — State Loading + Beat Initialization (every turn, before any LLM calls)
 
 The orchestrator reads current state and renders context strings passed into each step:
 
@@ -48,6 +28,18 @@ The orchestrator reads current state and renders context strings passed into eac
 | Wounds, strain per character | `state/party_stats.yaml` | Steps 1, 3–5 |
 | Beat descriptions, NPC defs, location text | scene YAML (read-only) | all steps |
 | Player's action from previous turn | `last_actions` in scene_state | Step 1 Show Runner context |
+
+**Beat initialization (first turn of each beat only):**
+1. Compare `current_beat` against `_last_beat`; if different, a transition is detected
+2. Look up the current beat dict from `scene["beats"]` by `id == current_beat`
+3. Append `show_runner_notes` and `narrator_notes` from the beat to the `sr_ctx` and
+   `narrator_ctx` strings passed into Step 1 — prefixed with `## Beat Director Notes:`
+4. If `verbose`: print `\n=== {beat["title"]} ===` to terminal
+5. Log the transition: `log.info(f"Beat transition: {current_beat}")`
+6. Set `_last_beat = current_beat`
+
+`_beat_notes_pending = True` is set before the turn loop starts so the first beat always
+initializes correctly.
 
 ---
 
