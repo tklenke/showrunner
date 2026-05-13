@@ -85,20 +85,13 @@ def render_referee_context(scene: dict, beat_id: str) -> str:
     return "\n".join(lines)
 
 
-def create_referee(context: str = "") -> Agent:
-    """Return the Referee agent (Alien).
-
-    context is rendered beat/scene data from render_referee_context(); appended
-    to backstory so the Referee has it regardless of the Show Runner's delegation.
-    """
+def create_referee() -> Agent:
+    """Return the Referee agent (Alien)."""
     cfg = load_agent_configs()["referee"]
-    backstory = build_referee_backstory()
-    if context:
-        backstory = f"{backstory}\n\n{context}"
     return Agent(
         role=cfg["role"],
         goal=cfg["goal"],
-        backstory=backstory,
+        backstory=build_referee_backstory(),
         llm=cfg["llm"],
         tools=[roll_dice, read_state, consult_show_runner],
         allow_delegation=cfg["allow_delegation"],

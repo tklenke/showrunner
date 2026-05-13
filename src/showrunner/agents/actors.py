@@ -143,20 +143,13 @@ def load_scene_characters(scene: dict, scene_state: dict, characters_dir: str = 
     return result
 
 
-def create_actors(context: str = "") -> Agent:
-    """Return the Actors agent (Sardinia).
-
-    context is the rendered NPC character data from load_scene_characters(); appended
-    to backstory so the agent knows which characters are present and how to voice them.
-    """
+def create_actors() -> Agent:
+    """Return the Actors agent (Sardinia)."""
     cfg = load_agent_configs()["actors"]
-    backstory = cfg["backstory"]
-    if context:
-        backstory = f"{backstory}\n\n{context}"
     return Agent(
         role=cfg["role"],
         goal=cfg["goal"],
-        backstory=backstory,
+        backstory=cfg["backstory"],
         llm=cfg["llm"],
         tools=[read_state, consult_show_runner],
         allow_delegation=cfg["allow_delegation"],

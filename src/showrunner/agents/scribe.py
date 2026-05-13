@@ -39,20 +39,13 @@ def render_scribe_context(scene_state: dict, party_stats: dict) -> str:
     return "\n".join(lines)
 
 
-def create_scribe(context: str = "") -> Agent:
-    """Return the Scribe agent (Alien).
-
-    context is the rendered state snapshot from render_scribe_context(); appended
-    to backstory so the Scribe has it regardless of the Show Runner's delegation.
-    """
+def create_scribe() -> Agent:
+    """Return the Scribe agent (Alien)."""
     cfg = load_agent_configs()["scribe"]
-    backstory = cfg["backstory"]
-    if context:
-        backstory = f"{backstory}\n\n{context}"
     return Agent(
         role=cfg["role"],
         goal=cfg["goal"],
-        backstory=backstory,
+        backstory=cfg["backstory"],
         llm=cfg["llm"],
         tools=[read_state, write_state, consult_show_runner],
         allow_delegation=cfg["allow_delegation"],
