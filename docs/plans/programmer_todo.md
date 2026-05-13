@@ -262,7 +262,7 @@ Acceptable outcomes in priority order:
 
 ---
 
-### [ ] 4.13 — Three-Phase Turn Loop with Per-Check Referee Isolation
+### [x] 4.13 — Three-Phase Turn Loop with Per-Check Referee Isolation
 
 See `docs/plans/architect_todo.md` — "Resolved Decisions: Turn Loop" for the full
 design rationale and Option A vs B discussion. Option B was chosen.

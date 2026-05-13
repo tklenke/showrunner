@@ -75,7 +75,7 @@ def verbose_to_file(log_path: Path):
 
     real_stdout = sys.stdout
     log_path.parent.mkdir(parents=True, exist_ok=True)
-    f = log_path.open("w")
+    f = log_path.open("a")
 
     old_rich_console = event_listener.formatter.console
     file_console = Console(file=f, width=200)

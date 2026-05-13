@@ -1,18 +1,17 @@
-# ABOUTME: Main turn loop — sequences agent calls for each scene beat.
-# ABOUTME: Narrator decides beat → World Runner narrates → player/actor acts → Referee checks → Scribe records.
+# ABOUTME: Main turn loop — three-phase sequential agent pipeline per turn.
+# ABOUTME: Phase 1: NPC wave. Phase 2: PC wave + check ID. Phase 3: resolution + scribe.
 
 import logging
 from datetime import datetime
 from pathlib import Path
 
-
 from showrunner.agents.actors import load_scene_characters
-from showrunner.config import load_agent_configs
 from showrunner.agents.narrator import render_narrator_context
 from showrunner.agents.referee import render_referee_context
 from showrunner.agents.scribe import render_scribe_context
 from showrunner.agents.show_runner import render_show_runner_context
-from showrunner.crew import build_crew
+from showrunner.config import load_agent_configs
+from showrunner.crew import build_npc_crew, build_pc_crew, build_resolution_crew
 from showrunner.instrumentation import setup_instrumentation, verbose_to_file
 from showrunner.tools.state_reader import load_party_stats, load_scene_state
 from showrunner.tools.state_writer import advance_beat, initialize_scene_state, update_scene_state
@@ -49,7 +48,7 @@ _DIVIDER = "─" * 60
 def prompt_player_action(character_name: str) -> str:
     """Prompt the CLI for the human player's action and return their input."""
     print(f"\n{_DIVIDER}")
-    return input(f"  What does {character_name} do? > ")
+    return input(f"  What do you and your companions do? > ")
 
 
 def _next_beat_id(scene: dict, current_beat_id: str) -> str | None:
@@ -83,12 +82,58 @@ def _beat_prompt(scene: dict, current_beat_id: str) -> str:
     return choice
 
 
-def run_turn_loop(scene: dict) -> None:
-    """Run the agent turn loop for a loaded adventure scene.
+def _parse_check_specs(review_output: str) -> list[dict]:
+    """Parse the Show Runner review output into a list of check spec dicts.
 
-    Each iteration builds context from current state, kicks off a CrewAI
-    hierarchical run, then continues until the player quits or the scene exits.
+    Expects either "NO_CHECKS" or a CHECKS:/CHECKS_END block:
+        CHECKS:
+        1. actor | skill | characteristic | difficulty | notes
+        CHECKS_END
     """
+    if "NO_CHECKS" in review_output:
+        return []
+    specs = []
+    in_checks = False
+    for line in review_output.splitlines():
+        stripped = line.strip()
+        if "CHECKS:" in stripped:
+            in_checks = True
+            continue
+        if "CHECKS_END" in stripped:
+            break
+        if in_checks and stripped and stripped[0].isdigit():
+            content = stripped.split(".", 1)[1].strip() if "." in stripped else stripped
+            parts = [p.strip() for p in content.split("|")]
+            if len(parts) >= 4:
+                specs.append({
+                    "actor": parts[0],
+                    "skill": parts[1],
+                    "characteristic": parts[2],
+                    "difficulty": parts[3],
+                    "notes": parts[4] if len(parts) > 4 else "",
+                })
+    return specs
+
+
+def _collect_wave_outputs(crew, role: str) -> dict[str, str]:
+    """Return {task.name: output.raw} for all tasks matching the given agent role."""
+    return {
+        task.name: (task.output.raw.strip() if task.output else "")
+        for task in crew.tasks
+        if task.agent.role == role and task.name
+    }
+
+
+def _get_task_output(crew, role: str) -> str:
+    """Return output.raw for the first task matching the given agent role."""
+    for task in crew.tasks:
+        if task.agent.role == role and task.output:
+            return task.output.raw.strip()
+    return ""
+
+
+def run_turn_loop(scene: dict) -> None:
+    """Run the three-phase agent turn loop for a loaded adventure scene."""
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     log = _setup_session_log(timestamp)
     verbose_path, prompts_path, prompt_logger = setup_instrumentation(
@@ -113,69 +158,101 @@ def run_turn_loop(scene: dict) -> None:
         current_beat = scene_state.get("current_beat", "")
         last_actions = scene_state.get("last_actions", {})
 
-        show_runner_ctx = render_show_runner_context(scene, scene_state, party_stats, last_actions)
+        # Contexts built once per turn (state hasn't changed mid-turn)
+        sr_ctx = render_show_runner_context(scene, scene_state, party_stats, last_actions)
         narrator_ctx = render_narrator_context(scene, current_beat, last_actions, party_stats)
         referee_ctx = render_referee_context(scene, current_beat)
         scribe_ctx = render_scribe_context(scene_state, party_stats)
-        scene_chars = load_scene_characters(scene, scene_state)
-        log.debug(f"Beat: {current_beat}  last_actions: {last_actions!r}  npcs: {list(scene_chars)}")
 
-        print(f"\n--- Beat: {current_beat} ---")
-        crew = build_crew(
-            show_runner_ctx,
-            narrator_context=narrator_ctx,
-            actors_contexts=scene_chars if scene_chars else None,
-            referee_context=referee_ctx,
-            scribe_context=scribe_ctx,
+        npc_chars = load_scene_characters(scene, scene_state, player_filter="npc")
+        ai_pc_chars = load_scene_characters(scene, scene_state, player_filter="ai")
+
+        log.debug(
+            f"Beat: {current_beat}  npcs: {list(npc_chars)}  ai_pcs: {list(ai_pc_chars)}"
         )
+        print(f"\n--- Beat: {current_beat} ---")
+
+        # ── Phase 1: NPC wave ────────────────────────────────────────────────
+        npc_crew = build_npc_crew(sr_ctx, narrator_ctx, npc_chars)
         with verbose_to_file(verbose_path):
-            crew.kickoff()
+            npc_crew.kickoff()
 
-        # Display player-facing outputs in narrative order.
-        npc_last_actions = {}
-        scribe_summary = ""
-        for task in crew.tasks:
-            role = task.agent.role
-            raw = task.output.raw.strip() if task.output else ""
-            if role == "Narrator":
-                print(f"\n{raw}")
-            elif role == "NPC Voice Actor":
-                npc_id = getattr(task, "name", None) or role
-                print(f"\n[{npc_id}]\n{raw}")
-                npc_last_actions[npc_id] = raw
-            elif role == "Rules Engine" and raw and "no check" not in raw.lower():
-                print(f"\n[Referee]\n{raw}")
-            elif role == "State Keeper":
-                scribe_summary = raw
+        narrator_text = _get_task_output(npc_crew, "Narrator")
+        npc_outputs = _collect_wave_outputs(npc_crew, "NPC Voice Actor")
 
-        log.info(f"Beat outputs collected: narrator + {len(npc_last_actions)} NPCs")
+        if narrator_text:
+            print(f"\n{narrator_text}")
+        for npc_id, text in npc_outputs.items():
+            if text:
+                print(f"\n[{npc_id}]\n{text}")
 
-        # Write last_actions: NPC outputs + player action added below after prompt.
-        if npc_last_actions:
-            update_scene_state({"last_actions": npc_last_actions})
+        log.info(f"Phase 1 complete: {len(npc_outputs)} NPCs voiced")
 
-        # Append session log entry written by Scribe.
-        if scribe_summary:
-            log_path = Path("state/session_log.md")
-            with log_path.open("a") as f:
-                f.write(f"{scribe_summary}\n")
-            log.info(f"Session log: {scribe_summary[:120]}")
-
+        # ── Player input ─────────────────────────────────────────────────────
         player_action = prompt_player_action("Z-4P0")
-        log.info(f"Z-4P0: {player_action!r}")
+        log.info(f"Player action: {player_action!r}")
 
         if player_action.strip().lower() in ("quit", "exit", "q"):
             print("Session ended.")
             log.info("Session ended by player.")
             break
 
+        # ── Phase 2: PC wave + check identification ──────────────────────────
+        npc_wave_text = "\n\n".join(
+            f"[{npc_id}]: {text}" for npc_id, text in npc_outputs.items()
+        )
+
+        pc_crew = build_pc_crew(npc_wave_text, ai_pc_chars, player_action, sr_ctx)
+        with verbose_to_file(verbose_path):
+            pc_crew.kickoff()
+
+        ai_pc_outputs = _collect_wave_outputs(pc_crew, "NPC Voice Actor")
+        review_output = _get_task_output(pc_crew, "Show Runner")
+
+        for pc_id, text in ai_pc_outputs.items():
+            if text:
+                print(f"\n[{pc_id}]\n{text}")
+
+        check_specs = _parse_check_specs(review_output)
+        log.info(f"Phase 2 complete: {len(check_specs)} checks identified")
+
+        # ── Phase 3: Resolution ───────────────────────────────────────────────
+        full_turn_summary = (
+            npc_wave_text
+            + "\n\n"
+            + "\n\n".join(f"[{k}]: {v}" for k, v in ai_pc_outputs.items())
+            + f"\n\n[Z-4P0]: {player_action}"
+        )
+
+        resolution_crew = build_resolution_crew(check_specs, scribe_ctx, full_turn_summary)
+        with verbose_to_file(verbose_path):
+            resolution_crew.kickoff()
+
+        for task in resolution_crew.tasks:
+            if task.agent.role == "Rules Engine" and task.output:
+                result_text = task.output.raw.strip()
+                if result_text and "no check" not in result_text.lower():
+                    print(f"\n[Referee]\n{result_text}")
+
+        scribe_summary = _get_task_output(resolution_crew, "State Keeper")
+        log.info(f"Phase 3 complete: {len(check_specs)} checks resolved")
+
+        # ── State writes ──────────────────────────────────────────────────────
+        all_last_actions = {**npc_outputs, **ai_pc_outputs, "Z-4P0": player_action}
+        update_scene_state({"last_actions": all_last_actions})
+
+        if scribe_summary:
+            log_path = Path("state/session_log.md")
+            with log_path.open("a") as f:
+                f.write(f"{scribe_summary}\n")
+            log.info(f"Session log: {scribe_summary[:120]}")
+
+        # ── Beat advancement ──────────────────────────────────────────────────
         choice = _beat_prompt(scene, current_beat)
         if choice in ("quit", "exit", "q"):
             print("Session ended.")
             log.info("Session ended by player.")
             break
-
-        update_scene_state({"last_actions": {"Z-4P0": player_action}})
 
         if choice == "stay":
             log.info(f"Staying on beat: {current_beat}")
