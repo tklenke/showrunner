@@ -22,6 +22,80 @@ Reference documents:
 
 ---
 
+### [ ] 4.8a — Session Instrumentation
+
+New file: `src/showrunner/instrumentation.py`
+
+#### Verbose log — CrewAI output to file
+
+Redirect `sys.stdout` to `logs/verbose_TIMESTAMP.log` for the duration of `crew.kickoff()`,
+then restore it. All user-facing `print()` calls in `run_turn_loop()` happen outside that
+window, so they stay on the terminal.
+
+Implement as a context manager `verbose_to_file(log_path: Path)`.
+
+#### Prompt/response log — LiteLLM callback
+
+Register a `CustomLogger` subclass via `litellm.callbacks` at session startup. It writes
+every prompt and response to `logs/prompts_TIMESTAMP.log` in this format:
+
+```
+2026-05-12 16:45:23 | gemini | prompt
+================================================================================
+[system]
+You are the Show Runner...
+
+[user]
+Run a single scene beat...
+================================================================================
+
+2026-05-12 16:45:25 | gemini | response
+================================================================================
+The Gamorreans have arrived...
+================================================================================
+```
+
+**Server name mapping**: at startup, read `config/litellm.yaml` and build a reverse map
+from `litellm_params.model` → the prefix of `model_name`. Example:
+`"openai/Llama-3.2-3B-Instruct.gguf"` → `"alien"`. Use this map in the callback to
+resolve the server label from the model string LiteLLM passes to the callback.
+
+#### Functions to implement in `instrumentation.py`
+
+- `_build_server_map(config_path: Path) -> dict[str, str]`
+- `_PromptLogger(CustomLogger)` — implements `log_pre_api_call` (writes prompt block) and
+  `log_success_event` (writes response block)
+- `verbose_to_file(log_path: Path)` — context manager for stdout redirect
+- `setup_instrumentation(timestamp: str) -> tuple[Path, Path]` — registers the LiteLLM
+  callback, returns `(verbose_path, prompts_path)`
+
+#### Changes to `orchestrator.py`
+
+- Call `setup_instrumentation(timestamp)` alongside `_setup_session_log`; use the same
+  `timestamp` string so all three log files share a common prefix
+- Print both paths at session start:
+  `Verbose log: logs/verbose_TIMESTAMP.log  (tail -f to watch)`
+  `Prompt log:  logs/prompts_TIMESTAMP.log`
+- Wrap `crew.kickoff()` with `verbose_to_file(verbose_path)`
+
+#### Tests (`tests/test_instrumentation.py`)
+
+- `test_server_map_alien` — alien model string maps to `"alien"`
+- `test_server_map_sardinia` — sardinia model string maps to `"sardinia"`
+- `test_server_map_gemini` — gemini model string maps to `"gemini"`
+- `test_server_for_known_model` — `_PromptLogger._server_for` returns correct label
+- `test_server_for_unknown_model_returns_model` — unknown model falls back to model string
+- `test_format_messages_single` — single message formatted with role header
+- `test_format_messages_multiple_roles` — system + user both present and labelled
+- `test_write_creates_file` — `_write` creates the log file
+- `test_write_format_contains_header_fields` — server, type, and text all present
+- `test_write_appends_on_multiple_calls` — both entries present after two writes
+- `test_verbose_redirect_captures_stdout` — output inside context lands in file
+- `test_verbose_redirect_restores_stdout` — `sys.stdout` is the real stdout after exit
+- `test_verbose_redirect_restores_stdout_on_exception` — restored even if exception raised
+
+---
+
 ### [~] 4.8 — End-to-End Scene Playthrough
 
 No tests for this task — this is exploratory play. Run `src/showrunner/main.py` and
