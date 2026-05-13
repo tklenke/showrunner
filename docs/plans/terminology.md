@@ -71,3 +71,21 @@ via `config/litellm.yaml`.
 | `"human"` | PC | User via CLI |
 | `"companion"` | Companion | Actors agent, direction from User |
 | *(omitted)* | NPC | Show Runner / plot |
+
+
+## Abbreviations and Acronyms
+
+| Abbreviation | Meaning | Notes |
+|-------------|---------|-------|
+| **SR** | Show Runner | The GM-brain agent |
+| **PC** | Player Character | `player: "human"` |
+| **NPC** | Non-Player Character | No `player` field |
+| **GM** | Game Master | The human role SR emulates |
+| **FFG** | Fantasy Flight Games | Publisher of the Genesys / Star Wars RPG system |
+| **LLM** | Large Language Model | The AI models running on Sardinia, Alien, and Gemini |
+| **CLI** | Command Line Interface | The terminal prompt the User interacts with |
+| **GLMD** | `game_loop.md` | Shorthand for the game loop source-of-truth document |
+| **TDD** | Test-Driven Development | Required workflow — see CLAUDE.md |
+| **YAGNI** | You Ain't Gonna Need It | Core design principle — see CLAUDE.md |
+
+*Tom is the User in all current examples. "User" is the preferred term in code and docs.*
