@@ -165,6 +165,18 @@ def test_dump_md_file_contains_system_user_response_sections(tmp_path):
     assert "# Response\nTHE RESPONSE" in content
 
 
+def test_dump_md_file_contains_call_id(tmp_path):
+    from showrunner.instrumentation import _PromptLogger
+    log_file = tmp_path / "prompts.log"
+    dump_dir = tmp_path / "prompts"
+    dump_dir.mkdir()
+    logger = _PromptLogger(log_file, dump_dir=dump_dir)
+    logger.log("narrator", "sardinia", "step", 10, 5,
+               system_prompt="s", user_message="u", response="r")
+    content = list(dump_dir.glob("*.md"))[0].read_text()
+    assert "0001" in content
+
+
 def test_setup_instrumentation_dump_prompts_creates_subdir(tmp_path, monkeypatch):
     import showrunner.llm
     monkeypatch.setattr(showrunner.llm, "setup_llm_logging", lambda *a, **kw: None)

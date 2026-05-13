@@ -31,7 +31,7 @@ class _PromptLogger:
             f.write(line)
         if self._dump_dir is not None:
             filename = f"{self._call_id:04d}_{agent}_{step_col}.md"
-            content = f"# System\n{system_prompt}\n\n# User\n{user_message}\n\n# Response\n{response}\n"
+            content = f"ID: {self._call_id:04d}\n\n# System\n{system_prompt}\n\n# User\n{user_message}\n\n# Response\n{response}\n"
             (self._dump_dir / filename).write_text(content)
 
 
