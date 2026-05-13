@@ -52,7 +52,8 @@ initializes correctly.
 | Output | 2–3 sentences of player-facing prose describing the current situation |
 | Prints | Directly to terminal, before Step 1 prompt |
 
-On subsequent turns the resolution narrative from Step 7 provides orientation.
+- One `call_llm()` — first turn of each beat only.
+- On subsequent turns the resolution narrative from Step 7 provides orientation.
 
 ---
 
@@ -147,8 +148,10 @@ dice pool without further lookups.
 | Output | Outcome ruling: passed/failed, wounds, triumph/despair effects |
 | Writes | `logs/turn_{ts}_{beat}_results.txt` |
 
-The **orchestrator** rolls the dice in Python (`roll_pool()`) before calling `run_rulings()`.
-Each ruling call receives all prior rulings as context. Skipped entirely if `NO_CHECKS`.
+- One `call_llm()` per check. Skipped entirely if `NO_CHECKS`.
+- The **orchestrator** rolls dice in Python (`roll_pool()`) before each call — the LLM
+  receives a pre-computed result and rules on it; it does not roll.
+- Each call receives all prior rulings as context.
 
 ---
 
@@ -161,6 +164,8 @@ Each ruling call receives all prior rulings as context. Skipped entirely if `NO_
 | Output | 2–4 sentences of player-facing narrative prose |
 | Prints | Directly to terminal |
 
+- One `call_llm()`.
+
 ---
 
 ## Step 8 — Last Action Extraction (`run_last_actions()`)
@@ -171,7 +176,8 @@ Each ruling call receives all prior rulings as context. Skipped entirely if `NO_
 | Input | That character's summary |
 | Output | One sentence capturing that character's last action |
 
-Orchestrator writes the collected dict to `scene_state.yaml` → `last_actions`.
+- One `call_llm()` per active character (NPCs + Companions + PC).
+- Orchestrator writes the collected dict to `scene_state.yaml` → `last_actions`.
 
 ---
 
@@ -186,9 +192,11 @@ SR reviews the full turn and updates each character's plan for next turn.
 N calls: SR  →  overall plan + that character's situation         →  individual plan
 ```
 
+- One `call_llm()` for the overall plan.
+- One `call_llm()` per character (NPC and Companion, same code path) for individual plans.
+- Total: 1 + N `call_llm()` calls for N characters.
 - The overall plan is SR's private coordination notes — logged for debugging but never
   shared with characters.
-- One individual plan call per NPC and Companion (same code path for both).
 - Orchestrator writes updated plans to `scene_state.yaml` → `character_plans`.
 
 ---
@@ -201,7 +209,8 @@ N calls: SR  →  overall plan + that character's situation         →  individ
 | Input | Scene state + full turn summary |
 | Output | One-sentence narrative record of the turn |
 
-Orchestrator appends output to `state/session_log.md`.
+- One `call_llm()`.
+- Orchestrator appends output to `state/session_log.md`.
 
 ---
 
