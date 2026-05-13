@@ -12,7 +12,6 @@ logging.getLogger("crewai.telemetry").setLevel(logging.ERROR)
 
 from showrunner.orchestrator import run_turn_loop
 from showrunner.tools.state_reader import load_adventure_scene
-from showrunner.tools.state_writer import initialize_scene_state
 
 
 def main() -> None:
@@ -25,8 +24,6 @@ def main() -> None:
 
     n = int(sys.argv[1]) if len(sys.argv) > 1 else 0
     scene = load_adventure_scene(n)
-    initialize_scene_state(n, scene["beats"][0]["id"])
-
     run_turn_loop(scene)
 
 
