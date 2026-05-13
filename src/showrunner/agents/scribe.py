@@ -4,7 +4,6 @@
 from crewai import Agent
 
 from showrunner.config import load_agent_configs
-from showrunner.tools.agent_tools import consult_show_runner, read_state, write_state
 
 
 def render_scribe_context(scene_state: dict, party_stats: dict) -> str:
@@ -47,7 +46,7 @@ def create_scribe() -> Agent:
         goal=cfg["goal"],
         backstory=cfg["backstory"],
         llm=cfg["llm"],
-        tools=[read_state, write_state, consult_show_runner],
+        tools=[],
         allow_delegation=cfg["allow_delegation"],
         verbose=cfg["verbose"],
     )

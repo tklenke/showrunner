@@ -129,10 +129,37 @@ def run_turn_loop(scene: dict) -> None:
             scribe_context=scribe_ctx,
         )
         with verbose_to_file(verbose_path):
-            result = crew.kickoff()
-        result_str = str(result)
-        print(f"\n{result_str}")
-        log.info(f"Beat result: {result_str[:200]}")
+            crew.kickoff()
+
+        # Display player-facing outputs in narrative order.
+        npc_last_actions = {}
+        scribe_summary = ""
+        for task in crew.tasks:
+            role = task.agent.role
+            raw = task.output.raw.strip() if task.output else ""
+            if role == "Narrator":
+                print(f"\n{raw}")
+            elif role == "NPC Voice Actor":
+                npc_id = getattr(task, "name", None) or role
+                print(f"\n[{npc_id}]\n{raw}")
+                npc_last_actions[npc_id] = raw
+            elif role == "Rules Engine" and raw and "no check" not in raw.lower():
+                print(f"\n[Referee]\n{raw}")
+            elif role == "State Keeper":
+                scribe_summary = raw
+
+        log.info(f"Beat outputs collected: narrator + {len(npc_last_actions)} NPCs")
+
+        # Write last_actions: NPC outputs + player action added below after prompt.
+        if npc_last_actions:
+            update_scene_state({"last_actions": npc_last_actions})
+
+        # Append session log entry written by Scribe.
+        if scribe_summary:
+            log_path = Path("state/session_log.md")
+            with log_path.open("a") as f:
+                f.write(f"{scribe_summary}\n")
+            log.info(f"Session log: {scribe_summary[:120]}")
 
         player_action = prompt_player_action("Z-4P0")
         log.info(f"Z-4P0: {player_action!r}")

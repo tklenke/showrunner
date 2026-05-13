@@ -58,6 +58,7 @@ def build_crew(
     for npc_id, npc_prompt in (actors_contexts or {}).items():
         actor = create_actors()
         npc_task = Task(
+            name=npc_id,
             description=(
                 f"{npc_prompt}\n\n"
                 f"Voice {npc_id} this beat per the beat plan. "
@@ -84,12 +85,11 @@ def build_crew(
     task_scribe = Task(
         description=(
             f"{scribe_context}\n\n"
-            "Record the outcomes of this beat. Update scene_state.yaml with the current "
-            "beat progression, any NPC knowledge changes, and last_actions for each actor "
-            "who acted this beat. Update party_stats.yaml for any wounds, strain, or "
-            "resource changes."
+            "Write a single sentence summarising what happened this beat for the session log. "
+            "Format: '<what happened this beat in plain past tense>'. "
+            "Do not call any tools. Output only the summary sentence, nothing else."
         ),
-        expected_output="State files updated; last_actions recorded for each active actor.",
+        expected_output="One sentence: a plain past-tense summary of this beat's events.",
         agent=scribe,
         context=[task_plan, task_narrate] + npc_tasks + [task_referee],
     )

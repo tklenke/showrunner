@@ -58,3 +58,11 @@ def test_scribe_context_includes_log_format():
     from showrunner.agents.scribe import render_scribe_context
     output = render_scribe_context(SCENE_STATE, PARTY_STATS)
     assert "YYYY-MM-DD" in output
+
+
+def test_scribe_has_no_tools():
+    import os
+    os.environ.setdefault("GEMINI_API_KEY", "test-key")
+    from showrunner.agents.scribe import create_scribe
+    scribe = create_scribe()
+    assert not scribe.tools

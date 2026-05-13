@@ -181,7 +181,7 @@ Tests:
 
 ---
 
-### [ ] 4.10a — Display Agent Outputs to Player
+### [x] 4.10a — Display Agent Outputs to Player
 
 Currently `crew.kickoff()` returns only the last task's output (State Keeper), which is
 printed verbatim. The Narrator's prose, NPC dialogue, and Referee results are buried in
@@ -199,7 +199,7 @@ Tests:
 
 ---
 
-### [ ] 4.10b — Move State Writing from Scribe to Orchestrator
+### [x] 4.10b — Move State Writing from Scribe to Orchestrator
 
 The Scribe (Alien 3B) cannot reliably call tools in a ReAct loop. It outputs tool call
 syntax as text in its Final Answer (`Action: write_state { ... }`) instead of invoking
