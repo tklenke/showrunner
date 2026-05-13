@@ -46,9 +46,9 @@ def test_human_player_turn_prompts_cli(monkeypatch):
     assert result == "Zee scans the exits."
 
 
-def test_ai_character_detected_correctly():
+def test_companion_character_detected_correctly():
     from showrunner.orchestrator import is_human_character
-    assert not is_human_character({"identity": {"player": "ai"}})
+    assert not is_human_character({"identity": {"player": "companion"}})
 
 
 def test_human_character_detected_correctly():

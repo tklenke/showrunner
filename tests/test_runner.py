@@ -78,43 +78,43 @@ def test_run_npc_wave_prints_npc_output_with_id(capsys):
 
 
 # ---------------------------------------------------------------------------
-# run_pc_wave
+# run_companion_wave
 # ---------------------------------------------------------------------------
 
-def test_run_pc_wave_empty_returns_empty_dict():
-    from showrunner.runner import run_pc_wave
-    result = run_pc_wave("npc wave text", {}, "player did something")
+def test_run_companion_wave_empty_returns_empty_dict():
+    from showrunner.runner import run_companion_wave
+    result = run_companion_wave("npc wave text", {}, "player did something")
     assert result == {}
 
 
-def test_run_pc_wave_calls_actors_once_per_ai_pc():
-    from showrunner.runner import run_pc_wave
+def test_run_companion_wave_calls_actors_once_per_ai_pc():
+    from showrunner.runner import run_companion_wave
     with patch("showrunner.runner.call_llm", side_effect=["kaelen out"]) as mock:
-        run_pc_wave("npc wave", {"kaelen": "kaelen ctx"}, "player action")
+        run_companion_wave("npc wave", {"kaelen": "kaelen ctx"}, "player action")
     actors_calls = [c for c in mock.call_args_list if c.args[0] == "actors"]
     assert len(actors_calls) == 1
 
 
-def test_run_pc_wave_user_message_contains_npc_wave_text():
-    from showrunner.runner import run_pc_wave
+def test_run_companion_wave_user_message_contains_npc_wave_text():
+    from showrunner.runner import run_companion_wave
     with patch("showrunner.runner.call_llm", side_effect=["kaelen out"]) as mock:
-        run_pc_wave("NPC wave text here", {"kaelen": "kaelen ctx"}, "player action")
+        run_companion_wave("NPC wave text here", {"kaelen": "kaelen ctx"}, "player action")
     user_msg = mock.call_args_list[0].args[2]
     assert "NPC wave text here" in user_msg
 
 
-def test_run_pc_wave_user_message_contains_player_action():
-    from showrunner.runner import run_pc_wave
+def test_run_companion_wave_user_message_contains_player_action():
+    from showrunner.runner import run_companion_wave
     with patch("showrunner.runner.call_llm", side_effect=["kaelen out"]) as mock:
-        run_pc_wave("npc wave", {"kaelen": "kaelen ctx"}, "player does X")
+        run_companion_wave("npc wave", {"kaelen": "kaelen ctx"}, "player does X")
     user_msg = mock.call_args_list[0].args[2]
     assert "player does X" in user_msg
 
 
-def test_run_pc_wave_returns_pc_outputs():
-    from showrunner.runner import run_pc_wave
+def test_run_companion_wave_returns_pc_outputs():
+    from showrunner.runner import run_companion_wave
     with patch("showrunner.runner.call_llm", side_effect=["kaelen out"]):
-        result = run_pc_wave("npc wave", {"kaelen": "ctx"}, "action")
+        result = run_companion_wave("npc wave", {"kaelen": "ctx"}, "action")
     assert result == {"kaelen": "kaelen out"}
 
 

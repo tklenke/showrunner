@@ -32,19 +32,19 @@ def run_npc_wave(
     return {"_narrator": narration, **npc_outputs}
 
 
-def run_pc_wave(
+def run_companion_wave(
     npc_wave_text: str,
-    ai_pc_contexts: dict[str, str],
+    companion_contexts: dict[str, str],
     player_action: str,
 ) -> dict[str, str]:
-    """Phase 2: Each AI PC responds to the NPC wave and player action.
+    """Phase 2: Each Companion responds to the NPC wave and player action.
 
-    Returns {} for empty ai_pc_contexts.
+    Returns {} for empty companion_contexts.
     """
-    if not ai_pc_contexts:
+    if not companion_contexts:
         return {}
     outputs: dict[str, str] = {}
-    for pc_id, pc_context in ai_pc_contexts.items():
+    for pc_id, pc_context in companion_contexts.items():
         msg = (
             f"{pc_context}\n\n"
             f"## What just happened:\n{npc_wave_text}\n\n"

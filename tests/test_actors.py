@@ -50,41 +50,41 @@ SCENE_MIXED = {
 def test_load_scene_characters_no_filter_returns_all():
     from showrunner.agents.actors import load_scene_characters
     result = load_scene_characters(SCENE_MIXED, SCENE_STATE, characters_dir=str(FIXTURES))
-    assert "character_test" in result  # player: "ai"
+    assert "character_test" in result  # player: "companion"
     assert "npc_test" in result        # no player field
     assert "guard" in result           # inline NPC
 
 
-def test_load_scene_characters_npc_filter_excludes_ai_pcs():
+def test_load_scene_characters_npc_filter_excludes_companions():
     from showrunner.agents.actors import load_scene_characters
     result = load_scene_characters(
         SCENE_MIXED, SCENE_STATE, characters_dir=str(FIXTURES), player_filter="npc"
     )
-    assert "character_test" not in result  # player: "ai" — excluded
+    assert "character_test" not in result  # player: "companion" — excluded
     assert "npc_test" in result            # no player field — included
     assert "guard" in result               # inline NPC — always included
 
 
-def test_load_scene_characters_ai_filter_returns_only_ai_pcs():
+def test_load_scene_characters_companion_filter_returns_only_companions():
     from showrunner.agents.actors import load_scene_characters
     result = load_scene_characters(
-        SCENE_MIXED, SCENE_STATE, characters_dir=str(FIXTURES), player_filter="ai"
+        SCENE_MIXED, SCENE_STATE, characters_dir=str(FIXTURES), player_filter="companion"
     )
-    assert "character_test" in result      # player: "ai" — included
+    assert "character_test" in result      # player: "companion" — included
     assert "npc_test" not in result        # no player field — excluded
     assert "guard" not in result           # inline NPC — excluded
 
 
-def test_load_scene_characters_ai_filter_excludes_human_pcs():
+def test_load_scene_characters_companion_filter_excludes_human_pcs():
     """Characters with player: "human" are never returned by any filter."""
     import yaml as pyyaml
     from showrunner.agents.actors import load_scene_characters
-    # character_test has player: "ai", npc_test has no player field
+    # character_test has player: "companion", npc_test has no player field
     # We rely on the fixture not having a human PC; just confirm "human" logic via npc filter
     result = load_scene_characters(
         SCENE_WITH_NPC, SCENE_STATE, characters_dir=str(FIXTURES), player_filter="npc"
     )
-    # character_test has player: "ai" → excluded by npc filter
+    # character_test has player: "companion" → excluded by npc filter
     assert "character_test" not in result
 
 
@@ -101,7 +101,7 @@ def test_load_scene_yamls_returns_raw_dicts():
 def test_load_scene_yamls_includes_both_npc_and_ai():
     from showrunner.agents.actors import load_scene_yamls
     result = load_scene_yamls(SCENE_MIXED, characters_dir=str(FIXTURES))
-    assert "character_test" in result  # player: "ai"
+    assert "character_test" in result  # player: "companion"
     assert "npc_test" in result        # no player field
 
 

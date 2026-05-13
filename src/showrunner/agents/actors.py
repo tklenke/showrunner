@@ -122,9 +122,9 @@ def load_scene_characters(
     """Return {id: rendered_prompt} for characters in the scene.
 
     player_filter controls which characters are returned:
-      None  → all characters (default)
-      "npc" → only characters with no player field (pure NPCs); inline NPCs always included
-      "ai"  → only characters with player: "ai" (AI party members); inline NPCs excluded
+      None         → all characters (default)
+      "npc"        → only characters with no player field (pure NPCs); inline NPCs always included
+      "companion"  → only characters with player: "companion" (Companions); inline NPCs excluded
     Characters with player: "human" are never returned by any filter.
     """
     import yaml as pyyaml
@@ -142,12 +142,12 @@ def load_scene_characters(
             continue
         if player_filter == "npc" and char_player is not None:
             continue
-        if player_filter == "ai" and char_player != "ai":
+        if player_filter == "companion" and char_player != "companion":
             continue
         persona_md = md_path.read_text() if md_path.exists() else ""
         result[name] = render_actor_prompt(char_yaml, persona_md, scene_state)
 
-    if player_filter != "ai":
+    if player_filter != "companion":
         for npc in scene.get("inline_npcs", []):
             result[npc["id"]] = npc["key_traits"]
 

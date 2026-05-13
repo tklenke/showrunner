@@ -18,7 +18,7 @@ Tasks are listed in dependency order. Complete each before starting the next.
 
 ---
 
-### [ ] 4.16 — Terminology: rename `player: "ai"` → `"companion"` across Python code
+### [x] 4.16 — Terminology: rename `player: "ai"` → `"companion"` across Python code
 
 Docs and YAML files are already updated. This task propagates the change into Python.
 
@@ -39,7 +39,7 @@ No logic changes — pure rename/string substitution. Run full test suite after.
 
 ---
 
-### [ ] 4.17 — Rename runner.py functions: drop `_phase` suffix
+### [~] 4.17 — Rename runner.py functions: drop `_phase` suffix
 
 The `_phase` suffix on runner functions conflicts with the "step" vocabulary used in
 `game_loop.md`. Rename for consistency. **Do this before 4.18** — the instrumentation

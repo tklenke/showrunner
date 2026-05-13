@@ -15,7 +15,7 @@ from showrunner.runner import (
     run_last_action_phase,
     run_npc_wave,
     run_narrative_phase,
-    run_pc_wave,
+    run_companion_wave,
     run_ruling_phase,
     run_scribe_phase,
     run_summary_phase,
@@ -252,9 +252,9 @@ def run_turn_loop(scene: dict) -> None:
         scribe_ctx = render_scribe_context(scene_state, party_stats)
 
         npc_chars = load_scene_characters(scene, scene_state, player_filter="npc")
-        ai_pc_chars = load_scene_characters(scene, scene_state, player_filter="ai")
+        companion_chars = load_scene_characters(scene, scene_state, player_filter="companion")
 
-        log.debug(f"Beat: {current_beat}  npcs: {list(npc_chars)}  ai_pcs: {list(ai_pc_chars)}")
+        log.debug(f"Beat: {current_beat}  npcs: {list(npc_chars)}  companions: {list(companion_chars)}")
         print(f"\n--- Beat: {current_beat} ---")
 
         # ── Phase 1: NPC wave ────────────────────────────────────────────────
@@ -275,11 +275,11 @@ def run_turn_loop(scene: dict) -> None:
         npc_wave_text = "\n\n".join(
             f"[{npc_id}]: {text}" for npc_id, text in npc_outputs.items()
         )
-        ai_pc_outputs = run_pc_wave(npc_wave_text, ai_pc_chars, player_action)
-        log.info(f"Phase 2 complete: {len(ai_pc_outputs)} AI PCs voiced")
+        companion_outputs = run_companion_wave(npc_wave_text, companion_chars, player_action)
+        log.info(f"Phase 2 complete: {len(companion_outputs)} Companions voiced")
 
         # ── Phase 3: Resolution pipeline ─────────────────────────────────────
-        action_map = {**npc_outputs, **ai_pc_outputs, "Z-4P0": player_action}
+        action_map = {**npc_outputs, **companion_outputs, "Z-4P0": player_action}
 
         # 3a — action summaries
         actor_summaries = run_summary_phase(action_map)
@@ -318,7 +318,7 @@ def run_turn_loop(scene: dict) -> None:
         full_turn_summary = (
             f"Beat: {current_beat}\n"
             f"NPCs active: {', '.join(npc_outputs.keys()) or 'none'}\n"
-            f"AI PCs active: {', '.join(ai_pc_outputs.keys()) or 'none'}\n"
+            f"Companions active: {', '.join(companion_outputs.keys()) or 'none'}\n"
             f"Player action: {player_action}"
         )
         scribe_summary = run_scribe_phase(scribe_ctx, full_turn_summary)
