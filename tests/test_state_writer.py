@@ -53,20 +53,46 @@ def test_update_scene_state(tmp_path):
     assert data["location"] == "Hangar Bay"
 
 
+_SCENE = {"scene_id": "test_scene", "beats": [{"id": "opening"}, {"id": "audience"}]}
+
+
 def test_initialize_scene_state_writes_correct_fields(tmp_path):
     from showrunner.tools.state_writer import initialize_scene_state
-    initialize_scene_state(0, "opening", state_dir=str(tmp_path))
+    initialize_scene_state(_SCENE, state_dir=str(tmp_path))
     with open(tmp_path / "scene_state.yaml") as f:
         data = yaml.safe_load(f)
-    assert data["current_scene"] == 0
+    assert data["scene_id"] == "test_scene"
     assert data["current_beat"] == "opening"
-    assert data["ticking_clocks"] == []
-    assert data["character_plans"] == {}
+    assert data["npc_knowledge"] == {}
+    assert data["flags"] == {}
+    assert data["last_actions"] == {}
+
+
+def test_initialize_scene_state_skips_if_same_scene(tmp_path):
+    from showrunner.tools.state_writer import initialize_scene_state, advance_beat
+    initialize_scene_state(_SCENE, state_dir=str(tmp_path))
+    advance_beat("audience", state_dir=str(tmp_path))
+    initialize_scene_state(_SCENE, state_dir=str(tmp_path))
+    with open(tmp_path / "scene_state.yaml") as f:
+        data = yaml.safe_load(f)
+    assert data["current_beat"] == "audience", "existing state should be preserved for same scene"
+
+
+def test_initialize_scene_state_reinitializes_on_scene_change(tmp_path):
+    from showrunner.tools.state_writer import initialize_scene_state, advance_beat
+    initialize_scene_state(_SCENE, state_dir=str(tmp_path))
+    advance_beat("audience", state_dir=str(tmp_path))
+    new_scene = {"scene_id": "other_scene", "beats": [{"id": "start"}]}
+    initialize_scene_state(new_scene, state_dir=str(tmp_path))
+    with open(tmp_path / "scene_state.yaml") as f:
+        data = yaml.safe_load(f)
+    assert data["scene_id"] == "other_scene"
+    assert data["current_beat"] == "start"
 
 
 def test_advance_beat_updates_current_beat(tmp_path):
     from showrunner.tools.state_writer import initialize_scene_state, advance_beat
-    initialize_scene_state(0, "opening", state_dir=str(tmp_path))
+    initialize_scene_state(_SCENE, state_dir=str(tmp_path))
     advance_beat("audience", state_dir=str(tmp_path))
     with open(tmp_path / "scene_state.yaml") as f:
         data = yaml.safe_load(f)
@@ -99,7 +125,7 @@ def test_update_scene_state_deep_merge_preserves_other_clocks(tmp_path):
 
 def test_advance_beat_preserves_other_fields(tmp_path):
     from showrunner.tools.state_writer import initialize_scene_state, advance_beat, update_scene_state
-    initialize_scene_state(0, "opening", state_dir=str(tmp_path))
+    initialize_scene_state(_SCENE, state_dir=str(tmp_path))
     outfile = str(tmp_path / "scene_state.yaml")
     update_scene_state({"ticking_clocks": [{"id": "storm_barriers", "destroyed": 1}]}, path=outfile)
     advance_beat("audience", state_dir=str(tmp_path))

@@ -15,7 +15,7 @@ from showrunner.agents.show_runner import render_show_runner_context
 from showrunner.crew import build_crew
 from showrunner.instrumentation import setup_instrumentation, verbose_to_file
 from showrunner.tools.state_reader import load_party_stats, load_scene_state
-from showrunner.tools.state_writer import advance_beat
+from showrunner.tools.state_writer import advance_beat, initialize_scene_state
 
 
 def _setup_session_log(timestamp: str) -> logging.Logger:
@@ -100,6 +100,8 @@ def run_turn_loop(scene: dict) -> None:
         print(f"  {name:<14} {cfg['model_alias']}")
     print(f"Verbose log: logs/verbose_{timestamp}.log  (tail -f to watch)")
     print(f"Prompt log:  logs/prompts_{timestamp}.log")
+
+    initialize_scene_state(scene)
 
     print(f"\n=== {scene['title']} ===")
     print(scene["location"]["read_aloud"])

@@ -89,7 +89,7 @@ See `docs/plans/game_loop.md` for the current architecture and known weaknesses 
 
 ---
 
-#### 4.9a — Scene Initialization
+#### [x] 4.9a — Scene Initialization
 
 Currently `scene_state.yaml` must be pre-populated manually. Initialize it
 programmatically from the scene YAML at session start — no LLM involved.

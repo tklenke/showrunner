@@ -47,15 +47,24 @@ def append_session_log(entry: str, path: str = "state/session_log.md") -> None:
         f.write(entry + "\n")
 
 
-def initialize_scene_state(n: int, first_beat_id: str, state_dir: str = "state") -> None:
-    """Write a fresh scene_state.yaml for the start of scene n."""
+def initialize_scene_state(scene: dict, state_dir: str = "state") -> None:
+    """Write a fresh scene_state.yaml for the given scene, unless that scene is already loaded."""
+    path = Path(state_dir) / "scene_state.yaml"
+    scene_id = scene["scene_id"]
+    if path.exists():
+        with open(path) as f:
+            existing = yaml.safe_load(f) or {}
+        if existing.get("scene_id") == scene_id:
+            return
     state = {
-        "current_scene": n,
-        "current_beat": first_beat_id,
+        "scene_id": scene_id,
+        "current_beat": scene["beats"][0]["id"],
+        "npc_knowledge": {},
+        "flags": {},
+        "last_actions": {},
         "ticking_clocks": [],
         "character_plans": {},
     }
-    path = Path(state_dir) / "scene_state.yaml"
     with open(path, "w") as f:
         yaml.dump(state, f, allow_unicode=True, sort_keys=False)
 
