@@ -56,7 +56,7 @@ def run_companion_wave(
     return outputs
 
 
-def run_summary_phase(action_map: dict[str, str]) -> dict[str, str]:
+def run_summaries(action_map: dict[str, str]) -> dict[str, str]:
     """Step 3a: Summarise each actor's action in 1–2 sentences.
 
     Returns {actor_id: summary_text}.
@@ -68,7 +68,7 @@ def run_summary_phase(action_map: dict[str, str]) -> dict[str, str]:
     return summaries
 
 
-def run_check_phase(summaries_text: str, stats_text: str) -> str:
+def run_checks(summaries_text: str, stats_text: str) -> str:
     """Step 3b: Identify skill checks from summaries and stats.
 
     Returns raw Show Runner output (list of checks or "NO_CHECKS").
@@ -84,7 +84,7 @@ def run_check_phase(summaries_text: str, stats_text: str) -> str:
     return call_llm("show_runner", build_system_prompt("show_runner"), msg)
 
 
-def run_ruling_phase(check_specs: list[dict]) -> dict[str, str]:
+def run_rulings(check_specs: list[dict]) -> dict[str, str]:
     """Step 3c: Issue a ruling for each check spec.
 
     Each call sees all prior rulings for context. Returns {} for empty specs.
@@ -108,7 +108,7 @@ def run_ruling_phase(check_specs: list[dict]) -> dict[str, str]:
     return rulings
 
 
-def run_narrative_phase(summaries: str, checks: str, results: str) -> str:
+def run_narrative(summaries: str, checks: str, results: str) -> str:
     """Step 3d: Generate player-facing narrative prose from the full resolution record."""
     msg = (
         f"## Action Summaries\n{summaries}\n\n"
@@ -118,7 +118,7 @@ def run_narrative_phase(summaries: str, checks: str, results: str) -> str:
     return call_llm("show_runner", build_system_prompt("show_runner"), msg)
 
 
-def run_last_action_phase(actor_summaries: dict[str, str]) -> dict[str, str]:
+def run_last_actions(actor_summaries: dict[str, str]) -> dict[str, str]:
     """Step 3e: Extract each actor's last action sentence from their summary.
 
     Each Narrator call receives only that actor's own summary. Returns {} for empty input.

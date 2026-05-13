@@ -119,164 +119,164 @@ def test_run_companion_wave_returns_pc_outputs():
 
 
 # ---------------------------------------------------------------------------
-# run_summary_phase
+# run_summaries
 # ---------------------------------------------------------------------------
 
-def test_run_summary_phase_calls_actors_once_per_actor():
-    from showrunner.runner import run_summary_phase
+def test_run_summaries_calls_actors_once_per_actor():
+    from showrunner.runner import run_summaries
     with patch("showrunner.runner.call_llm", side_effect=["sum1", "sum2"]) as mock:
-        run_summary_phase({"bargos": "did X", "kaelen": "did Y"})
+        run_summaries({"bargos": "did X", "kaelen": "did Y"})
     actors_calls = [c for c in mock.call_args_list if c.args[0] == "actors"]
     assert len(actors_calls) == 2
 
 
-def test_run_summary_phase_user_message_contains_action_text():
-    from showrunner.runner import run_summary_phase
+def test_run_summaries_user_message_contains_action_text():
+    from showrunner.runner import run_summaries
     with patch("showrunner.runner.call_llm", side_effect=["summary"]) as mock:
-        run_summary_phase({"bargos": "threatened Z-4P0"})
+        run_summaries({"bargos": "threatened Z-4P0"})
     user_msg = mock.call_args_list[0].args[2]
     assert "threatened Z-4P0" in user_msg
 
 
-def test_run_summary_phase_returns_dict_keyed_by_actor():
-    from showrunner.runner import run_summary_phase
+def test_run_summaries_returns_dict_keyed_by_actor():
+    from showrunner.runner import run_summaries
     with patch("showrunner.runner.call_llm", side_effect=["sum1", "sum2"]):
-        result = run_summary_phase({"bargos": "did X", "kaelen": "did Y"})
+        result = run_summaries({"bargos": "did X", "kaelen": "did Y"})
     assert set(result.keys()) == {"bargos", "kaelen"}
     assert result["bargos"] == "sum1"
 
 
 # ---------------------------------------------------------------------------
-# run_check_phase
+# run_checks
 # ---------------------------------------------------------------------------
 
-def test_run_check_phase_calls_show_runner_once():
-    from showrunner.runner import run_check_phase
+def test_run_checks_calls_show_runner_once():
+    from showrunner.runner import run_checks
     with patch("showrunner.runner.call_llm", return_value="NO_CHECKS") as mock:
-        run_check_phase("summaries", "stats")
+        run_checks("summaries", "stats")
     sr_calls = [c for c in mock.call_args_list if c.args[0] == "show_runner"]
     assert len(sr_calls) == 1
 
 
-def test_run_check_phase_user_message_contains_summaries_and_stats():
-    from showrunner.runner import run_check_phase
+def test_run_checks_user_message_contains_summaries_and_stats():
+    from showrunner.runner import run_checks
     with patch("showrunner.runner.call_llm", return_value="NO_CHECKS") as mock:
-        run_check_phase("action summaries here", "stats here")
+        run_checks("action summaries here", "stats here")
     user_msg = mock.call_args_list[0].args[2]
     assert "action summaries here" in user_msg
     assert "stats here" in user_msg
 
 
-def test_run_check_phase_returns_llm_output():
-    from showrunner.runner import run_check_phase
+def test_run_checks_returns_llm_output():
+    from showrunner.runner import run_checks
     with patch("showrunner.runner.call_llm", return_value="1. Z-4P0 | Negotiation | ..."):
-        result = run_check_phase("summaries", "stats")
+        result = run_checks("summaries", "stats")
     assert "Negotiation" in result
 
 
 # ---------------------------------------------------------------------------
-# run_ruling_phase
+# run_rulings
 # ---------------------------------------------------------------------------
 
-def test_run_ruling_phase_empty_returns_empty_dict():
-    from showrunner.runner import run_ruling_phase
-    result = run_ruling_phase([])
+def test_run_rulings_empty_returns_empty_dict():
+    from showrunner.runner import run_rulings
+    result = run_rulings([])
     assert result == {}
 
 
-def test_run_ruling_phase_calls_show_runner_once_per_spec():
-    from showrunner.runner import run_ruling_phase
+def test_run_rulings_calls_show_runner_once_per_spec():
+    from showrunner.runner import run_rulings
     specs = [
         {"actor": "Z-4P0", "skill": "Negotiation", "difficulty": "Average", "notes": "", "roll_result": "passed"},
         {"actor": "Kaelen", "skill": "Athletics", "difficulty": "Easy", "notes": "", "roll_result": "failed"},
     ]
     with patch("showrunner.runner.call_llm", side_effect=["ruling1", "ruling2"]) as mock:
-        run_ruling_phase(specs)
+        run_rulings(specs)
     sr_calls = [c for c in mock.call_args_list if c.args[0] == "show_runner"]
     assert len(sr_calls) == 2
 
 
-def test_run_ruling_phase_second_call_contains_first_ruling():
-    from showrunner.runner import run_ruling_phase
+def test_run_rulings_second_call_contains_first_ruling():
+    from showrunner.runner import run_rulings
     specs = [
         {"actor": "A", "skill": "S", "difficulty": "Easy", "notes": "", "roll_result": "passed"},
         {"actor": "B", "skill": "S", "difficulty": "Easy", "notes": "", "roll_result": "failed"},
     ]
     with patch("showrunner.runner.call_llm", side_effect=["first ruling text", "second ruling"]) as mock:
-        run_ruling_phase(specs)
+        run_rulings(specs)
     second_call_msg = mock.call_args_list[1].args[2]
     assert "first ruling text" in second_call_msg
 
 
-def test_run_ruling_phase_returns_dict_keyed_by_actor():
-    from showrunner.runner import run_ruling_phase
+def test_run_rulings_returns_dict_keyed_by_actor():
+    from showrunner.runner import run_rulings
     specs = [{"actor": "Z-4P0", "skill": "N", "difficulty": "Easy", "notes": "", "roll_result": "passed"}]
     with patch("showrunner.runner.call_llm", return_value="Z-4P0 succeeds."):
-        result = run_ruling_phase(specs)
+        result = run_rulings(specs)
     assert result == {"Z-4P0": "Z-4P0 succeeds."}
 
 
 # ---------------------------------------------------------------------------
-# run_narrative_phase
+# run_narrative
 # ---------------------------------------------------------------------------
 
-def test_run_narrative_phase_calls_show_runner_once():
-    from showrunner.runner import run_narrative_phase
+def test_run_narrative_calls_show_runner_once():
+    from showrunner.runner import run_narrative
     with patch("showrunner.runner.call_llm", return_value="prose") as mock:
-        run_narrative_phase("summaries", "checks", "results")
+        run_narrative("summaries", "checks", "results")
     sr_calls = [c for c in mock.call_args_list if c.args[0] == "show_runner"]
     assert len(sr_calls) == 1
 
 
-def test_run_narrative_phase_user_message_contains_all_three_inputs():
-    from showrunner.runner import run_narrative_phase
+def test_run_narrative_user_message_contains_all_three_inputs():
+    from showrunner.runner import run_narrative
     with patch("showrunner.runner.call_llm", return_value="prose") as mock:
-        run_narrative_phase("summary text", "check text", "result text")
+        run_narrative("summary text", "check text", "result text")
     user_msg = mock.call_args_list[0].args[2]
     assert "summary text" in user_msg
     assert "check text" in user_msg
     assert "result text" in user_msg
 
 
-def test_run_narrative_phase_returns_llm_output():
-    from showrunner.runner import run_narrative_phase
+def test_run_narrative_returns_llm_output():
+    from showrunner.runner import run_narrative
     with patch("showrunner.runner.call_llm", return_value="The battle concludes."):
-        result = run_narrative_phase("s", "c", "r")
+        result = run_narrative("s", "c", "r")
     assert result == "The battle concludes."
 
 
 # ---------------------------------------------------------------------------
-# run_last_action_phase
+# run_last_actions
 # ---------------------------------------------------------------------------
 
-def test_run_last_action_phase_empty_returns_empty_dict():
-    from showrunner.runner import run_last_action_phase
-    result = run_last_action_phase({})
+def test_run_last_actions_empty_returns_empty_dict():
+    from showrunner.runner import run_last_actions
+    result = run_last_actions({})
     assert result == {}
 
 
-def test_run_last_action_phase_calls_narrator_once_per_actor():
-    from showrunner.runner import run_last_action_phase
+def test_run_last_actions_calls_narrator_once_per_actor():
+    from showrunner.runner import run_last_actions
     with patch("showrunner.runner.call_llm", side_effect=["act1", "act2"]) as mock:
-        run_last_action_phase({"bargos": "summary1", "kaelen": "summary2"})
+        run_last_actions({"bargos": "summary1", "kaelen": "summary2"})
     narrator_calls = [c for c in mock.call_args_list if c.args[0] == "narrator"]
     assert len(narrator_calls) == 2
 
 
-def test_run_last_action_phase_bargos_call_does_not_contain_kaelen_summary():
-    from showrunner.runner import run_last_action_phase
+def test_run_last_actions_bargos_call_does_not_contain_kaelen_summary():
+    from showrunner.runner import run_last_actions
     with patch("showrunner.runner.call_llm", side_effect=["bargos last", "kaelen last"]) as mock:
-        run_last_action_phase({"bargos": "Bargos threatened Z-4P0.", "kaelen": "Kaelen took cover."})
+        run_last_actions({"bargos": "Bargos threatened Z-4P0.", "kaelen": "Kaelen took cover."})
     bargos_call = mock.call_args_list[0]
     user_msg = bargos_call.args[2]
     assert "Bargos threatened Z-4P0." in user_msg
     assert "Kaelen took cover." not in user_msg
 
 
-def test_run_last_action_phase_returns_dict_keyed_by_actor():
-    from showrunner.runner import run_last_action_phase
+def test_run_last_actions_returns_dict_keyed_by_actor():
+    from showrunner.runner import run_last_actions
     with patch("showrunner.runner.call_llm", side_effect=["Bargos spoke.", "Kaelen fled."]):
-        result = run_last_action_phase({"bargos": "s1", "kaelen": "s2"})
+        result = run_last_actions({"bargos": "s1", "kaelen": "s2"})
     assert result == {"bargos": "Bargos spoke.", "kaelen": "Kaelen fled."}
 
 

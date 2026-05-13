@@ -12,14 +12,14 @@ from showrunner.agents.show_runner import render_show_runner_context
 from showrunner.config import apply_litellm_settings, load_agent_configs
 from showrunner.instrumentation import setup_instrumentation
 from showrunner.runner import (
-    run_last_action_phase,
+    run_last_actions,
     run_npc_wave,
-    run_narrative_phase,
+    run_narrative,
     run_companion_wave,
-    run_ruling_phase,
+    run_rulings,
     run_scribe_phase,
-    run_summary_phase,
-    run_check_phase,
+    run_summaries,
+    run_checks,
 )
 from showrunner.tools.dice_roller import roll_pool
 from showrunner.tools.state_reader import load_party_stats, load_scene_state
@@ -282,31 +282,31 @@ def run_turn_loop(scene: dict) -> None:
         action_map = {**npc_outputs, **companion_outputs, "Z-4P0": player_action}
 
         # 3a — action summaries
-        actor_summaries = run_summary_phase(action_map)
+        actor_summaries = run_summaries(action_map)
         summaries_text = "\n".join(f"{k}: {v}" for k, v in actor_summaries.items())
         _write_turn_file(logs_dir, turn_ts, current_beat, "summaries", summaries_text)
 
         # 3b — check identification
         stats_text = _build_stats_text(scene_yamls)
-        check_output = run_check_phase(summaries_text, stats_text)
+        check_output = run_checks(summaries_text, stats_text)
         checks_text = _write_turn_file(logs_dir, turn_ts, current_beat, "checks", check_output)
         ruling_specs = _parse_ruling_specs(checks_text)
         log.info(f"Phase 3b complete: {len(ruling_specs)} checks identified")
 
         # 3c — dice rolling + rulings
         _roll_specs(ruling_specs)
-        rulings = run_ruling_phase(ruling_specs)
+        rulings = run_rulings(ruling_specs)
         results_text = "\n".join(f"{k}: {v}" for k, v in rulings.items()) if rulings else "No checks this turn."
         _write_turn_file(logs_dir, turn_ts, current_beat, "results", results_text)
         log.info(f"Phase 3c complete: {len(ruling_specs)} checks resolved")
 
         # 3d — resolution narrative (printed to player)
-        narrative = run_narrative_phase(summaries_text, checks_text, results_text)
+        narrative = run_narrative(summaries_text, checks_text, results_text)
         if narrative:
             print(f"\n{narrative}")
 
         # 3e — last-action extraction
-        last_actions_extracted = run_last_action_phase(actor_summaries)
+        last_actions_extracted = run_last_actions(actor_summaries)
         if not last_actions_extracted:
             last_actions_extracted = actor_summaries
         log.info("Phase 3 complete")

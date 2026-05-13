@@ -39,7 +39,7 @@ No logic changes — pure rename/string substitution. Run full test suite after.
 
 ---
 
-### [~] 4.17 — Rename runner.py functions: drop `_phase` suffix
+### [x] 4.17 — Rename runner.py functions: drop `_phase` suffix
 
 The `_phase` suffix on runner functions conflicts with the "step" vocabulary used in
 `game_loop.md`. Rename for consistency. **Do this before 4.18** — the instrumentation
