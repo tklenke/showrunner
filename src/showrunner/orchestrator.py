@@ -287,7 +287,7 @@ def _run_beat_initialization(
         update_scene_state({"character_plans": character_plans})
 
     sr_ctx, narrator_ctx = _apply_beat_notes(beat, sr_ctx, narrator_ctx)
-    run_beat_opener(beat, last_log_entry)
+    run_beat_opener(beat, last_log_entry, verbose=verbose)
 
     if verbose:
         print(f"\n=== {beat['title']} ===")
@@ -473,7 +473,8 @@ def run_turn_loop(scene: dict, verbose: bool = False) -> None:
         # ── Step 7: Resolution narrative (printed to player) ─────────────────
         narrative = run_narrative(all_summaries, checks_text, results_text)
         if narrative:
-            print(f"\n{narrative}")
+            label = "\n=== Resolution Narrative ===" if verbose else ""
+            print(f"{label}\n{narrative}")
 
         # ── Step 8: Last-action extraction ───────────────────────────────────
         all_actors = {**npc_outputs, **party_actions}

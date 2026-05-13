@@ -360,7 +360,7 @@ N calls: SR  →  overall_plan + character id + current situation  →  individu
 
 ---
 
-### [ ] 4.29 — Output labeling: character headers always; step labels in verbose mode
+### [~] 4.29 — Output labeling: character headers always; step labels in verbose mode
 
 **Why:** The current output mixes GM-internal blobs, character responses, and narrative
 with no visual separation. We can't tell which step produced bad output. This task adds

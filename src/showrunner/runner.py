@@ -33,7 +33,7 @@ def run_npc_wave(
             msg += f"\n\n## Earlier NPC actions this turn:\n{prior_summaries}"
 
         full_output = call_llm("actors", build_system_prompt("actors"), msg)
-        print(f"[{npc_id}] {full_output}")
+        print(f"\n=== {npc_id} ===\n{full_output}")
         npc_outputs[npc_id] = full_output
 
         summary_msg = f"Summarize in 1-2 sentences what {npc_id} just did:\n{full_output}"
@@ -65,7 +65,7 @@ def run_companion_wave(
             f"## Player action:\n{player_action}"
         )
         output = call_llm("actors", build_system_prompt("actors"), msg)
-        print(f"[{pc_id}] {output}")
+        print(f"\n=== {pc_id} ===\n{output}")
         outputs[pc_id] = output
     return outputs
 
@@ -188,7 +188,7 @@ def run_plan_update(
     return individual_plans
 
 
-def run_beat_opener(beat: dict, last_log_entry: str) -> None:
+def run_beat_opener(beat: dict, last_log_entry: str, verbose: bool = False) -> None:
     """Print a 2-3 sentence player-facing opener for the start of a new beat."""
     msg = (
         f"## Beat Director Notes\n"
@@ -198,4 +198,7 @@ def run_beat_opener(beat: dict, last_log_entry: str) -> None:
     if last_log_entry:
         msg += f"\n\n## Previous session log entry:\n{last_log_entry}"
     opener = call_llm("narrator", build_system_prompt("narrator"), msg)
-    print(opener)
+    if verbose:
+        print(f"=== Beat Opener ===\n{opener}")
+    else:
+        print(opener)

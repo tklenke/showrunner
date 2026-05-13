@@ -305,7 +305,7 @@ def test_run_beat_initialization_calls_run_beat_opener(tmp_path, monkeypatch):
     with patch("showrunner.orchestrator.update_scene_state"), \
          patch("showrunner.orchestrator.run_beat_opener") as mock_opener:
         _run_beat_initialization(_BEAT_WITH_NOTES, "sr", "nar", "last entry", verbose=False, log=log)
-    mock_opener.assert_called_once_with(_BEAT_WITH_NOTES, "last entry")
+    mock_opener.assert_called_once_with(_BEAT_WITH_NOTES, "last entry", verbose=False)
 
 
 # ---------------------------------------------------------------------------

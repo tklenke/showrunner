@@ -76,6 +76,16 @@ def test_run_npc_wave_prints_npc_output_with_id(tmp_path, capsys):
     assert "bargos speaks" in captured.out
 
 
+def test_run_npc_wave_uses_section_header_format(tmp_path, capsys):
+    from showrunner.runner import run_npc_wave
+    log_path = tmp_path / "summaries.txt"
+    with patch("showrunner.runner.call_llm", side_effect=["bargos speaks", "summary"]):
+        run_npc_wave({"bargos": "ctx"}, "beat ctx", "action", {}, log_path)
+    captured = capsys.readouterr()
+    assert "=== bargos ===" in captured.out
+    assert "[bargos]" not in captured.out
+
+
 # ---------------------------------------------------------------------------
 # run_companion_wave
 # ---------------------------------------------------------------------------
@@ -108,6 +118,15 @@ def test_run_companion_wave_user_message_contains_player_action():
         run_companion_wave({"kaelen": "kaelen ctx"}, "beat ctx", "player does X")
     user_msg = mock.call_args_list[0].args[2]
     assert "player does X" in user_msg
+
+
+def test_run_companion_wave_uses_section_header_format(capsys):
+    from showrunner.runner import run_companion_wave
+    with patch("showrunner.runner.call_llm", side_effect=["kaelen out"]):
+        run_companion_wave({"kaelen": "kaelen ctx"}, "beat ctx", "action")
+    captured = capsys.readouterr()
+    assert "=== kaelen ===" in captured.out
+    assert "[kaelen]" not in captured.out
 
 
 def test_run_companion_wave_returns_companion_outputs():
@@ -364,6 +383,20 @@ def test_run_beat_opener_empty_last_log_does_not_crash():
     from showrunner.runner import run_beat_opener
     with patch("showrunner.runner.call_llm", return_value="ok"):
         run_beat_opener(BEAT, "")  # must not raise
+
+
+def test_run_beat_opener_verbose_prints_step_label(capsys):
+    from showrunner.runner import run_beat_opener
+    with patch("showrunner.runner.call_llm", return_value="You enter."):
+        run_beat_opener(BEAT, "", verbose=True)
+    assert "=== Beat Opener ===" in capsys.readouterr().out
+
+
+def test_run_beat_opener_not_verbose_no_step_label(capsys):
+    from showrunner.runner import run_beat_opener
+    with patch("showrunner.runner.call_llm", return_value="You enter."):
+        run_beat_opener(BEAT, "", verbose=False)
+    assert "=== Beat Opener ===" not in capsys.readouterr().out
 
 
 # ---------------------------------------------------------------------------
