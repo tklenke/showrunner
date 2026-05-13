@@ -1,5 +1,5 @@
-# ABOUTME: CrewAI crew assembly — three phase builders for the turn loop.
-# ABOUTME: build_npc_crew, build_pc_crew, build_resolution_crew replace the old build_crew.
+# ABOUTME: CrewAI crew assembly — phase builders for the turn loop.
+# ABOUTME: NPC/PC wave builders plus five-step resolution pipeline (3a–3e).
 
 from crewai import Crew, Process, Task
 
@@ -167,6 +167,173 @@ def build_resolution_crew(
     return Crew(
         agents=all_agents,
         tasks=all_tasks,
+        process=Process.sequential,
+        verbose=True,
+    )
+
+
+# ── Resolution pipeline (4.14) ───────────────────────────────────────────────
+
+
+def build_summary_crew(action_map: dict[str, str]) -> Crew:
+    """Phase 3a: one alien 3B summarisation task per actor.
+
+    action_map is {actor_id: action_text} covering all characters that acted
+    this turn. Each task produces a 1–2 sentence plain-language summary.
+    """
+    tasks = []
+    for actor_id, action_text in action_map.items():
+        actor = create_actors()
+        task = Task(
+            name=actor_id,
+            description=(
+                f"Summarise in 1–2 sentences what {actor_id} did:\n\n{action_text}"
+            ),
+            expected_output=f"1–2 sentence summary of {actor_id}'s action.",
+            agent=actor,
+        )
+        tasks.append(task)
+    return Crew(
+        agents=[t.agent for t in tasks],
+        tasks=tasks,
+        process=Process.sequential,
+        verbose=True,
+    )
+
+
+def build_check_crew(summaries_text: str, stats_text: str) -> Crew:
+    """Phase 3b: sardinia 8B identifies required checks from summaries + stats.
+
+    Produces a numbered check list or NO_CHECKS. Format per line:
+    {n}. {actor} | {skill} | {characteristic} {value} | {skill_rank} | {difficulty} | {notes}
+    """
+    show_runner = create_show_runner()
+    task = Task(
+        description=(
+            "## Action Summaries\n"
+            f"{summaries_text}\n\n"
+            "## Character Stats\n"
+            f"{stats_text}\n\n"
+            "Review every action. List every skill check, opposed roll, or combat attack "
+            "triggered. Output format — one line per check:\n"
+            "{n}. {actor} | {skill} | {characteristic} {value} | {skill_rank} | {difficulty} | {notes}\n\n"
+            "If no checks are needed, output exactly: NO_CHECKS"
+        ),
+        expected_output=(
+            "Either NO_CHECKS, or a numbered check list with characteristic values "
+            "and skill ranks embedded."
+        ),
+        agent=show_runner,
+    )
+    return Crew(
+        agents=[show_runner],
+        tasks=[task],
+        process=Process.sequential,
+        verbose=True,
+    )
+
+
+def build_ruling_crew(check_specs: list[dict]) -> Crew | None:
+    """Phase 3c: one sardinia 8B ruling task per check spec.
+
+    Each spec must include a pre-computed 'roll_result' string (dice rolled by
+    the orchestrator). Returns None when check_specs is empty.
+    Tasks chain so each ruling sees prior rulings.
+    """
+    if not check_specs:
+        return None
+
+    ruling_tasks = []
+    for spec in check_specs:
+        show_runner = create_show_runner()
+        task = Task(
+            name=spec["actor"],
+            description=(
+                f"Actor: {spec['actor']} | Skill: {spec['skill']} | "
+                f"Characteristic: {spec['characteristic']} {spec.get('char_value', '')} | "
+                f"Skill rank: {spec.get('skill_rank', '')} | "
+                f"Difficulty: {spec['difficulty']}\n"
+                f"Notes: {spec.get('notes', '')}\n\n"
+                f"Dice roll result: {spec['roll_result']}\n\n"
+                "State the outcome: passed or failed, wounds dealt (if attack), "
+                "and any triumph/despair effects. One short paragraph."
+            ),
+            expected_output="Outcome ruling: passed/failed, mechanical consequences, narrative flavour.",
+            agent=show_runner,
+            context=ruling_tasks[:],
+        )
+        ruling_tasks.append(task)
+
+    return Crew(
+        agents=[t.agent for t in ruling_tasks],
+        tasks=ruling_tasks,
+        process=Process.sequential,
+        verbose=True,
+    )
+
+
+def build_narrative_crew(summaries: str, checks: str, results: str) -> Crew:
+    """Phase 3d: sardinia 8B (Show Runner) produces player-facing resolution prose.
+
+    Receives all three turn files; outputs 2–4 sentences printed directly to terminal.
+    """
+    show_runner = create_show_runner()
+    task = Task(
+        description=(
+            "## What each character did\n"
+            f"{summaries}\n\n"
+            "## Checks triggered\n"
+            f"{checks}\n\n"
+            "## Ruling results\n"
+            f"{results}\n\n"
+            "Describe what just happened in 2–4 vivid sentences for the player. "
+            "Write in second person. Cover the most dramatic outcomes."
+        ),
+        expected_output="2–4 sentences of player-facing narrative prose.",
+        agent=show_runner,
+    )
+    return Crew(
+        agents=[show_runner],
+        tasks=[task],
+        process=Process.sequential,
+        verbose=True,
+    )
+
+
+def build_last_action_crew(
+    actor_ids: list[str],
+    summaries: str,
+    checks: str,
+    results: str,
+) -> Crew | None:
+    """Phase 3e: Narrator extracts one last-action sentence per actor.
+
+    Used to populate scene_state last_actions for next turn context.
+    Returns None when actor_ids is empty.
+    """
+    if not actor_ids:
+        return None
+
+    tasks = []
+    for actor_id in actor_ids:
+        narrator = create_narrator()
+        task = Task(
+            name=actor_id,
+            description=(
+                "Given these events:\n\n"
+                f"## Summaries\n{summaries}\n\n"
+                f"## Checks\n{checks}\n\n"
+                f"## Results\n{results}\n\n"
+                f"What was {actor_id}'s last action this turn? One sentence only."
+            ),
+            expected_output=f"One sentence describing {actor_id}'s last action.",
+            agent=narrator,
+        )
+        tasks.append(task)
+
+    return Crew(
+        agents=[t.agent for t in tasks],
+        tasks=tasks,
         process=Process.sequential,
         verbose=True,
     )

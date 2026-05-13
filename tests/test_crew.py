@@ -263,3 +263,200 @@ def test_parse_check_specs_missing_notes_defaults_empty():
     text = "CHECKS:\n1. Z-4P0 | Brawl | Brawn | Easy\nCHECKS_END"
     specs = _parse_check_specs(text)
     assert specs[0]["notes"] == ""
+
+
+# ---------------------------------------------------------------------------
+# build_summary_crew (3a)
+# ---------------------------------------------------------------------------
+
+def test_build_summary_crew_returns_crew():
+    from showrunner.crew import build_summary_crew
+    crew = build_summary_crew({"bargos": "Said something threatening."})
+    assert isinstance(crew, Crew)
+
+
+def test_summary_crew_one_task_per_actor():
+    from showrunner.crew import build_summary_crew
+    crew = build_summary_crew({"bargos": "Spoke.", "kae": "Moved."})
+    assert len(crew.tasks) == 2
+
+
+def test_summary_crew_task_names_match_actor_ids():
+    from showrunner.crew import build_summary_crew
+    crew = build_summary_crew({"bargos": "Spoke.", "kae": "Moved."})
+    assert {t.name for t in crew.tasks} == {"bargos", "kae"}
+
+
+def test_summary_crew_task_contains_action_text():
+    from showrunner.crew import build_summary_crew
+    crew = build_summary_crew({"bargos": "Said something threatening."})
+    assert "Said something threatening." in crew.tasks[0].description
+
+
+def test_summary_crew_uses_actor_agent():
+    from showrunner.crew import build_summary_crew
+    crew = build_summary_crew({"bargos": "Spoke."})
+    assert crew.tasks[0].agent.role == "NPC Voice Actor"
+
+
+# ---------------------------------------------------------------------------
+# build_check_crew (3b)
+# ---------------------------------------------------------------------------
+
+def test_build_check_crew_returns_crew():
+    from showrunner.crew import build_check_crew
+    crew = build_check_crew("Bargos threatened Z-4P0.", "Z-4P0: Presence 2, Negotiation rank 1")
+    assert isinstance(crew, Crew)
+
+
+def test_check_crew_has_single_show_runner_task():
+    from showrunner.crew import build_check_crew
+    crew = build_check_crew("summaries", "stats")
+    assert len(crew.tasks) == 1
+    assert crew.tasks[0].agent.role == "Show Runner"
+
+
+def test_check_crew_task_contains_summaries():
+    from showrunner.crew import build_check_crew
+    crew = build_check_crew("Bargos threatened Z-4P0.", "stats")
+    assert "Bargos threatened Z-4P0." in crew.tasks[0].description
+
+
+def test_check_crew_task_contains_stats():
+    from showrunner.crew import build_check_crew
+    crew = build_check_crew("summaries", "Z-4P0: Presence 2, Negotiation rank 1")
+    assert "Z-4P0: Presence 2, Negotiation rank 1" in crew.tasks[0].description
+
+
+# ---------------------------------------------------------------------------
+# build_ruling_crew (3c)
+# ---------------------------------------------------------------------------
+
+RULING_SPEC = {
+    "actor": "Z-4P0",
+    "skill": "Negotiation",
+    "characteristic": "Presence",
+    "char_value": 2,
+    "skill_rank": 1,
+    "difficulty": "Opposed vs Bargos Cool",
+    "notes": "+1 Boost",
+    "roll_result": "Roll passed: net +2 successes, +1 advantage",
+}
+
+RULING_SPEC_2 = {
+    "actor": "Kaelen",
+    "skill": "Athletics",
+    "characteristic": "Brawn",
+    "char_value": 3,
+    "skill_rank": 2,
+    "difficulty": "Average",
+    "notes": "",
+    "roll_result": "Roll failed: net -1 successes, +2 advantage",
+}
+
+
+def test_build_ruling_crew_returns_none_for_empty_specs():
+    from showrunner.crew import build_ruling_crew
+    assert build_ruling_crew([]) is None
+
+
+def test_build_ruling_crew_returns_crew():
+    from showrunner.crew import build_ruling_crew
+    crew = build_ruling_crew([RULING_SPEC])
+    assert isinstance(crew, Crew)
+
+
+def test_ruling_crew_one_task_per_spec():
+    from showrunner.crew import build_ruling_crew
+    crew = build_ruling_crew([RULING_SPEC, RULING_SPEC_2])
+    assert len(crew.tasks) == 2
+
+
+def test_ruling_crew_uses_show_runner_agent():
+    from showrunner.crew import build_ruling_crew
+    crew = build_ruling_crew([RULING_SPEC])
+    assert crew.tasks[0].agent.role == "Show Runner"
+
+
+def test_ruling_crew_task_contains_roll_result():
+    from showrunner.crew import build_ruling_crew
+    crew = build_ruling_crew([RULING_SPEC])
+    assert "Roll passed: net +2 successes" in crew.tasks[0].description
+
+
+def test_ruling_crew_task_contains_check_details():
+    from showrunner.crew import build_ruling_crew
+    crew = build_ruling_crew([RULING_SPEC])
+    assert "Z-4P0" in crew.tasks[0].description
+    assert "Negotiation" in crew.tasks[0].description
+
+
+def test_ruling_crew_tasks_chained():
+    from showrunner.crew import build_ruling_crew
+    crew = build_ruling_crew([RULING_SPEC, RULING_SPEC_2])
+    assert crew.tasks[0] in crew.tasks[1].context
+
+
+# ---------------------------------------------------------------------------
+# build_narrative_crew (3d)
+# ---------------------------------------------------------------------------
+
+def test_build_narrative_crew_returns_crew():
+    from showrunner.crew import build_narrative_crew
+    crew = build_narrative_crew("summaries", "checks", "results")
+    assert isinstance(crew, Crew)
+
+
+def test_narrative_crew_has_single_show_runner_task():
+    from showrunner.crew import build_narrative_crew
+    crew = build_narrative_crew("summaries", "checks", "results")
+    assert len(crew.tasks) == 1
+    assert crew.tasks[0].agent.role == "Show Runner"
+
+
+def test_narrative_crew_task_contains_all_three_inputs():
+    from showrunner.crew import build_narrative_crew
+    crew = build_narrative_crew("ACTION SUMMARIES", "CHECK LIST", "RULING RESULTS")
+    desc = crew.tasks[0].description
+    assert "ACTION SUMMARIES" in desc
+    assert "CHECK LIST" in desc
+    assert "RULING RESULTS" in desc
+
+
+# ---------------------------------------------------------------------------
+# build_last_action_crew (3e)
+# ---------------------------------------------------------------------------
+
+def test_build_last_action_crew_returns_none_for_empty_actors():
+    from showrunner.crew import build_last_action_crew
+    assert build_last_action_crew([], "s", "c", "r") is None
+
+
+def test_build_last_action_crew_returns_crew():
+    from showrunner.crew import build_last_action_crew
+    crew = build_last_action_crew(["bargos"], "summaries", "checks", "results")
+    assert isinstance(crew, Crew)
+
+
+def test_last_action_crew_one_task_per_actor():
+    from showrunner.crew import build_last_action_crew
+    crew = build_last_action_crew(["bargos", "kae"], "s", "c", "r")
+    assert len(crew.tasks) == 2
+
+
+def test_last_action_crew_task_names_match_actor_ids():
+    from showrunner.crew import build_last_action_crew
+    crew = build_last_action_crew(["bargos", "kae"], "s", "c", "r")
+    assert {t.name for t in crew.tasks} == {"bargos", "kae"}
+
+
+def test_last_action_crew_uses_narrator_agent():
+    from showrunner.crew import build_last_action_crew
+    crew = build_last_action_crew(["bargos"], "s", "c", "r")
+    assert crew.tasks[0].agent.role == "Narrator"
+
+
+def test_last_action_crew_task_contains_actor_name():
+    from showrunner.crew import build_last_action_crew
+    crew = build_last_action_crew(["bargos"], "summaries", "checks", "results")
+    assert "bargos" in crew.tasks[0].description
