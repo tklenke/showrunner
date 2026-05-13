@@ -9,18 +9,18 @@ from showrunner.agents.actors import load_scene_characters, load_scene_yamls
 from showrunner.agents.narrator import render_narrator_context
 from showrunner.agents.scribe import render_scribe_context
 from showrunner.agents.show_runner import render_show_runner_context
-from showrunner.config import load_agent_configs
-from showrunner.crew import (
-    build_check_crew,
-    build_last_action_crew,
-    build_narrative_crew,
-    build_npc_crew,
-    build_pc_crew,
-    build_resolution_crew,
-    build_ruling_crew,
-    build_summary_crew,
+from showrunner.config import apply_litellm_settings, load_agent_configs
+from showrunner.instrumentation import setup_instrumentation
+from showrunner.runner import (
+    run_last_action_phase,
+    run_npc_wave,
+    run_narrative_phase,
+    run_pc_wave,
+    run_ruling_phase,
+    run_scribe_phase,
+    run_summary_phase,
+    run_check_phase,
 )
-from showrunner.instrumentation import setup_instrumentation, verbose_to_file
 from showrunner.tools.dice_roller import roll_pool
 from showrunner.tools.state_reader import load_party_stats, load_scene_state
 from showrunner.tools.state_writer import advance_beat, initialize_scene_state, update_scene_state
@@ -219,37 +219,18 @@ def _roll_specs(specs: list[dict]) -> None:
         )
 
 
-def _collect_wave_outputs(crew, role: str) -> dict[str, str]:
-    """Return {task.name: output.raw} for all tasks matching the given agent role."""
-    return {
-        task.name: (task.output.raw.strip() if task.output else "")
-        for task in crew.tasks
-        if task.agent.role == role and task.name
-    }
-
-
-def _get_task_output(crew, role: str) -> str:
-    """Return output.raw for the first task matching the given agent role."""
-    for task in crew.tasks:
-        if task.agent.role == role and task.output:
-            return task.output.raw.strip()
-    return ""
-
-
 def run_turn_loop(scene: dict) -> None:
     """Run the agent turn loop for a loaded adventure scene."""
+    apply_litellm_settings()
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     log = _setup_session_log(timestamp)
-    verbose_path, prompts_path, prompt_logger = setup_instrumentation(
-        timestamp, config_path=Path("config/litellm.yaml")
-    )
+    verbose_path, prompts_path = setup_instrumentation(timestamp)
     logs_dir = Path("logs")
 
     agent_configs = load_agent_configs()
     print("Agents:")
     for name, cfg in agent_configs.items():
         print(f"  {name:<14} {cfg['model_alias']}")
-    print(f"Verbose log: logs/verbose_{timestamp}.log  (tail -f to watch)")
     print(f"Prompt log:  logs/prompts_{timestamp}.log")
 
     initialize_scene_state(scene)
@@ -277,11 +258,8 @@ def run_turn_loop(scene: dict) -> None:
         print(f"\n--- Beat: {current_beat} ---")
 
         # ── Phase 1: NPC wave ────────────────────────────────────────────────
-        npc_crew = build_npc_crew(sr_ctx, narrator_ctx, npc_chars)
-        with verbose_to_file(verbose_path):
-            npc_crew.kickoff()
-
-        npc_outputs = _collect_wave_outputs(npc_crew, "NPC Voice Actor")
+        npc_wave = run_npc_wave(sr_ctx, narrator_ctx, npc_chars)
+        npc_outputs = {k: v for k, v in npc_wave.items() if k != "_narrator"}
         log.info(f"Phase 1 complete: {len(npc_outputs)} NPCs voiced")
 
         # ── Player input ─────────────────────────────────────────────────────
@@ -297,76 +275,40 @@ def run_turn_loop(scene: dict) -> None:
         npc_wave_text = "\n\n".join(
             f"[{npc_id}]: {text}" for npc_id, text in npc_outputs.items()
         )
-
-        pc_crew = build_pc_crew(npc_wave_text, ai_pc_chars, player_action)
-        if pc_crew is not None:
-            with verbose_to_file(verbose_path):
-                pc_crew.kickoff()
-            ai_pc_outputs = _collect_wave_outputs(pc_crew, "NPC Voice Actor")
-        else:
-            ai_pc_outputs = {}
-
+        ai_pc_outputs = run_pc_wave(npc_wave_text, ai_pc_chars, player_action)
         log.info(f"Phase 2 complete: {len(ai_pc_outputs)} AI PCs voiced")
 
         # ── Phase 3: Resolution pipeline ─────────────────────────────────────
         action_map = {**npc_outputs, **ai_pc_outputs, "Z-4P0": player_action}
 
         # 3a — action summaries
-        summary_crew = build_summary_crew(action_map)
-        with verbose_to_file(verbose_path):
-            summary_crew.kickoff()
-        summaries = "\n".join(
-            f"{t.name}: {t.output.raw.strip() if t.output else ''}"
-            for t in summary_crew.tasks
-        )
-        summaries_text = _write_turn_file(logs_dir, turn_ts, current_beat, "summaries", summaries)
+        actor_summaries = run_summary_phase(action_map)
+        summaries_text = "\n".join(f"{k}: {v}" for k, v in actor_summaries.items())
+        _write_turn_file(logs_dir, turn_ts, current_beat, "summaries", summaries_text)
 
         # 3b — check identification
         stats_text = _build_stats_text(scene_yamls)
-        check_crew = build_check_crew(summaries_text, stats_text)
-        with verbose_to_file(verbose_path):
-            check_crew.kickoff()
-        check_output = _get_task_output(check_crew, "Show Runner")
+        check_output = run_check_phase(summaries_text, stats_text)
         checks_text = _write_turn_file(logs_dir, turn_ts, current_beat, "checks", check_output)
         ruling_specs = _parse_ruling_specs(checks_text)
         log.info(f"Phase 3b complete: {len(ruling_specs)} checks identified")
 
         # 3c — dice rolling + rulings
         _roll_specs(ruling_specs)
-        ruling_crew = build_ruling_crew(ruling_specs)
-        if ruling_crew is not None:
-            with verbose_to_file(verbose_path):
-                ruling_crew.kickoff()
-            rulings = "\n".join(
-                f"{t.name}: {t.output.raw.strip() if t.output else ''}"
-                for t in ruling_crew.tasks
-            )
-        else:
-            rulings = "No checks this turn."
-        results_text = _write_turn_file(logs_dir, turn_ts, current_beat, "results", rulings)
+        rulings = run_ruling_phase(ruling_specs)
+        results_text = "\n".join(f"{k}: {v}" for k, v in rulings.items()) if rulings else "No checks this turn."
+        _write_turn_file(logs_dir, turn_ts, current_beat, "results", results_text)
         log.info(f"Phase 3c complete: {len(ruling_specs)} checks resolved")
 
         # 3d — resolution narrative (printed to player)
-        narrative_crew = build_narrative_crew(summaries_text, checks_text, results_text)
-        with verbose_to_file(verbose_path):
-            narrative_crew.kickoff()
-        narrative = _get_task_output(narrative_crew, "Show Runner")
+        narrative = run_narrative_phase(summaries_text, checks_text, results_text)
         if narrative:
             print(f"\n{narrative}")
 
-        # 3e — last-action extraction: one Narrator task per actor, each gets only its own summary
-        actor_summaries = {
-            t.name: (t.output.raw.strip() if t.output else action_map.get(t.name, ""))
-            for t in summary_crew.tasks
-        }
-        last_action_crew = build_last_action_crew(actor_summaries)
-        if last_action_crew is not None:
-            with verbose_to_file(verbose_path):
-                last_action_crew.kickoff()
-            last_actions_extracted = _collect_wave_outputs(last_action_crew, "Narrator")
-        else:
+        # 3e — last-action extraction
+        last_actions_extracted = run_last_action_phase(actor_summaries)
+        if not last_actions_extracted:
             last_actions_extracted = actor_summaries
-
         log.info("Phase 3 complete")
 
         # ── State writes ──────────────────────────────────────────────────────
@@ -379,10 +321,7 @@ def run_turn_loop(scene: dict) -> None:
             f"AI PCs active: {', '.join(ai_pc_outputs.keys()) or 'none'}\n"
             f"Player action: {player_action}"
         )
-        resolution_crew = build_resolution_crew([], scribe_ctx, full_turn_summary)
-        with verbose_to_file(verbose_path):
-            resolution_crew.kickoff()
-        scribe_summary = _get_task_output(resolution_crew, "State Keeper")
+        scribe_summary = run_scribe_phase(scribe_ctx, full_turn_summary)
         if scribe_summary:
             log_path = Path("state/session_log.md")
             with log_path.open("a") as f:
