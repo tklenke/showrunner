@@ -452,6 +452,7 @@ def run_turn_loop(scene: dict, verbose: bool = False) -> None:
 
         # ── Step 5: Check identification ─────────────────────────────────────
         char_summaries = _parse_summaries_log(summaries_log_path)
+        all_summaries = summaries_log_path.read_text() if summaries_log_path.exists() else ""
         char_stats = _build_char_stats(scene_yamls)
         check_output = run_checks(char_summaries, char_stats)
         checks_text = _write_turn_file(logs_dir, scene_num, _beat_num, current_beat, _turn_num, "checks", check_output)
