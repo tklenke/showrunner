@@ -24,14 +24,16 @@ Two repos, kept separate from day one (copyright and content concerns):
 ```
 showrunner/          ← this repo: engine, config, runtime state, character files
   src/showrunner/    ← Python package
-    agents/          ← narrator, world_runner, actors, referee, scribe
+    agents/          ← show_runner, narrator, actors, referee, scribe
     tools/           ← dice_roller, state_reader, state_writer
-    crew.py          ← CrewAI crew assembly
+    llm.py           ← call_llm(), build_system_prompt(), prompt logging
+    runner.py        ← phase runners: NPC/PC waves, resolution pipeline
+    config.py        ← agent config loading, litellm settings
+    instrumentation.py ← session/prompt log paths
     orchestrator.py  ← turn loop
     main.py          ← CLI entry point
   config/
-    agents.yaml      ← CrewAI agent definitions
-    tasks.yaml       ← CrewAI task definitions
+    agents.yaml      ← agent definitions (role, goal, backstory, model)
     litellm.yaml     ← model routing (Alien, Sardinia, Gemini)
   characters/        ← PC and NPC character files (YAML + MD pairs)
   state/             ← runtime state files, tracked in git
@@ -54,15 +56,16 @@ Runtime state files and character sheets live in `showrunner/`, not `swskin/`.
 
 ## Agent Roster
 
-| Agent | Model | Node | Role |
-|-------|-------|------|------|
-| **Narrator** | Gemini 2.0 Flash | Cloud | GM brain: adventure state, scene beat decisions, ticking clocks, NPC knowledge |
-| **World Runner** | Llama 3.1 8B | Sardinia | GM voice: prose narration, atmosphere, scene descriptions |
-| **Actors** | Llama 3.1 8B | Sardinia | NPC voices: live dialogue, physical action, character decisions |
-| **Referee** | Llama 3.2 3B | Alien | Rules engine: dice pool construction, skill check difficulty, combat validation |
-| **Scribe** | Llama 3.2 3B | Alien | State keeper: session log and party stats after each resolved action |
+| Agent | Config Key | Model | Node | Role |
+|-------|-----------|-------|------|------|
+| **Show Runner** | `show_runner` | Llama 3.1 8B | Sardinia | GM brain: beat decisions, check identification, dice rulings, resolution narrative |
+| **Narrator** | `narrator` | Llama 3.1 8B | Sardinia | GM voice: prose narration, last-action extraction |
+| **Actors** | `actors` | Llama 3.1 8B | Sardinia | NPC and AI PC dialogue, physical actions, action summaries |
+| **Scribe** | `scribe` | Llama 3.2 3B | Alien | State keeper: one-sentence session log entry per turn |
 
-CrewAI hierarchical process with Narrator as the manager agent.
+Gemini (gemini-2.5-flash) is configured in `config/litellm.yaml` but not currently assigned to an agent.
+The `referee` config exists in `config/agents.yaml` but is not called by the current pipeline —
+check identification and rulings are handled by Show Runner via `run_check_phase()` and `run_ruling_phase()`.
 
 ---
 
@@ -89,7 +92,7 @@ CrewAI hierarchical process with Narrator as the manager agent.
 
 | Layer | Technology |
 |-------|-----------|
-| Orchestration | CrewAI (hierarchical process) |
+| Orchestration | `runner.py` — direct `litellm.completion` calls via `llm.py` |
 | Inference routing | LiteLLM → local OpenAI-compatible endpoints + Gemini API |
 | Interface | CLI (primary), VS Code terminal |
 | State storage | YAML + Markdown files (human-readable, git-tracked) |
@@ -99,23 +102,25 @@ CrewAI hierarchical process with Narrator as the manager agent.
 
 ## Communication Patterns
 
-**Hierarchical delegation** — Narrator (Gemini) is the CrewAI manager. It delegates tasks
-to World Runner, Actors, Referee, and Scribe. Those agents do not call each other directly.
+**Three-phase turn loop** — Each turn runs three phases sequentially. Outputs from earlier
+phases flow forward as inputs to later phases via the orchestrator; no agent calls another
+directly.
 
-**Escalation** — Sardinia and Alien agents call `consult_narrator()` when they hit genuine
-uncertainty (ambiguous rules, plot-critical decisions). This invokes a Gemini call. Used
-sparingly to control API cost.
+**Phase 1 — NPC Wave** — Show Runner receives scene state and produces a beat plan. Narrator
+receives the beat plan and produces read-aloud narration. Each NPC (in scene order) receives
+the beat plan and all prior NPC outputs, then voices its dialogue and actions.
 
-**Player injection** — Tom can push direction at any time using a `!` prefix in the CLI
-(`! have Bargos look more nervous`). This is injected into the Narrator's context before
-the next beat decision.
+**Phase 2 — PC Wave** — Collected after player CLI input. Each AI PC receives the assembled
+NPC wave text and the player's action, then responds. Human PCs act via CLI prompt only.
 
-**Player turn** — When it is a human character's turn, the CLI prompts: `What does [name]
-do?` The response is fed to the Referee (if a check is triggered) and the World Runner
-(for narration).
+**Phase 3 — Resolution Pipeline** — Five orchestrator-driven steps: action summaries (3a) →
+check identification (3b) → Python dice rolling + LLM rulings (3c) → resolution narrative
+(3d) → last-action extraction (3e). Intermediate files (`logs/turn_{ts}_{beat}_{type}.txt`)
+serve as both debug trail and inter-step context.
 
-**Narrator ↔ Player** — Narrator calls `ask_player()` when a preference question surfaces
-(e.g., "do you want to avoid this fight or escalate?").
+**Player injection** — Tom can push direction using a `!` prefix in the CLI
+(`! have Bargos look more nervous`). Injected into the Show Runner's context before the
+next beat decision. Planned but not yet implemented.
 
 ---
 
@@ -143,24 +148,37 @@ via the CLI; automatic beat progression by the Narrator is a future milestone.
 ## Turn Loop
 
 ```
-Narrator   → assess scene state → decide next beat
-World Runner → narrate scene to player
-  ↓
-[if player's turn]
-  CLI: "What does [character] do?"
-  player inputs action (optionally with manual dice result)
+while True:
+    [load scene_state.yaml: current_beat, last_actions, party_stats]
 
-[if AI character's turn]
-  Actors: generate action from rendered character prompt
+    ── Phase 1: NPC Wave ─────────────────────────────────────────────
+    Show Runner  → scene state + last_actions → beat plan
+    Narrator     → beat plan → narration (printed to player)
+    NPCs in order→ beat plan + all prior NPC outputs → dialogue (printed)
 
-Referee    → is a check needed? → set difficulty → construct dice pool
-DiceRoller → auto-roll OR display pool + accept manual symbol input
-Referee    → interpret symbols → determine outcome
+    ── Player Input ──────────────────────────────────────────────────
+    CLI: "What do you and your companions do?"
 
-World Runner → narrate result
-Scribe     → update state files
-  ↓
-[loop — repeat until beat exits]
+    ── Phase 2: PC Wave ──────────────────────────────────────────────
+    AI PCs in order → npc_wave_text + player action → response (printed)
+
+    ── Phase 3: Resolution Pipeline ──────────────────────────────────
+    3a  Actors      → 1 call per actor → 1–2 sentence summary
+                    → logs/turn_{ts}_{beat}_summaries.txt
+    3b  Show Runner → summaries + character stats → check list or NO_CHECKS
+                    → logs/turn_{ts}_{beat}_checks.txt; parsed into specs
+    3c  Python      → roll_pool() per spec; result embedded in spec
+        Show Runner → 1 call per spec → ruling (each call sees prior rulings)
+                    → logs/turn_{ts}_{beat}_results.txt
+    3d  Show Runner → summaries + checks + results → narrative (printed)
+    3e  Narrator    → 1 call per actor → last-action sentence
+
+    ── State Writes ──────────────────────────────────────────────────
+    Orchestrator  → scene_state.yaml: last_actions updated
+    Scribe        → 1 call → one-sentence entry → appended to state/session_log.md
+
+    ── Beat Advancement ──────────────────────────────────────────────
+    CLI: [Enter] stay  |  [a] advance  |  [beat ID] jump  |  [q] quit
 ```
 
 ---
@@ -253,14 +271,14 @@ mechanical summary into the full system prompt for the Actors agent.
 ## State Files
 
 All state files live in `showrunner/state/`, tracked in git.
-Scribe is the only agent with write access.
+The orchestrator handles all state writes directly. The Scribe produces a one-sentence log
+entry as a string; the orchestrator appends it to `state/session_log.md`.
 
 | File | Format | Description |
 |------|--------|-------------|
-| `session_log.md` | Markdown | Full timestamped narrative record |
+| `session_log.md` | Markdown | Full narrative record; one entry per turn appended by the orchestrator |
 | `party_stats.yaml` | YAML | Current wounds, strain, credits, inventory for all PCs |
-| `scene_state.yaml` | YAML | Location, active NPCs, ticking clock status, character scene plans |
-| `draft.md` | Markdown | Pre-commit sandbox for agent negotiation |
+| `scene_state.yaml` | YAML | Location, active NPCs, ticking clock status, last_actions, character scene plans |
 
 ---
 

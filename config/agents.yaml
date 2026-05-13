@@ -1,4 +1,4 @@
-# CrewAI agent definitions — one entry per agent role.
+# Agent definitions — one entry per agent role.
 # LiteLLM model aliases are defined in litellm.yaml.
 
 show_runner:

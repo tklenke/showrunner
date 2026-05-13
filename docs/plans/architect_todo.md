@@ -5,66 +5,6 @@ For the stable design record, see `architecture.md`.
 
 ---
 
-## Design Notes
-
-**NOTE FROM PROGRAMMER (2026-05-12): LiteLLM callbacks are not viable for prompt logging with CrewAI**
-
-Root cause discovered during Phase 4 playthrough debugging:
-
-CrewAI's `Agent.execute_task()` (in `crewai/agent/core.py`) assigns
-`executor.callbacks = [TokenCalcHandler(self._token_process)]` on every agent call.
-`StepExecutor` then calls `LLM.call(callbacks=[TokenCalcHandler(...)])`.
-Inside `LLM.call()`, any non-empty `callbacks` list triggers
-`LLM.set_callbacks(callbacks)` which does `litellm.callbacks = [TokenCalcHandler(...)]`,
-completely overwriting any logger we registered. This fires on every model call,
-so re-registering after `build_crew()` only helps until the first agent executes.
-
-**Fix implemented**: replaced `litellm.CustomLogger` + `litellm.callbacks` with a
-`BaseEventListener` subclass that subscribes to CrewAI's own event bus
-(`LLMCallCompletedEvent`). The event contains `model`, `messages`, and `response`,
-giving us the same data without fighting CrewAI's callback management.
-
-**Architectural implication**: `architecture.md` describes the instrumentation as
-"LiteLLM prompt/response logging via CustomLogger callback" — this should be updated
-to reflect that prompt logging uses CrewAI's event bus, not LiteLLM callbacks.
-
----
-
-**NOTE FROM PROGRAMMER (2026-05-13): Small models (3B/8B) cannot reliably use tools in CrewAI's ReAct loop**
-
-Observed during Phase 4 playthrough: any agent running on alien (3B) or sardinia (8B) that
-is given tools will crash with `ValueError: Invalid response from LLM call - None or empty`
-or will emit JSON Schema syntax as its "final answer" instead of calling the tool.
-
-Root cause: CrewAI's ReAct loop injects tool schemas and thought/action/observation scaffolding
-into the prompt. Small models either overflow their context window under this added load, or
-generate output that doesn't conform to the expected format, causing CrewAI to reject the
-response entirely after retries.
-
-**Fix applied so far:** removed all tools from NPC Voice Actor (`tools=[]`). Same fix
-needed for the Referee (`roll_dice`, `read_state`, `consult_show_runner` — all three).
-
-**Architectural decision needed: Dice rolling without a tool-capable Referee**
-
-The Referee is the rules engine; real dice randomness is part of that. Three options:
-
-- **Option A — Strip tools; Referee narrates a fictional result.** Simple. Zero randomness.
-  Good enough for early playtesting but undermines the rules engine role.
-
-- **Option B — Roll in the orchestrator; Referee interprets.** Orchestrator calls `roll_pool()`
-  directly using the check spec, passes the result string to the Referee task description.
-  Referee narrates the outcome without needing to call tools. Real randomness; no ReAct loop.
-  Requires the Show Runner review output to include characteristic *values* (e.g. "Agility 3"),
-  not just names, so the orchestrator can build the correct dice pool.
-
-- **Option C — Move Referee to a larger/cloud model.** Gemini or a model with reliable tool
-  use handles the ReAct loop. Adds latency and cost per combat roll. Avoids prompt surgery.
-
-**Current status:** Referee still has tools (`referee.py:create_referee`); game crashes on
-first check. See "Resolved Decisions: Resolution Pipeline" below for the chosen design.
-
----
-
 ## Resolved Decisions
 
 ### Remove CrewAI; replace with direct LiteLLM calls (2026-05-13)
@@ -266,9 +206,6 @@ implementation phase begins.
 - [ ] **LAN addresses** — Confirm Alien's IP and Sardinia's IP (or DNS names) for
   `config/litellm.yaml`. Current placeholders: `http://alien:8080` and `http://sardinia:1234`.
 
-- [ ] **Gemini model** — Confirm which Gemini model to use (currently `gemini-2.0-flash`).
-  Verify Google AI Studio key is available and working before Phase 2.
-
 - [ ] **Sardinia context window** — LM Studio / Llama 3.1 8B max context. The rendered
   actor prompt for a complex NPC + scene state could be 2–3K tokens. Confirm the model
   can handle this while leaving enough room for generation.
@@ -278,9 +215,6 @@ implementation phase begins.
 
 - [ ] **Manual dice input format** — Confirm the symbol notation Tom wants to type.
   Current plan: `2s 1a 1f 1t`, `1tr`, `1de`. Ratify or change before Phase 1.
-
-- [ ] **Scribe write strategy** — Atomic file writes (write to temp, rename) vs. direct
-  overwrite. Decide before Phase 3. Low stakes but needs to be consistent.
 
 ---
 
@@ -303,12 +237,12 @@ Reference: `swskin/Game_masters_kit.pdf` Acts 1–2.
 Phases 5 and 6 are **not required** for this phase. The Referee operates with the specific
 rules and NPC stats for this scene baked inline — no `rules_lookup()` tool needed.
 
-- [ ] Narrator: load scene, decide beats, manage the Gamorrean arrival ticking clock
-- [ ] World Runner: narrate scene descriptions and outcomes
+- [ ] Show Runner: manage beat progression, Gamorrean arrival ticking clock
+- [ ] Narrator: deliver scene descriptions and resolved outcomes in prose
 - [ ] Actors: voice Bargos, Genko, C3-P9, Gamorreans — using `render_actor_prompt()`
-- [ ] Referee: handle Vigilance check (spotting Gamorreans), Brawl/Melee combat checks
-  - Referee system prompt includes the specific rules needed for this scene inline
-  - `rules_lookup()` tool stub exists but is not wired; defer to Phase 5
+- [ ] Resolution pipeline: handle Vigilance check (spotting Gamorreans), Brawl/Melee combat checks
+  - Show Runner system prompt includes the specific rules needed for this scene inline
+  - `rules_lookup()` is a future Phase 5 concern
 - [ ] CLI: player turn prompt, `!` directive injection, manual dice input option
 - [ ] Play through the scene; identify and fix issues
 
