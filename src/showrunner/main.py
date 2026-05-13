@@ -1,6 +1,7 @@
 # ABOUTME: CLI entry point — starts a session, loads state, hands off to the turn loop.
 # ABOUTME: Supports player input, ! directives, and manual dice entry.
 
+import argparse
 import logging
 import os
 import sys
@@ -22,9 +23,13 @@ def main() -> None:
         print("Error: GEMINI_API_KEY not set. Add it to .env or export it.")
         sys.exit(1)
 
-    n = int(sys.argv[1]) if len(sys.argv) > 1 else 0
-    scene = load_adventure_scene(n)
-    run_turn_loop(scene)
+    parser = argparse.ArgumentParser(description="Run a showrunner session.")
+    parser.add_argument("scene", nargs="?", type=int, default=0, help="Scene number (default: 0)")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Print beat titles on transition")
+    args = parser.parse_args()
+
+    scene = load_adventure_scene(args.scene)
+    run_turn_loop(scene, verbose=args.verbose)
 
 
 if __name__ == "__main__":

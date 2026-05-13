@@ -130,3 +130,16 @@ def run_last_actions(actor_summaries: dict[str, str]) -> dict[str, str]:
         msg = f"What was {actor_id}'s last action this turn? One sentence.\n\n{summary}"
         last_actions[actor_id] = call_llm("narrator", build_system_prompt("narrator"), msg)
     return last_actions
+
+
+def run_beat_opener(beat: dict, last_log_entry: str) -> None:
+    """Print a 2-3 sentence player-facing opener for the start of a new beat."""
+    msg = (
+        f"## Beat Director Notes\n"
+        f"Show Runner: {beat.get('show_runner_notes', '')}\n"
+        f"Narrator: {beat.get('narrator_notes', '')}"
+    )
+    if last_log_entry:
+        msg += f"\n\n## Previous session log entry:\n{last_log_entry}"
+    opener = call_llm("narrator", build_system_prompt("narrator"), msg)
+    print(opener)

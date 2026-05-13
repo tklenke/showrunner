@@ -279,3 +279,44 @@ def test_run_last_actions_returns_dict_keyed_by_actor():
         result = run_last_actions({"bargos": "s1", "kaelen": "s2"})
     assert result == {"bargos": "Bargos spoke.", "kaelen": "Kaelen fled."}
 
+
+# ---------------------------------------------------------------------------
+# run_beat_opener
+# ---------------------------------------------------------------------------
+
+BEAT = {
+    "id": "summons",
+    "title": "The Summons",
+    "show_runner_notes": "SR hint.",
+    "narrator_notes": "Narrator hint.",
+}
+
+
+def test_run_beat_opener_calls_narrator_once():
+    from showrunner.runner import run_beat_opener
+    with patch("showrunner.runner.call_llm", return_value="The door opens.") as mock:
+        run_beat_opener(BEAT, "")
+    narrator_calls = [c for c in mock.call_args_list if c.args[0] == "narrator"]
+    assert len(narrator_calls) == 1
+
+
+def test_run_beat_opener_prints_output(capsys):
+    from showrunner.runner import run_beat_opener
+    with patch("showrunner.runner.call_llm", return_value="You enter the chamber."):
+        run_beat_opener(BEAT, "")
+    captured = capsys.readouterr()
+    assert "You enter the chamber." in captured.out
+
+
+def test_run_beat_opener_includes_last_log_entry_in_message():
+    from showrunner.runner import run_beat_opener
+    with patch("showrunner.runner.call_llm", return_value="ok") as mock:
+        run_beat_opener(BEAT, "Z-4P0 arrived safely.")
+    user_msg = mock.call_args_list[0].args[2]
+    assert "Z-4P0 arrived safely." in user_msg
+
+
+def test_run_beat_opener_empty_last_log_does_not_crash():
+    from showrunner.runner import run_beat_opener
+    with patch("showrunner.runner.call_llm", return_value="ok"):
+        run_beat_opener(BEAT, "")  # must not raise

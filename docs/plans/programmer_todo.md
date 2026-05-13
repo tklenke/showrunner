@@ -121,7 +121,7 @@ Run full test suite after.
 
 ---
 
-### [ ] 4.20 — Step 0: beat initialization + Narrator opener on first turn of each beat
+### [x] 4.20 — Step 0: beat initialization + Narrator opener on first turn of each beat
 
 **Do 4.16 and 4.17 first** — this task uses the renamed functions.
 

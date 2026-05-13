@@ -175,3 +175,110 @@ def test_write_turn_file_returns_content(tmp_path):
     content = "Check: Z-4P0 | Negotiation"
     result = _write_turn_file(tmp_path, "ts", "beat", "checks", content)
     assert result == content
+
+
+# ---------------------------------------------------------------------------
+# _apply_beat_notes
+# ---------------------------------------------------------------------------
+
+_BEAT_WITH_NOTES = {
+    "id": "summons",
+    "title": "The Summons",
+    "show_runner_notes": "SR directive here.",
+    "narrator_notes": "Narrator hint here.",
+}
+
+
+def test_apply_beat_notes_injects_sr_notes():
+    from showrunner.orchestrator import _apply_beat_notes
+    sr_ctx, _ = _apply_beat_notes(_BEAT_WITH_NOTES, "base sr", "base narrator")
+    assert "SR directive here." in sr_ctx
+    assert "## Beat Director Notes:" in sr_ctx
+
+
+def test_apply_beat_notes_injects_narrator_notes():
+    from showrunner.orchestrator import _apply_beat_notes
+    _, narrator_ctx = _apply_beat_notes(_BEAT_WITH_NOTES, "base sr", "base narrator")
+    assert "Narrator hint here." in narrator_ctx
+    assert "## Beat Director Notes:" in narrator_ctx
+
+
+def test_apply_beat_notes_preserves_base_ctx():
+    from showrunner.orchestrator import _apply_beat_notes
+    sr_ctx, narrator_ctx = _apply_beat_notes(_BEAT_WITH_NOTES, "base sr", "base narrator")
+    assert "base sr" in sr_ctx
+    assert "base narrator" in narrator_ctx
+
+
+def test_apply_beat_notes_empty_notes_leaves_contexts_unchanged():
+    from showrunner.orchestrator import _apply_beat_notes
+    beat = {"id": "x", "title": "X", "show_runner_notes": "", "narrator_notes": ""}
+    sr_ctx, narrator_ctx = _apply_beat_notes(beat, "base sr", "base narrator")
+    assert sr_ctx == "base sr"
+    assert narrator_ctx == "base narrator"
+
+
+# ---------------------------------------------------------------------------
+# _read_last_session_log_entry
+# ---------------------------------------------------------------------------
+
+def test_read_last_session_log_entry_returns_empty_when_file_missing(tmp_path, monkeypatch):
+    from showrunner.orchestrator import _read_last_session_log_entry
+    monkeypatch.chdir(tmp_path)
+    result = _read_last_session_log_entry()
+    assert result == ""
+
+
+def test_read_last_session_log_entry_returns_last_paragraph(tmp_path, monkeypatch):
+    from showrunner.orchestrator import _read_last_session_log_entry
+    log_file = tmp_path / "state" / "session_log.md"
+    log_file.parent.mkdir()
+    log_file.write_text("First entry.\n\nSecond entry.\n\n")
+    monkeypatch.chdir(tmp_path)
+    result = _read_last_session_log_entry()
+    assert "Second entry." in result
+
+
+# ---------------------------------------------------------------------------
+# verbose beat title print (via _run_beat_initialization)
+# ---------------------------------------------------------------------------
+
+def test_run_beat_initialization_prints_title_when_verbose(capsys, tmp_path, monkeypatch):
+    import logging
+    from unittest.mock import patch
+    from showrunner.orchestrator import _run_beat_initialization
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "state").mkdir()
+    log = logging.getLogger("test")
+    with patch("showrunner.orchestrator.update_scene_state"), \
+         patch("showrunner.orchestrator.run_beat_opener"):
+        _run_beat_initialization(_BEAT_WITH_NOTES, "sr", "nar", "", verbose=True, log=log)
+    captured = capsys.readouterr()
+    assert "The Summons" in captured.out
+
+
+def test_run_beat_initialization_no_print_when_not_verbose(capsys, tmp_path, monkeypatch):
+    import logging
+    from unittest.mock import patch
+    from showrunner.orchestrator import _run_beat_initialization
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "state").mkdir()
+    log = logging.getLogger("test")
+    with patch("showrunner.orchestrator.update_scene_state"), \
+         patch("showrunner.orchestrator.run_beat_opener"):
+        _run_beat_initialization(_BEAT_WITH_NOTES, "sr", "nar", "", verbose=False, log=log)
+    captured = capsys.readouterr()
+    assert "The Summons" not in captured.out
+
+
+def test_run_beat_initialization_calls_run_beat_opener(tmp_path, monkeypatch):
+    import logging
+    from unittest.mock import patch, MagicMock
+    from showrunner.orchestrator import _run_beat_initialization
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "state").mkdir()
+    log = logging.getLogger("test")
+    with patch("showrunner.orchestrator.update_scene_state"), \
+         patch("showrunner.orchestrator.run_beat_opener") as mock_opener:
+        _run_beat_initialization(_BEAT_WITH_NOTES, "sr", "nar", "last entry", verbose=False, log=log)
+    mock_opener.assert_called_once_with(_BEAT_WITH_NOTES, "last entry")

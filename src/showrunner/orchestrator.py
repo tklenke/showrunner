@@ -11,6 +11,7 @@ from showrunner.agents.show_runner import render_show_runner_context
 from showrunner.config import apply_litellm_settings, load_agent_configs
 from showrunner.instrumentation import setup_instrumentation
 from showrunner.runner import (
+    run_beat_opener,
     run_last_actions,
     run_npc_wave,
     run_narrative,
@@ -192,6 +193,57 @@ def _build_stats_text(yamls: dict[str, dict]) -> str:
     return "\n".join(lines)
 
 
+def _apply_beat_notes(beat: dict, sr_ctx: str, narrator_ctx: str) -> tuple[str, str]:
+    """Append beat-specific director notes to the SR and Narrator context strings."""
+    sr_notes = beat.get("show_runner_notes", "")
+    narrator_notes = beat.get("narrator_notes", "")
+    if sr_notes:
+        sr_ctx += f"\n\n## Beat Director Notes:\n{sr_notes}"
+    if narrator_notes:
+        narrator_ctx += f"\n\n## Beat Director Notes:\n{narrator_notes}"
+    return sr_ctx, narrator_ctx
+
+
+def _read_last_session_log_entry() -> str:
+    """Return the last non-empty paragraph from state/session_log.md, or '' if absent."""
+    log_path = Path("state/session_log.md")
+    if not log_path.exists():
+        return ""
+    text = log_path.read_text().strip()
+    if not text:
+        return ""
+    paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
+    return paragraphs[-1] if paragraphs else ""
+
+
+def _run_beat_initialization(
+    beat: dict,
+    sr_ctx: str,
+    narrator_ctx: str,
+    last_log_entry: str,
+    verbose: bool,
+    log: logging.Logger,
+) -> tuple[str, str]:
+    """Run beat initialization for the first turn of a new beat.
+
+    Writes character_plans, injects beat notes into contexts, calls the Narrator
+    opener, handles verbose output, and logs the transition.
+    Returns updated (sr_ctx, narrator_ctx).
+    """
+    character_plans = beat.get("character_plans", {})
+    if character_plans:
+        update_scene_state({"character_plans": character_plans})
+
+    sr_ctx, narrator_ctx = _apply_beat_notes(beat, sr_ctx, narrator_ctx)
+    run_beat_opener(beat, last_log_entry)
+
+    if verbose:
+        print(f"\n=== {beat['title']} ===")
+
+    log.info(f"Beat transition: {beat['id']}")
+    return sr_ctx, narrator_ctx
+
+
 def _write_turn_file(logs_dir: Path, turn_ts: str, beat_id: str, type: str, content: str) -> str:
     """Write turn intermediate file; return content for chaining."""
     logs_dir.mkdir(parents=True, exist_ok=True)
@@ -217,7 +269,7 @@ def _roll_specs(specs: list[dict]) -> None:
         )
 
 
-def run_turn_loop(scene: dict) -> None:
+def run_turn_loop(scene: dict, verbose: bool = False) -> None:
     """Run the agent turn loop for a loaded adventure scene."""
     apply_litellm_settings()
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -229,7 +281,7 @@ def run_turn_loop(scene: dict) -> None:
     print("Agents:")
     for name, cfg in agent_configs.items():
         print(f"  {name:<14} {cfg['model_alias']}")
-    print(f"Prompt log:  logs/prompts_{timestamp}.log")
+    print(f"Prompt log:  {prompts_path}")
 
     initialize_scene_state(scene)
     scene_yamls = load_scene_yamls(scene)
@@ -237,6 +289,9 @@ def run_turn_loop(scene: dict) -> None:
     print(f"\n=== {scene['title']} ===")
     print(scene["location"]["read_aloud"])
     log.info(f"Scene started: {scene['scene_id']}")
+
+    _last_beat: str = ""
+    _turn_num: int = 1
 
     while True:
         turn_ts = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -248,11 +303,20 @@ def run_turn_loop(scene: dict) -> None:
         sr_ctx = render_show_runner_context(scene, scene_state, party_stats, last_actions)
         narrator_ctx = render_narrator_context(scene, current_beat, last_actions, party_stats)
 
+        # ── Step 0: Beat initialization (first turn of each beat only) ───────
+        if current_beat != _last_beat:
+            beat_list = scene.get("beats", [])
+            beat = next((b for b in beat_list if b["id"] == current_beat), {})
+            last_log_entry = _read_last_session_log_entry()
+            sr_ctx, narrator_ctx = _run_beat_initialization(beat, sr_ctx, narrator_ctx, last_log_entry, verbose, log)
+            _last_beat = current_beat
+            _turn_num = 1
+
         npc_chars = load_scene_characters(scene, scene_state, player_filter="npc")
         companion_chars = load_scene_characters(scene, scene_state, player_filter="companion")
 
-        log.debug(f"Beat: {current_beat}  npcs: {list(npc_chars)}  companions: {list(companion_chars)}")
-        print(f"\n--- Beat: {current_beat} ---")
+        log.debug(f"Beat: {current_beat} turn: {_turn_num}  npcs: {list(npc_chars)}  companions: {list(companion_chars)}")
+        print(f"\n--- Beat: {current_beat} (turn {_turn_num}) ---")
 
         # ── Phase 1: NPC wave ────────────────────────────────────────────────
         npc_wave = run_npc_wave(sr_ctx, narrator_ctx, npc_chars)
@@ -338,3 +402,5 @@ def run_turn_loop(scene: dict) -> None:
         else:
             advance_beat(choice)
             log.info(f"Jumped to beat: {choice}")
+
+        _turn_num += 1

@@ -86,6 +86,14 @@ beats:
       sounds of the room — rustling, a low hum of repulsors, the clink of
       someone eating — not silence, but Bargos's silence.
     checks: []
+    character_plans:
+      bargos_the_hutt: >
+        Wait in silence while the PCs cross the chamber. Let them feel your gaze.
+        When they reach the dais, acknowledge them with a slow nod and begin the
+        meeting. Do not appear impatient.
+      kaelen_sunara: >
+        Stay alert and observant during the approach. Let Z-4P0 take point.
+        Study Bargos and Genko for tells — who is nervous, who is hiding something.
 
   - id: "audience"
     title: "The Job"
@@ -123,6 +131,16 @@ beats:
           Threat: Bargos notes the PCs' names for future reference.
           Triumph: Bargos offers an additional 10,000 credits if they return
           with Gavos's full ledger intact.
+    character_plans:
+      bargos_the_hutt: >
+        Explain the Gavos situation with deliberate vagueness. Frame it as a
+        collection job. Do not mention the droid workforce unless pressed hard.
+        If PCs negotiate, be willing to adjust the bonus structure but not the
+        base sum of 100,000 credits.
+      kaelen_sunara: >
+        Listen carefully to Bargos's terms. Watch Genko — he knows more than he
+        is saying. If there's an opening to ask about what happened to the foreman,
+        take it; but don't push so hard that Bargos shuts down.
 
   - id: "gamorrean_warning"
     title: "Something Is Wrong"
@@ -158,6 +176,14 @@ beats:
           Average difficulty (2 purple). Success: PC recognizes the intruders as
           renegades before combat begins, granting 1 Boost die on initiative.
           Failure: the Gamorreans get one free move toward Bargos before PCs act.
+    character_plans:
+      bargos_the_hutt: >
+        Freeze when the doors burst open. Call for your guards — then realize
+        they are not coming. Defer to the PCs if they act; otherwise look to
+        Genko.
+      kaelen_sunara: >
+        The moment the doors open, move to position between Bargos and the threat.
+        Assess the numbers and weapons. Call out to Z-4P0 for a coordinated response.
 
   - id: "gamorrean_rumble"
     title: "The Gamorrean Rumble"
@@ -185,6 +211,14 @@ beats:
       destroyed: the food table overturned, a cage rattling loose, a servant
       fleeing through a side door.
     checks: []
+    character_plans:
+      bargos_the_hutt: >
+        Retreat toward the rear of the dais. Do not engage directly. Shout orders
+        that no one is listening to. If a PC takes a hit protecting you, remember it.
+      kaelen_sunara: >
+        Engage the nearest Gamorrean trying to reach Bargos. Keep Z-4P0 in
+        sight. Use the environment — tables, pillars, overturned furniture —
+        for cover and tactical positioning.
 
   - id: "mission_brief"
     title: "The Mission Brief"
@@ -209,6 +243,15 @@ beats:
       Genko has produced a datapad with the Gavos coordinates. The smell
       of a broken spice container mingles with ozone from a discharged weapon.
     checks: []
+    character_plans:
+      bargos_the_hutt: >
+        Regain composure quickly. Acknowledge what the PCs did — or didn't do.
+        Deliver the mission brief with minimal words: Gavos coordinates, 100,000
+        credits, return deadline. Dismiss them. Do not show further vulnerability.
+      kaelen_sunara: >
+        Accept the Gavos coordinates. Note the deadline mentally. If Bargos seems
+        warmer than expected, probe gently for more information about what he
+        knows. Otherwise, prepare to depart.
 
 exit:
   condition: "PCs have received the Gavos coordinates and Bargos has dismissed them."
