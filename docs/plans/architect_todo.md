@@ -1,7 +1,7 @@
 # Architect TODO
 
 Open decisions and phased work for the showrunner engine.
-Completed items are checked. For the stable design record, see `architecture.md`.
+For the stable design record, see `architecture.md`.
 
 ---
 
@@ -29,67 +29,14 @@ implementation phase begins.
 - [ ] **Scribe write strategy** — Atomic file writes (write to temp, rename) vs. direct
   overwrite. Decide before Phase 3. Low stakes but needs to be consistent.
 
-- [x] **MVP PC character sheet** — Kaelen Sunara (AI-driven Smuggler/Thief) and Z-4P0
-  (human-driven droid companion, `player: "human"`) created and committed.
-
 ---
 
 ## Phase 0: Pre-Implementation Setup
 
-- [x] Architecture design finalized — see `architecture.md`
-- [x] `docs/plans/character_schema.md` — YAML schema for character files documented
-- [x] `docs/plans/architecture.md` — this file
-- [x] `characters/bargos_the_hutt.yaml` + `bargos_the_hutt.md` — Bargos NPC complete
-- [x] Directory structure created: `src/showrunner/`, `config/`, `characters/`, `state/`, `tests/`
-- [x] Python package stubs created with phase markers
-- [x] `config/agents.yaml` — CrewAI agent definitions stub
-- [x] `config/tasks.yaml` — CrewAI task definitions stub
-- [x] `config/litellm.yaml` — LiteLLM routing stub (needs real IPs)
-- [x] `requirements.txt` — dependency list stub
 - [ ] Tom provides PC character YAML + MD (at least one, for Phase 4)
 - [ ] Parse Genesys Core Rulebook into indexed sections (`swskin/rules/`)
   - `rules/index.md`, `rules/dice.md`, `rules/combat.md`, `rules/skills.md`
 - [ ] Verify LiteLLM can reach llama.cpp on Alien and LM Studio on Sardinia
-
----
-
-## Phase 1: DiceRoller (Critical Path)
-
-Everything downstream depends on a working dice roller. Do this first.
-
-- [ ] Implement `roll_pool()` in `src/showrunner/tools/dice_roller.py`
-  - Face tables are already in the file; add random face selection
-- [ ] Build and test: pool construction `build_pool(characteristic, skill_ranks, difficulty, boost, setback, upgrades)`
-- [ ] Build and test: `DiceResult` symbol cancellation (S/F cancel, A/T cancel, Tr/De independent)
-- [ ] Manual input parser: accept `2s 1a 1f` or `1tr 2a` notation, return `DiceResult`
-- [ ] Unit tests for every die type (verify face table coverage)
-- [ ] Unit tests for cancellation edge cases (exact tie, Tr+De in same pool)
-- [ ] Unit tests for pool construction rule (max/min characteristic vs skill_ranks)
-
----
-
-## Phase 2: CrewAI Scaffold
-
-- [ ] Install dependencies: `pip install -r requirements.txt`
-- [ ] Implement agent classes in `src/showrunner/agents/` using `config/agents.yaml`
-- [ ] Wire LiteLLM routing — verify each agent can make a test inference call
-  - Alien endpoint test (Referee or Scribe makes a trivial call)
-  - Sardinia endpoint test (World Runner or Actors makes a trivial call)
-  - Gemini endpoint test (Narrator makes a trivial call)
-- [ ] Implement `crew.py` — assemble CrewAI hierarchical Crew from agent + task configs
-- [ ] Implement basic turn loop in `orchestrator.py` — message passing only, no game content
-- [ ] Tool stubs wired: `consult_narrator()`, `ask_player()`, `roll_dice()`, `read_state()`, `write_state()`
-
----
-
-## Phase 3: State Management
-
-- [ ] `state_reader.py` — implement `load_scene_state()`, `load_party_stats()`, `load_character()`
-- [ ] `state_writer.py` — implement `update_party_stats()`, `update_scene_state()`, `append_session_log()`
-- [ ] Initial state loader: read character YAMLs, initialise `party_stats.yaml` and `scene_state.yaml` for a new session
-- [ ] Scribe agent: write structured updates to state files after each resolved action
-- [ ] `render_actor_prompt()` in `actors.py` — combine persona MD + YAML mechanical summary, sorted static-to-dynamic per `character_schema.md`
-- [ ] Session log format: timestamped narrative entries in `state/session_log.md`
 
 ---
 
@@ -103,13 +50,6 @@ Reference: `swskin/Game_masters_kit.pdf` Acts 1–2.
 Phases 5 and 6 are **not required** for this phase. The Referee operates with the specific
 rules and NPC stats for this scene baked inline — no `rules_lookup()` tool needed.
 
-- [x] Adventure scene format: `docs/plans/scene_format.md` — schema, Narrator prompt
-  assembly order (cache-aware: static scene file top, dynamic runtime state bottom),
-  `render_narrator_context()` spec, implementation notes.
-- [x] Convert Bargos mansion scenes (Acts 1–2) to YAML format
-  - `state/scene_0.yaml` — Bargos audience + Gamorrean Rumble (inline minion stats)
-  - `state/scene_1.yaml` — Gavos landing pad + EV-8D3 deception
-  - NOTE: Gamorrean Guard stats need verification against source adventure PDF.
 - [ ] Narrator: load scene, decide beats, manage the Gamorrean arrival ticking clock
 - [ ] World Runner: narrate scene descriptions and outcomes
 - [ ] Actors: voice Bargos, Genko, C3-P9, Gamorreans — using `render_actor_prompt()`
