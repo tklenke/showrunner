@@ -10,6 +10,7 @@ from showrunner.agents.narrator import render_narrator_context
 from showrunner.agents.show_runner import render_show_runner_context
 from showrunner.config import apply_litellm_settings, load_agent_configs
 from showrunner.instrumentation import setup_instrumentation
+from showrunner.llm import build_system_prompt, call_llm
 from showrunner.runner import (
     run_beat_opener,
     run_last_actions,
@@ -204,6 +205,43 @@ def _parse_summaries_log(path) -> dict[str, str]:
             actor, summary = line.split(": ", 1)
             result[actor.strip()] = summary.strip()
     return result
+
+
+def parse_structured(raw: str, parser, *, context: str = "") -> tuple:
+    """Parse raw LLM output, escalating through a repair chain on failure.
+
+    parser(raw) -> (result, ok: bool). Returns (result, recovered: bool).
+    Steps: direct parse → Narrator → Show Runner → User+Narrator → zero fallback.
+    """
+    result, ok = parser(raw)
+    if ok:
+        return result, False
+
+    repair_prompt = f"{context}\n\nRaw output to fix:\n{raw}" if context else f"Raw output to fix:\n{raw}"
+
+    for agent in ("narrator", "show_runner"):
+        fixed = call_llm(agent, build_system_prompt(agent), repair_prompt)
+        result, ok = parser(fixed)
+        if ok:
+            return result, True
+
+    # User prompt → Narrator interprets (max 1 attempt)
+    try:
+        user_input = input("Parse failed. Enter correction (or press Enter to skip): ").strip()
+    except (EOFError, OSError):
+        user_input = ""
+    if user_input:
+        fixed = call_llm("narrator", build_system_prompt("narrator"), f"{context}\n\nUser correction:\n{user_input}")
+        result, ok = parser(fixed)
+        if ok:
+            return result, True
+
+    # Zero fallback
+    warning = f"\nWARNING: parse_structured failed for context: {context!r}. Using zero fallback.\n"
+    session_log_path = Path("state/session_log.md")
+    with session_log_path.open("a") as f:
+        f.write(warning)
+    return result, False
 
 
 def _apply_beat_notes(beat: dict, sr_ctx: str, narrator_ctx: str) -> tuple[str, str]:

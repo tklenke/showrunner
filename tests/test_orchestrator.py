@@ -306,3 +306,81 @@ def test_run_beat_initialization_calls_run_beat_opener(tmp_path, monkeypatch):
          patch("showrunner.orchestrator.run_beat_opener") as mock_opener:
         _run_beat_initialization(_BEAT_WITH_NOTES, "sr", "nar", "last entry", verbose=False, log=log)
     mock_opener.assert_called_once_with(_BEAT_WITH_NOTES, "last entry")
+
+
+# ---------------------------------------------------------------------------
+# parse_structured
+# ---------------------------------------------------------------------------
+
+def _ok_parser(raw: str):
+    return (raw.strip(), True) if raw.strip() else (None, False)
+
+
+def _fail_parser(raw: str):
+    return (None, False)
+
+
+def test_parse_structured_clean_input_no_llm_calls():
+    from unittest.mock import patch
+    from showrunner.orchestrator import parse_structured
+    with patch("showrunner.orchestrator.call_llm") as mock:
+        result, recovered = parse_structured("good input", _ok_parser, context="ctx")
+    mock.assert_not_called()
+    assert result == "good input"
+    assert recovered is False
+
+
+def test_parse_structured_malformed_calls_narrator():
+    from unittest.mock import patch
+    from showrunner.orchestrator import parse_structured
+    with patch("showrunner.orchestrator.call_llm", return_value="fixed") as mock:
+        result, recovered = parse_structured("bad", _fail_parser, context="ctx")
+    narrator_calls = [c for c in mock.call_args_list if c.args[0] == "narrator"]
+    assert len(narrator_calls) >= 1
+
+
+def test_parse_structured_narrator_fixes_returns_recovered_true():
+    from unittest.mock import patch
+    from showrunner.orchestrator import parse_structured
+    calls = []
+
+    def parser(raw):
+        calls.append(raw)
+        return (raw, True) if "fixed" in raw else (None, False)
+
+    with patch("showrunner.orchestrator.call_llm", return_value="fixed output"):
+        result, recovered = parse_structured("broken", parser, context="ctx")
+    assert recovered is True
+    assert result == "fixed output"
+
+
+def test_parse_structured_narrator_fails_calls_show_runner():
+    from unittest.mock import patch
+    from showrunner.orchestrator import parse_structured
+    with patch("showrunner.orchestrator.call_llm", return_value="still bad") as mock:
+        parse_structured("bad", _fail_parser, context="ctx")
+    sr_calls = [c for c in mock.call_args_list if c.args[0] == "show_runner"]
+    assert len(sr_calls) >= 1
+
+
+def test_parse_structured_all_llm_fail_returns_zero_fallback(tmp_path, monkeypatch):
+    from unittest.mock import patch
+    from showrunner.orchestrator import parse_structured
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "state").mkdir()
+    monkeypatch.setattr("builtins.input", lambda _: "")
+    with patch("showrunner.orchestrator.call_llm", return_value="still bad"):
+        result, recovered = parse_structured("bad", _fail_parser, context="ctx")
+    assert recovered is False
+
+
+def test_parse_structured_all_fail_writes_warning_to_session_log(tmp_path, monkeypatch):
+    from unittest.mock import patch
+    from showrunner.orchestrator import parse_structured
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "state").mkdir()
+    monkeypatch.setattr("builtins.input", lambda _: "")
+    with patch("showrunner.orchestrator.call_llm", return_value="still bad"):
+        parse_structured("bad", _fail_parser, context="ctx")
+    log_content = (tmp_path / "state" / "session_log.md").read_text()
+    assert "WARNING" in log_content

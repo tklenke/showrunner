@@ -238,7 +238,7 @@ to the same `_summaries.txt` log file that Step 3 wrote NPC summaries to.
 
 ---
 
-### [~] 4.24 — Step 5: Check Identification — N calls, one per character
+### [x] 4.24 — Step 5: Check Identification — N calls, one per character
 
 Per `game_loop.md` Step 5: the Show Runner identifies required checks one character at a
 time. One `call_llm()` per character — focused on one actor at a time rather than the
@@ -267,7 +267,7 @@ Or `NO_CHECKS` if no check needed for that character.
 
 ---
 
-### [ ] 4.25 — Structured Output Chain: parse-repair loop in orchestrator
+### [~] 4.25 — Structured Output Chain: parse-repair loop in orchestrator
 
 Per `game_loop.md` Ref C: the orchestrator never parses free-form LLM output cold.
 It always leads with a programmatic best-guess (regex, keyword extraction), then hands
