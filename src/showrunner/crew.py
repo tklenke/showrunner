@@ -1,6 +1,8 @@
 # ABOUTME: CrewAI crew assembly — phase builders for the turn loop.
 # ABOUTME: NPC/PC wave builders plus five-step resolution pipeline (3a–3e).
 
+import sys
+
 from crewai import Crew, Process, Task
 
 from showrunner.agents.actors import create_actors
@@ -8,6 +10,24 @@ from showrunner.agents.narrator import create_narrator
 from showrunner.agents.referee import create_referee
 from showrunner.agents.scribe import create_scribe
 from showrunner.agents.show_runner import create_show_runner
+
+
+def _make_print_callback(label: str | None = None):
+    """Return a task callback that prints output to the real terminal immediately.
+
+    Uses sys.__stdout__ so it bypasses the verbose_to_file redirect and reaches
+    the player console as soon as each task completes.
+    """
+    def callback(output):
+        text = output.raw.strip() if hasattr(output, "raw") else str(output)
+        if not text:
+            return
+        if label:
+            sys.__stdout__.write(f"\n[{label}]\n{text}\n")
+        else:
+            sys.__stdout__.write(f"\n{text}\n")
+        sys.__stdout__.flush()
+    return callback
 
 
 def build_npc_crew(
@@ -45,6 +65,7 @@ def build_npc_crew(
         expected_output="Narration text delivered to the player.",
         agent=narrator,
         context=[task_plan],
+        callback=_make_print_callback(),
     )
 
     npc_tasks = []
@@ -61,6 +82,7 @@ def build_npc_crew(
             expected_output=f"Dialogue and actions for {npc_id} this beat.",
             agent=actor,
             context=[task_plan] + npc_tasks,
+            callback=_make_print_callback(npc_id),
         )
         npc_tasks.append(npc_task)
 
@@ -106,6 +128,7 @@ def build_pc_crew(
             ),
             expected_output=f"Dialogue and actions for {pc_id} this beat.",
             agent=actor,
+            callback=_make_print_callback(pc_id),
         )
         ai_pc_tasks.append(pc_task)
 

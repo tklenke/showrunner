@@ -281,15 +281,7 @@ def run_turn_loop(scene: dict) -> None:
         with verbose_to_file(verbose_path):
             npc_crew.kickoff()
 
-        narrator_text = _get_task_output(npc_crew, "Narrator")
         npc_outputs = _collect_wave_outputs(npc_crew, "NPC Voice Actor")
-
-        if narrator_text:
-            print(f"\n{narrator_text}")
-        for npc_id, text in npc_outputs.items():
-            if text:
-                print(f"\n[{npc_id}]\n{text}")
-
         log.info(f"Phase 1 complete: {len(npc_outputs)} NPCs voiced")
 
         # ── Player input ─────────────────────────────────────────────────────
@@ -313,10 +305,6 @@ def run_turn_loop(scene: dict) -> None:
             ai_pc_outputs = _collect_wave_outputs(pc_crew, "NPC Voice Actor")
         else:
             ai_pc_outputs = {}
-
-        for pc_id, text in ai_pc_outputs.items():
-            if text:
-                print(f"\n[{pc_id}]\n{text}")
 
         log.info(f"Phase 2 complete: {len(ai_pc_outputs)} AI PCs voiced")
 

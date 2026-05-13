@@ -93,6 +93,27 @@ def test_npc_crew_narrator_sees_sr_plan():
     assert sr_task in narrator_task.context
 
 
+def test_npc_crew_narrator_has_callback():
+    from showrunner.crew import build_npc_crew
+    crew = build_npc_crew("scene", "", {})
+    narrator_task = crew.tasks[1]
+    assert narrator_task.callback is not None
+
+
+def test_npc_crew_npc_tasks_have_callbacks():
+    from showrunner.crew import build_npc_crew
+    crew = build_npc_crew("scene", "", {"bargos": "data", "genko": "data"})
+    npc_tasks = crew.tasks[2:]
+    assert all(t.callback is not None for t in npc_tasks)
+
+
+def test_npc_crew_show_runner_task_has_no_callback():
+    from showrunner.crew import build_npc_crew
+    crew = build_npc_crew("scene", "", {})
+    sr_task = crew.tasks[0]
+    assert sr_task.callback is None
+
+
 # ---------------------------------------------------------------------------
 # build_pc_crew
 # ---------------------------------------------------------------------------
@@ -133,6 +154,12 @@ def test_pc_crew_has_no_show_runner_task():
     crew = build_pc_crew("NPC wave.", {"kaelen": "Kaelen data"}, "Player ran.")
     roles = [t.agent.role for t in crew.tasks]
     assert "Show Runner" not in roles
+
+
+def test_pc_crew_ai_pc_tasks_have_callbacks():
+    from showrunner.crew import build_pc_crew
+    crew = build_pc_crew("NPC wave.", {"kaelen": "Kaelen data", "rex": "Rex data"}, "Player ran.")
+    assert all(t.callback is not None for t in crew.tasks)
 
 
 # ---------------------------------------------------------------------------
