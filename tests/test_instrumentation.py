@@ -42,6 +42,21 @@ def test_server_for_no_slash_returns_model():
     assert logger._server_for("unknown") == "unknown"
 
 
+def test_server_for_uses_map_over_prefix():
+    from showrunner.instrumentation import _PromptLogger
+    server_map = {"openai/meta-llama-3.1-8b-instruct": "sardinia"}
+    logger = _PromptLogger(None, server_map=server_map)
+    assert logger._server_for("openai/meta-llama-3.1-8b-instruct") == "sardinia"
+
+
+def test_server_for_falls_back_to_prefix_when_not_in_map():
+    from showrunner.instrumentation import _PromptLogger
+    server_map = {"openai/meta-llama-3.1-8b-instruct": "sardinia"}
+    logger = _PromptLogger(None, server_map=server_map)
+    assert logger._server_for("gemini-2.5-flash") == "gemini-2.5-flash"
+    assert logger._server_for("other/model") == "other"
+
+
 def test_format_messages_single():
     from showrunner.instrumentation import _PromptLogger
     logger = _PromptLogger(None)
@@ -128,6 +143,36 @@ def test_verbose_redirect_restores_stdout_on_exception(tmp_path):
     except ValueError:
         pass
     assert sys.stdout is real_stdout
+
+
+def test_setup_instrumentation_maps_server_names_from_config(tmp_path, config_path):
+    """When config_path given, litellm model IDs are resolved to server names."""
+    from crewai.events.event_bus import crewai_event_bus
+    from crewai.events.types.llm_events import LLMCallCompletedEvent, LLMCallStartedEvent, LLMCallType
+    from showrunner.instrumentation import setup_instrumentation
+
+    _, prompts_path, logger = setup_instrumentation("test_ts2", logs_dir=tmp_path, config_path=config_path)
+
+    try:
+        crewai_event_bus.emit(None, event=LLMCallStartedEvent(
+            model="openai/meta-llama-3.1-8b-instruct",
+            call_id="map-test-1",
+        ))
+        future = crewai_event_bus.emit(None, event=LLMCallCompletedEvent(
+            model="openai/meta-llama-3.1-8b-instruct",
+            call_id="map-test-1",
+            messages=[],
+            response="sardinia response",
+            call_type=LLMCallType.LLM_CALL,
+        ))
+        if future is not None:
+            future.result(timeout=5.0)
+
+        content = prompts_path.read_text()
+        assert "sardinia" in content
+        assert "openai" not in content
+    finally:
+        crewai_event_bus.off(LLMCallCompletedEvent, logger._on_completed)
 
 
 def test_prompts_written_via_crewai_event_bus(tmp_path, config_path):

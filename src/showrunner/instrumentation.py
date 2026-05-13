@@ -25,11 +25,14 @@ def _build_server_map(config_path: Path) -> dict[str, str]:
 
 
 class _PromptLogger:
-    def __init__(self, log_path: Path):
+    def __init__(self, log_path: Path, server_map: dict[str, str] | None = None):
         self._log_path = log_path
+        self._server_map = server_map or {}
 
     def _server_for(self, model: str) -> str:
-        """Derive a human-readable server label from a model_name string."""
+        """Resolve model to a human-readable server label via map, then prefix fallback."""
+        if model in self._server_map:
+            return self._server_map[model]
         return model.split("/")[0] if model and "/" in model else (model or "unknown")
 
     def _format_messages(self, messages) -> str:
@@ -74,7 +77,7 @@ def verbose_to_file(log_path: Path):
 
 
 def setup_instrumentation(
-    timestamp: str, logs_dir: Path | None = None
+    timestamp: str, logs_dir: Path | None = None, config_path: Path | None = None
 ) -> tuple[Path, Path, "_PromptLogger"]:
     """Create log paths, subscribe prompt logger to CrewAI event bus, return (verbose_path, prompts_path, logger)."""
     if logs_dir is None:
@@ -84,6 +87,7 @@ def setup_instrumentation(
     verbose_path = logs_dir / f"verbose_{timestamp}.log"
     prompts_path = logs_dir / f"prompts_{timestamp}.log"
 
-    logger = _PromptLogger(prompts_path)
+    server_map = _build_server_map(config_path) if config_path and config_path.exists() else {}
+    logger = _PromptLogger(prompts_path, server_map=server_map)
     crewai_event_bus.on(LLMCallCompletedEvent)(logger._on_completed)
     return verbose_path, prompts_path, logger

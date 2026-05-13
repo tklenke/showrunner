@@ -90,7 +90,9 @@ def run_turn_loop(scene: dict) -> None:
     """
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     log = _setup_session_log(timestamp)
-    verbose_path, prompts_path, prompt_logger = setup_instrumentation(timestamp)
+    verbose_path, prompts_path, prompt_logger = setup_instrumentation(
+        timestamp, config_path=Path("config/litellm.yaml")
+    )
     print(f"Verbose log: logs/verbose_{timestamp}.log  (tail -f to watch)")
     print(f"Prompt log:  logs/prompts_{timestamp}.log")
 
