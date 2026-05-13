@@ -328,7 +328,7 @@ characters:
 
 ---
 
-### [~] 4.27 — Step 9: plan update — SR sets overall plan then individual plans
+### [x] 4.27 — Step 9: plan update — SR sets overall plan then individual plans
 
 **Do 4.20 first** — this step runs after last-action extraction in the same turn loop.
 
