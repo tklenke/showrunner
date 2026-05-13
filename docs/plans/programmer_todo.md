@@ -360,6 +360,63 @@ N calls: SR  →  overall_plan + character id + current situation  →  individu
 
 ---
 
+### [ ] 4.29 — Output labeling: character headers always; step labels in verbose mode
+
+**Why:** The current output mixes GM-internal blobs, character responses, and narrative
+with no visual separation. We can't tell which step produced bad output. This task adds
+labeled section headers so every printed block has a clear origin.
+
+**Character headers — always on (not verbose-gated):**
+
+Replace the current `[name]` prefix style with a proper section header on its own line.
+
+| Current | New |
+|---|---|
+| `[bargos_the_hutt] He stares...` | `\n=== bargos_the_hutt ===\nHe stares...` |
+| `[kaelen_sunara] She nods...` | `\n=== kaelen_sunara ===\nShe nods...` |
+
+Files: `runner.py` → `run_npc_wave` and `run_companion_wave` both call
+`print(f"[{npc_id}] {full_output}")` / `print(f"[{pc_id}] {output}")`.
+Change both to `print(f"\n=== {id} ===\n{output}")`.
+
+**Step labels — verbose mode only:**
+
+When `--verbose` / `-v` is passed, print a `=== Step Name ===` header before each
+major output block. Add a `verbose: bool = False` parameter to the runner functions
+that print, thread it through from the orchestrator.
+
+| Block | Label | Currently printed by |
+|---|---|---|
+| Beat opener | `=== Beat Opener ===` | `run_beat_opener()` in `runner.py` |
+| Resolution narrative | `=== Resolution Narrative ===` | `orchestrator.py` after `run_narrative()` |
+
+`run_beat_opener(beat, last_log_entry, verbose=False)` — add `verbose` parameter;
+prefix the output with `=== Beat Opener ===\n` when verbose.
+
+The resolution narrative is already printed in the orchestrator's turn loop:
+```python
+if narrative:
+    print(f"\n{narrative}")
+```
+Change to:
+```python
+if narrative:
+    label = "\n=== Resolution Narrative ===" if verbose else ""
+    print(f"{label}\n{narrative}")
+```
+
+**`--verbose` is already a real CLI flag** (`-v` / `--verbose` in `main.py`, passed to
+`run_turn_loop`). It currently only controls beat-title printing in `_run_beat_initialization`.
+That existing behavior stays; this task adds step labels on top of it.
+
+**Tests:**
+- `run_npc_wave` output contains `=== {npc_id} ===` (no brackets)
+- `run_companion_wave` output contains `=== {pc_id} ===`
+- `run_beat_opener` with `verbose=True` prints `=== Beat Opener ===`
+- `run_beat_opener` with `verbose=False` does NOT print `=== Beat Opener ===`
+
+---
+
 ### [~] 4.28 — End-to-End Scene Playthrough
 
 No tests for this task — this is exploratory play. Run `src/showrunner/main.py` and
