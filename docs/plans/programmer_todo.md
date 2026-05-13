@@ -181,6 +181,67 @@ Tests:
 
 ---
 
+### [ ] 4.10a — Display Agent Outputs to Player
+
+Currently `crew.kickoff()` returns only the last task's output (State Keeper), which is
+printed verbatim. The Narrator's prose, NPC dialogue, and Referee results are buried in
+`crew.tasks[i].output.raw` and never shown to the player.
+
+Fix in `orchestrator.py`:
+- After `crew.kickoff()`, iterate `crew.tasks`
+- Print outputs for Narrator, NPC Voice Actor (all), and Rules Engine tasks in order
+- Skip Show Runner (internal planning) and State Keeper (bookkeeping)
+- Label each section so the player can orient (e.g. `--- Narrator ---`, `--- Bargos ---`)
+- The existing `print(f"\n{result_str}")` call should be removed
+
+Tests:
+- Add an integration test (or at minimum document the expected output format)
+
+---
+
+### [ ] 4.10b — Move State Writing from Scribe to Orchestrator
+
+The Scribe (Alien 3B) cannot reliably call tools in a ReAct loop. It outputs tool call
+syntax as text in its Final Answer (`Action: write_state { ... }`) instead of invoking
+the tool. The root cause is that the 3B model does not understand the ReAct format well
+enough to use tools.
+
+**Design decision (confirmed with Tom):** Remove tool dependency from the Scribe. The
+orchestrator handles all state writes deterministically after `kickoff()`.
+
+Changes:
+
+**`scribe.py`:**
+- Remove `tools=[read_state, write_state, consult_show_runner]` — replace with `tools=[]`
+- Keep `render_scribe_context()` as context input (the Scribe still needs to know current
+  state to write a meaningful session log entry)
+- Scribe task `expected_output` changes to: a one-sentence session log entry only
+  (no tool calls needed)
+
+**`orchestrator.py`** — after `crew.kickoff()`:
+1. **last_actions**: collect NPC outputs from NPC Voice Actor task outputs
+   (`task.output.raw` for each task where `task.agent.role == "NPC Voice Actor"`)
+   and combine with the player action already captured via `prompt_player_action()`.
+   Write via `update_scene_state({"last_actions": {...}})`.
+2. **session_log.md**: take the Scribe task's `output.raw` (the prose summary sentence)
+   and append it to `state/session_log.md` directly in the orchestrator — no tool call.
+3. **party_stats.yaml**: wounds/strain — not implemented yet; leave a TODO comment.
+   Will be wired when combat is added.
+
+**NPC name mapping**: To build the `last_actions` dict, the orchestrator needs the NPC
+id for each NPC task. Pass `scene_chars` (already a `dict[str, str]`) to the crew or
+track task→npc_id mapping. Simplest approach: the NPC task description starts with the
+rendered prompt which begins with `# {npc_name}` — or better, tag the task with the NPC
+id in `build_crew()` by storing it as a `task.name` (CrewAI Task accepts a `name` param).
+
+Tests:
+- `test_scribe_has_no_tools` — verify `create_scribe()` has no tools
+- `test_orchestrator_writes_last_actions_from_npc_outputs` — mock task outputs, verify
+  `update_scene_state` is called with correct last_actions dict
+- `test_session_log_appended_by_orchestrator` — verify session_log.md gets a new line
+
+---
+
 ### [~] 4.8 — End-to-End Scene Playthrough
 
 No tests for this task — this is exploratory play. Run `src/showrunner/main.py` and
