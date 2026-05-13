@@ -16,6 +16,29 @@ Reference documents:
 
 ---
 
+### [ ] 4.36 — Remove dead goal/backstory fields from agents with prompt_file
+
+`show_runner`, `narrator`, and `actors` in `config/agents.yaml` each have a `prompt_file`
+field. `build_system_prompt()` reads from the file when `prompt_file` is present and
+ignores `role`, `goal`, and `backstory` entirely. Those three fields are dead weight for
+these agents — the content now lives exclusively in `config/prompts/agent_*.md`.
+
+`referee` and `scribe` have no `prompt_file` and still use `role`/`goal`/`backstory` via
+the fallback path — do not touch those entries.
+
+**Changes:**
+- Remove `role`, `goal`, and `backstory` from the `show_runner`, `narrator`, and `actors`
+  entries in `config/agents.yaml`
+- Verify `load_agent_configs()` does not require those fields (it should not — they are
+  only read inside `build_system_prompt()`, which bypasses them when `prompt_file` exists)
+
+**Tests:**
+- `build_system_prompt("narrator")` still returns a non-empty string containing world
+  context and narrator role text after the YAML fields are removed
+- `load_agent_configs()` does not raise for entries missing `role`/`goal`/`backstory`
+
+---
+
 ### [~] 4.33 — End-to-End Scene Playthrough
 
 No tests for this task — this is exploratory play. Run `src/showrunner/main.py` and
