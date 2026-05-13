@@ -118,14 +118,13 @@ def run_turn_loop(scene: dict) -> None:
         referee_ctx = render_referee_context(scene, current_beat)
         scribe_ctx = render_scribe_context(scene_state, party_stats)
         scene_chars = load_scene_characters(scene, scene_state)
-        actors_ctx = "\n\n---\n\n".join(scene_chars.values()) if scene_chars else ""
-        log.debug(f"Beat: {current_beat}  last_actions: {last_actions!r}")
+        log.debug(f"Beat: {current_beat}  last_actions: {last_actions!r}  npcs: {list(scene_chars)}")
 
         print(f"\n--- Beat: {current_beat} ---")
         crew = build_crew(
             show_runner_ctx,
             narrator_context=narrator_ctx,
-            actors_context=actors_ctx,
+            actors_contexts=scene_chars if scene_chars else None,
             referee_context=referee_ctx,
             scribe_context=scribe_ctx,
         )

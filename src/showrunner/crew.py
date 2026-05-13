@@ -1,5 +1,5 @@
 # ABOUTME: CrewAI crew assembly — wires agents and tasks into a sequential pipeline.
-# ABOUTME: Show Runner plans; Narrator, Actors, Referee, Scribe execute in order each turn.
+# ABOUTME: Show Runner plans; Narrator, one task per NPC, Referee, Scribe execute in order each turn.
 
 from crewai import Crew, Process, Task
 
@@ -13,7 +13,7 @@ from showrunner.agents.show_runner import create_show_runner
 def build_crew(
     show_runner_context: str,
     narrator_context: str = "",
-    actors_context: str = "",
+    actors_contexts: dict[str, str] | None = None,
     referee_context: str = "",
     scribe_context: str = "",
 ) -> Crew:
@@ -21,10 +21,11 @@ def build_crew(
 
     Each *_context string is injected into the corresponding agent's task description
     so agents have per-turn scene data without it being baked into their backstories.
+    actors_contexts maps npc_id to that NPC's rendered character prompt; one task is
+    created per NPC so each receives only their own character data.
     """
     show_runner = create_show_runner()
     narrator = create_narrator()
-    actors = create_actors()
     referee = create_referee()
     scribe = create_scribe()
 
@@ -53,16 +54,21 @@ def build_crew(
         context=[task_plan],
     )
 
-    task_act = Task(
-        description=(
-            f"{actors_context}\n\n"
-            "Voice the NPCs active this beat per the beat plan. "
-            "Write each NPC's dialogue and actions in character."
-        ),
-        expected_output="NPC dialogue and actions for each active NPC this beat.",
-        agent=actors,
-        context=[task_plan],
-    )
+    npc_tasks = []
+    for npc_id, npc_prompt in (actors_contexts or {}).items():
+        actor = create_actors()
+        npc_task = Task(
+            description=(
+                f"{npc_prompt}\n\n"
+                f"Voice {npc_id} this beat per the beat plan. "
+                "Write their dialogue and physical actions in character. "
+                "Respond only as this character — do not speak for other NPCs."
+            ),
+            expected_output=f"Dialogue and actions for {npc_id} this beat.",
+            agent=actor,
+            context=[task_plan],
+        )
+        npc_tasks.append(npc_task)
 
     task_referee = Task(
         description=(
@@ -72,7 +78,7 @@ def build_crew(
         ),
         expected_output="Check result with dice outcome, or 'No check required.'",
         agent=referee,
-        context=[task_plan, task_narrate, task_act],
+        context=[task_plan, task_narrate] + npc_tasks,
     )
 
     task_scribe = Task(
@@ -85,12 +91,15 @@ def build_crew(
         ),
         expected_output="State files updated; last_actions recorded for each active actor.",
         agent=scribe,
-        context=[task_plan, task_narrate, task_act, task_referee],
+        context=[task_plan, task_narrate] + npc_tasks + [task_referee],
     )
 
+    all_agents = [show_runner, narrator] + [t.agent for t in npc_tasks] + [referee, scribe]
+    all_tasks = [task_plan, task_narrate] + npc_tasks + [task_referee, task_scribe]
+
     return Crew(
-        agents=[show_runner, narrator, actors, referee, scribe],
-        tasks=[task_plan, task_narrate, task_act, task_referee, task_scribe],
+        agents=all_agents,
+        tasks=all_tasks,
         process=Process.sequential,
         verbose=True,
     )
