@@ -13,27 +13,27 @@ How one turn executes: what the orchestrator does, what each agent does, and wha
 | **Beat** | A dramatic sub-unit within a scene; may span many turns | `gamorrean_rumble` |
 | **Turn** | One full pass through all steps below | One round of combat |
 
-A beat does not advance automatically — the player chooses stay / advance / jump at the
+A beat does not advance automatically — the User chooses stay / advance / jump at the
 end of each turn. Multiple turns can execute within the same beat.
 
 ---
 
-## Step 0 — State Loading + Beat Initialization (every turn, before any LLM calls)
+## Step 0 — Turn Setup (every turn)
 
-The orchestrator reads current state and renders context strings passed into each step:
+**State loading** — the orchestrator reads current state and renders context strings:
 
 | Data | Source file | Used in |
 |---|---|---|
-| Current beat, ticking clocks, character plans, last_actions | `state/scene_state.yaml` | Steps 1, 3 |
-| Wounds, strain per character | `state/party_stats.yaml` | Steps 1, 4–6 |
+| Current beat, ticking clocks, character plans, last_actions | `state/scene_state.yaml` | Steps 1–3 |
+| Wounds, strain per character | `state/party_stats.yaml` | Steps 3, 5–7 |
 | Beat descriptions, NPC defs, location text | scene YAML (read-only) | all steps |
-| Player's action from previous turn | `last_actions` in scene_state | Step 1 Show Runner context |
+| Last session log entry | `state/session_log.md` | Step 0 beat opener |
 
 **Beat initialization (first turn of each beat only):**
 1. Compare `current_beat` against `_last_beat`; if different, a transition is detected
 2. Look up the current beat dict from `scene["beats"]` by `id == current_beat`
 3. Append `show_runner_notes` and `narrator_notes` from the beat to the `sr_ctx` and
-   `narrator_ctx` strings passed into Step 1 — prefixed with `## Beat Director Notes:`
+   `narrator_ctx` strings passed into Step 3 — prefixed with `## Beat Director Notes:`
 4. If `verbose`: print `\n=== {beat["title"]} ===` to terminal
 5. Log the transition: `log.info(f"Beat transition: {current_beat}")`
 6. Set `_last_beat = current_beat`
@@ -41,44 +41,59 @@ The orchestrator reads current state and renders context strings passed into eac
 `_beat_notes_pending = True` is set before the turn loop starts so the first beat always
 initializes correctly.
 
----
+**Beat opener (first turn of each beat only):**
 
-## Step 1 — NPC Wave (`run_npc_wave()`)
+| | |
+|---|---|
+| Agent | Narrator (sardinia 8B), single call |
+| Input | Beat notes (`show_runner_notes`, `narrator_notes`) + last session log entry (if any) |
+| Output | 2–3 sentences of player-facing prose describing the current situation |
+| Prints | Directly to terminal, before Step 1 prompt |
 
-```
-Show Runner  →  beat plan
-Narrator     →  narration (receives beat plan)
-NPC_1        →  dialogue + actions (receives beat plan)
-NPC_2        →  dialogue + actions (receives beat plan + NPC_1 output)
-...
-```
-
-- One `call_llm()` per NPC; each receives the beat plan and all prior NPC outputs.
-- Narrator text and NPC outputs printed to terminal as they arrive.
-- Returns `{"_narrator": narration, npc_id: output, ...}` for use in Steps 3–6.
+On subsequent turns within the same beat, the resolution narrative from the previous turn
+(Step 7) provides orientation — no opener call is made.
 
 ---
 
-## Step 2 — Player Input
+## Step 1 — User Input
 
 ```
 "What do you and your companions do? > "
 ```
 
-Free-form text. Direction to AI party members is embedded naturally — no special syntax required.
+Free-form text. Direction to Companions is embedded naturally — no special syntax required.
 
 ---
 
-## Step 3 — Companion Wave (`run_companion_wave()`)
+## Step 2 — Companion Wave (`run_companion_wave()`)
 
 ```
-Kae (Companion)  →  dialogue + actions (receives NPC wave text + user action)
+Kae (Companion)  →  dialogue + actions
 ...
 ```
 
 - One `call_llm()` per Companion (`player: "companion"` in character YAML).
-- Each call receives the full NPC wave text and user action.
+- Each call receives beat context (from Step 0 director notes), the user's action, and
+  last turn context. Companions act before NPCs and do not see this turn's NPC outputs.
 - Companion outputs printed to terminal as they arrive.
+
+---
+
+## Step 3 — NPC Wave (`run_npc_wave()`)
+
+```
+Show Runner  →  scene state + user action + companion outputs  →  beat plan
+Narrator     →  narration of NPC reactions (receives beat plan)
+NPC_1        →  dialogue + actions (receives beat plan + user action)
+NPC_2        →  dialogue + actions (receives beat plan + NPC_1 output)
+...
+```
+
+- Show Runner receives the full context (scene state, user action, Companion outputs) and
+  produces a beat plan directing NPC behaviour in response.
+- One `call_llm()` per NPC; each receives the beat plan and all prior NPC outputs.
+- Narrator text and NPC outputs printed to terminal as they arrive.
+- Returns `{"_narrator": narration, npc_id: output, ...}` for use in Steps 4–7.
 
 ---
 
@@ -177,9 +192,9 @@ the scene ends.
 
 | Agent | Model | Steps |
 |---|---|---|
-| Show Runner | sardinia 8B | 1 (beat plan), 5 (check id), 6 (rulings), 7 (narrative) |
-| Narrator | sardinia 8B | 1 (narration), 8 (last-action extraction) |
-| Actors | sardinia 8B | 1 (NPC voicing), 3 (Companion voicing), 4 (summaries) |
+| Show Runner | sardinia 8B | 3 (beat plan), 5 (check id), 6 (rulings), 7 (narrative) |
+| Narrator | sardinia 8B | 0 (beat opener), 3 (narration), 8 (last-action extraction) |
+| Actors | sardinia 8B | 2 (Companion voicing), 3 (NPC voicing), 4 (summaries) |
 | Scribe | alien 3B | 9 (session log) |
 
 The `referee` agent is configured in `config/agents.yaml` but not called by the current pipeline.
