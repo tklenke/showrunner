@@ -1,6 +1,7 @@
 # ABOUTME: LiteLLM wrapper — call_llm() assembles messages and calls litellm.completion().
-# ABOUTME: Provides setup_llm_logging() to enable prompt/response logging to a file.
+# ABOUTME: Provides setup_llm_logging() to enable per-call summary logging to a file.
 
+import inspect
 from pathlib import Path
 
 import litellm
@@ -47,8 +48,8 @@ def call_llm(agent_name: str, system_prompt: str, user_message: str) -> str:
     content = response.choices[0].message.content
 
     if _prompt_logger is not None:
-        server = _prompt_logger._server_for(params["model"])
-        _prompt_logger._write(server, "prompt", _prompt_logger._format_messages(messages))
-        _prompt_logger._write(server, "response", content)
+        server = cfg["model_alias"].split("/")[0]
+        step = inspect.currentframe().f_back.f_code.co_name
+        _prompt_logger.log(agent_name, server, step, len(system_prompt) + len(user_message), len(content))
 
     return content

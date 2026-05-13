@@ -224,7 +224,7 @@ def run_turn_loop(scene: dict) -> None:
     apply_litellm_settings()
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     log = _setup_session_log(timestamp)
-    verbose_path, prompts_path = setup_instrumentation(timestamp)
+    prompts_path = setup_instrumentation(timestamp)
     logs_dir = Path("logs")
 
     agent_configs = load_agent_configs()

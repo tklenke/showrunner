@@ -63,7 +63,7 @@ Tests: update test function names that reference the old names; verify full suit
 
 ---
 
-### [~] 4.18 — Concise per-call instrumentation log
+### [x] 4.18 — Concise per-call instrumentation log
 
 Replace the verbose full-content prompt/response log with a single summary line per LLM call.
 **Do 4.17 first** — the log captures the calling function name automatically.
