@@ -5,6 +5,31 @@ For the stable design record, see `architecture.md`.
 
 ---
 
+## Design Notes
+
+**NOTE FROM PROGRAMMER (2026-05-12): LiteLLM callbacks are not viable for prompt logging with CrewAI**
+
+Root cause discovered during Phase 4 playthrough debugging:
+
+CrewAI's `Agent.execute_task()` (in `crewai/agent/core.py`) assigns
+`executor.callbacks = [TokenCalcHandler(self._token_process)]` on every agent call.
+`StepExecutor` then calls `LLM.call(callbacks=[TokenCalcHandler(...)])`.
+Inside `LLM.call()`, any non-empty `callbacks` list triggers
+`LLM.set_callbacks(callbacks)` which does `litellm.callbacks = [TokenCalcHandler(...)]`,
+completely overwriting any logger we registered. This fires on every model call,
+so re-registering after `build_crew()` only helps until the first agent executes.
+
+**Fix implemented**: replaced `litellm.CustomLogger` + `litellm.callbacks` with a
+`BaseEventListener` subclass that subscribes to CrewAI's own event bus
+(`LLMCallCompletedEvent`). The event contains `model`, `messages`, and `response`,
+giving us the same data without fighting CrewAI's callback management.
+
+**Architectural implication**: `architecture.md` describes the instrumentation as
+"LiteLLM prompt/response logging via CustomLogger callback" — this should be updated
+to reflect that prompt logging uses CrewAI's event bus, not LiteLLM callbacks.
+
+---
+
 ## Open Decisions
 
 Items that have not yet been fully resolved. These need an answer before the relevant

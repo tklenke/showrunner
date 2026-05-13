@@ -1,18 +1,18 @@
-# ABOUTME: Session instrumentation — LiteLLM prompt/response logging and verbose stdout capture.
-# ABOUTME: Registers a CustomLogger callback and provides a context manager for stdout redirection.
+# ABOUTME: Session instrumentation — CrewAI event bus prompt/response logging and verbose stdout capture.
+# ABOUTME: Subscribes to LLMCallCompletedEvent on CrewAI's event bus; provides a context manager for stdout redirection.
 
 import sys
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 
-import litellm
-import yaml
-from litellm import CustomLogger
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.llm_events import LLMCallCompletedEvent
 
 
 def _build_server_map(config_path: Path) -> dict[str, str]:
     """Build a reverse map from litellm_params.model → the server prefix of model_name."""
+    import yaml
     config = yaml.safe_load(config_path.read_text())
     result = {}
     for entry in config.get("model_list", []):
@@ -24,16 +24,19 @@ def _build_server_map(config_path: Path) -> dict[str, str]:
     return result
 
 
-class _PromptLogger(CustomLogger):
-    def __init__(self, server_map: dict, log_path: Path | None):
-        super().__init__()
-        self._server_map = server_map
+class _PromptLogger:
+    def __init__(self, log_path: Path):
         self._log_path = log_path
 
     def _server_for(self, model: str) -> str:
-        return self._server_map.get(model, model)
+        """Derive a human-readable server label from a model_name string."""
+        return model.split("/")[0] if model and "/" in model else (model or "unknown")
 
-    def _format_messages(self, messages: list) -> str:
+    def _format_messages(self, messages) -> str:
+        if isinstance(messages, str):
+            return messages
+        if not isinstance(messages, list):
+            return str(messages)
         parts = []
         for msg in messages:
             role = msg.get("role", "unknown")
@@ -48,19 +51,12 @@ class _PromptLogger(CustomLogger):
         with self._log_path.open("a") as f:
             f.write(block)
 
-    def log_pre_api_call(self, model, messages, kwargs):
-        server = self._server_for(model)
-        text = self._format_messages(messages)
-        self._write(server, "prompt", text)
-
-    def log_success_event(self, kwargs, response_obj, start_time, end_time):
-        model = kwargs.get("model", "")
-        server = self._server_for(model)
-        try:
-            text = response_obj.choices[0].message.content
-        except (AttributeError, IndexError):
-            text = str(response_obj)
-        self._write(server, "response", text)
+    def _on_completed(self, source, event: LLMCallCompletedEvent) -> None:
+        server = self._server_for(event.model or "")
+        prompt_text = self._format_messages(event.messages or [])
+        self._write(server, "prompt", prompt_text)
+        response_text = event.response if isinstance(event.response, str) else str(event.response)
+        self._write(server, "response", response_text)
 
 
 @contextmanager
@@ -80,11 +76,7 @@ def verbose_to_file(log_path: Path):
 def setup_instrumentation(
     timestamp: str, logs_dir: Path | None = None
 ) -> tuple[Path, Path, "_PromptLogger"]:
-    """Create log paths and prompt logger; return (verbose_path, prompts_path, logger).
-
-    The caller is responsible for registering the logger via litellm.callbacks = [logger]
-    after CrewAI agent creation, which resets litellm.callbacks during LLM initialisation.
-    """
+    """Create log paths, subscribe prompt logger to CrewAI event bus, return (verbose_path, prompts_path, logger)."""
     if logs_dir is None:
         logs_dir = Path("logs")
     logs_dir.mkdir(exist_ok=True)
@@ -92,10 +84,6 @@ def setup_instrumentation(
     verbose_path = logs_dir / f"verbose_{timestamp}.log"
     prompts_path = logs_dir / f"prompts_{timestamp}.log"
 
-    config_path = Path("config/litellm.yaml")
-    server_map = _build_server_map(config_path)
-
-    logger = _PromptLogger(server_map, prompts_path)
-    litellm.callbacks = [logger]
-
+    logger = _PromptLogger(prompts_path)
+    crewai_event_bus.on(LLMCallCompletedEvent)(logger._on_completed)
     return verbose_path, prompts_path, logger

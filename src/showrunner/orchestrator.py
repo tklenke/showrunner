@@ -5,7 +5,6 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
-import litellm
 
 from showrunner.agents.actors import load_scene_characters
 from showrunner.agents.narrator import render_narrator_context
@@ -121,7 +120,6 @@ def run_turn_loop(scene: dict) -> None:
             referee_context=referee_ctx,
             scribe_context=scribe_ctx,
         )
-        litellm.callbacks = [prompt_logger]
         with verbose_to_file(verbose_path):
             result = crew.kickoff()
         result_str = str(result)
