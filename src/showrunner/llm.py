@@ -15,11 +15,11 @@ _CONFIG_DIR = Path(__file__).parent.parent.parent / "config"
 _WORLD_YAML = Path(__file__).parent.parent.parent / "skin" / "world.yaml"
 
 
-def setup_llm_logging(log_path: Path) -> None:
+def setup_llm_logging(log_path: Path, dump_dir: Path | None = None) -> None:
     """Enable prompt/response logging for all call_llm() calls."""
     global _prompt_logger
     from showrunner.instrumentation import _PromptLogger
-    _prompt_logger = _PromptLogger(log_path)
+    _prompt_logger = _PromptLogger(log_path, dump_dir=dump_dir)
 
 
 def load_task_prompt(name: str) -> str:
@@ -81,6 +81,10 @@ def call_llm(agent_name: str, system_prompt: str, user_message: str, label: str 
     if _prompt_logger is not None:
         server = cfg["model_alias"].split("/")[0]
         step = inspect.currentframe().f_back.f_code.co_name
-        _prompt_logger.log(agent_name, server, step, len(system_prompt) + len(user_message), len(content), label=label)
+        _prompt_logger.log(
+            agent_name, server, step,
+            len(system_prompt) + len(user_message), len(content),
+            label=label, system_prompt=system_prompt, user_message=user_message, response=content,
+        )
 
     return content

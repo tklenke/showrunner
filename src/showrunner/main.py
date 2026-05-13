@@ -26,10 +26,11 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Run a showrunner session.")
     parser.add_argument("scene", nargs="?", type=int, default=0, help="Scene number (default: 0)")
     parser.add_argument("-v", "--verbose", action="store_true", help="Print beat titles on transition")
+    parser.add_argument("--dump-prompts", action="store_true", help="Write full prompt+response MD files to logs/prompts/")
     args = parser.parse_args()
 
     scene = load_adventure_scene(args.scene)
-    run_turn_loop(scene, verbose=args.verbose)
+    run_turn_loop(scene, verbose=args.verbose, dump_prompts=args.dump_prompts)
 
 
 if __name__ == "__main__":

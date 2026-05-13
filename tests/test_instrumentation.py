@@ -57,7 +57,7 @@ def test_setup_instrumentation_returns_prompts_path(tmp_path):
 def test_setup_instrumentation_calls_setup_llm_logging(tmp_path, monkeypatch):
     import showrunner.llm
     called_with = []
-    monkeypatch.setattr(showrunner.llm, "setup_llm_logging", lambda path: called_with.append(path))
+    monkeypatch.setattr(showrunner.llm, "setup_llm_logging", lambda path, **kw: called_with.append(path))
     from showrunner.instrumentation import setup_instrumentation
     prompts_path = setup_instrumentation("ts_wire", logs_dir=tmp_path)
     assert len(called_with) == 1
@@ -103,3 +103,71 @@ def test_log_step_no_brackets_when_no_label(tmp_path):
     line = log_file.read_text()
     assert "run_beat_opener[" not in line
     assert "run_beat_opener" in line
+
+
+def test_dump_dir_none_writes_no_md_files(tmp_path):
+    from showrunner.instrumentation import _PromptLogger
+    log_file = tmp_path / "prompts.log"
+    logger = _PromptLogger(log_file)
+    logger.log("narrator", "sardinia", "run_beat_opener", 100, 50,
+               system_prompt="sys", user_message="user", response="resp")
+    md_files = list(tmp_path.glob("*.md"))
+    assert md_files == []
+
+
+def test_dump_dir_set_writes_md_file(tmp_path):
+    from showrunner.instrumentation import _PromptLogger
+    log_file = tmp_path / "prompts.log"
+    dump_dir = tmp_path / "prompts"
+    dump_dir.mkdir()
+    logger = _PromptLogger(log_file, dump_dir=dump_dir)
+    logger.log("narrator", "sardinia", "run_beat_opener", 100, 50,
+               system_prompt="SYS CONTENT", user_message="USER CONTENT", response="RESP CONTENT")
+    md_files = list(dump_dir.glob("*.md"))
+    assert len(md_files) == 1
+
+
+def test_dump_md_file_named_by_id_agent_step(tmp_path):
+    from showrunner.instrumentation import _PromptLogger
+    log_file = tmp_path / "prompts.log"
+    dump_dir = tmp_path / "prompts"
+    dump_dir.mkdir()
+    logger = _PromptLogger(log_file, dump_dir=dump_dir)
+    logger.log("narrator", "sardinia", "run_beat_opener", 10, 5,
+               system_prompt="s", user_message="u", response="r")
+    md_files = list(dump_dir.glob("*.md"))
+    assert md_files[0].name == "0001_narrator_run_beat_opener.md"
+
+
+def test_dump_md_file_name_includes_label(tmp_path):
+    from showrunner.instrumentation import _PromptLogger
+    log_file = tmp_path / "prompts.log"
+    dump_dir = tmp_path / "prompts"
+    dump_dir.mkdir()
+    logger = _PromptLogger(log_file, dump_dir=dump_dir)
+    logger.log("actors", "sardinia", "run_npc_wave", 10, 5, label="bargos",
+               system_prompt="s", user_message="u", response="r")
+    md_files = list(dump_dir.glob("*.md"))
+    assert md_files[0].name == "0001_actors_run_npc_wave[bargos].md"
+
+
+def test_dump_md_file_contains_system_user_response_sections(tmp_path):
+    from showrunner.instrumentation import _PromptLogger
+    log_file = tmp_path / "prompts.log"
+    dump_dir = tmp_path / "prompts"
+    dump_dir.mkdir()
+    logger = _PromptLogger(log_file, dump_dir=dump_dir)
+    logger.log("narrator", "sardinia", "step", 10, 5,
+               system_prompt="THE SYSTEM", user_message="THE USER", response="THE RESPONSE")
+    content = list(dump_dir.glob("*.md"))[0].read_text()
+    assert "# System\nTHE SYSTEM" in content
+    assert "# User\nTHE USER" in content
+    assert "# Response\nTHE RESPONSE" in content
+
+
+def test_setup_instrumentation_dump_prompts_creates_subdir(tmp_path, monkeypatch):
+    import showrunner.llm
+    monkeypatch.setattr(showrunner.llm, "setup_llm_logging", lambda *a, **kw: None)
+    from showrunner.instrumentation import setup_instrumentation
+    setup_instrumentation("ts", logs_dir=tmp_path, dump_prompts=True)
+    assert (tmp_path / "prompts").is_dir()

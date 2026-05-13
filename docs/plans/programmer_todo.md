@@ -72,7 +72,7 @@ def log(self, agent, server, step, prompt_len, response_len, label="") -> None:
 
 ---
 
-### [ ] 4.35 — Prompts log: --dump-prompts flag writes full prompt/response MD files
+### [x] 4.35 — Prompts log: --dump-prompts flag writes full prompt/response MD files
 
 When `--dump-prompts` is passed on the CLI, every `call_llm()` writes a single Markdown
 file containing the full system prompt, user message, and response. Files are named by

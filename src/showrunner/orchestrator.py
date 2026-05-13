@@ -376,12 +376,12 @@ def _roll_specs(specs: list[dict]) -> None:
         )
 
 
-def run_turn_loop(scene: dict, verbose: bool = False) -> None:
+def run_turn_loop(scene: dict, verbose: bool = False, dump_prompts: bool = False) -> None:
     """Run the agent turn loop for a loaded adventure scene."""
     apply_litellm_settings()
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     log = _setup_session_log(timestamp)
-    prompts_path = setup_instrumentation(timestamp)
+    prompts_path = setup_instrumentation(timestamp, dump_prompts=dump_prompts)
     logs_dir = Path("logs")
 
     agent_configs = load_agent_configs()
