@@ -41,6 +41,7 @@ Reference: `skin/Game_masters_kit.pdf` Acts 1–2.
 Phases 5 and 6 are **not required** for this phase. The Show Runner operates with the
 specific rules and NPC stats for this scene baked inline — no `rules_lookup()` tool needed.
 
+- [ ] Prompts log enhancements (tasks 4.34–4.35): call ID, character label, --dump-prompts full capture
 - [ ] Show Runner: manage beat progression, Gamorrean arrival ticking clock
 - [ ] Narrator: beat openers and session log entries
 - [ ] Actors: voice Bargos, Genko, C3-P9, Gamorreans — using `render_actor_prompt()`
