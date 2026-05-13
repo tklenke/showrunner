@@ -120,3 +120,38 @@ def test_build_system_prompt_contains_goal():
     from showrunner.llm import build_system_prompt
     prompt = build_system_prompt("narrator")
     assert len(prompt) > 50
+
+
+def test_load_task_prompt_returns_non_empty_string():
+    from showrunner.llm import load_task_prompt
+    result = load_task_prompt("run_checks")
+    assert isinstance(result, str)
+    assert len(result) > 0
+
+
+def test_load_task_prompt_all_task_files_exist():
+    from showrunner.llm import load_task_prompt
+    tasks = [
+        "run_checks", "run_rulings", "run_narrative", "run_summaries",
+        "run_last_actions", "run_plan_update", "run_beat_opener",
+    ]
+    for task in tasks:
+        result = load_task_prompt(task)
+        assert len(result) > 0, f"task_{task}.md is empty"
+
+
+def test_build_system_prompt_uses_prompt_file_when_present(tmp_path, monkeypatch):
+    from showrunner.llm import build_system_prompt
+    fake_configs = {
+        "narrator": {
+            "role": "Narrator",
+            "goal": "Tell stories.",
+            "backstory": "A storyteller.",
+            "prompt_file": None,
+            "litellm_params": {"model": "test/model"},
+            "model_alias": "test",
+        }
+    }
+    with patch("showrunner.llm.load_agent_configs", return_value=fake_configs):
+        prompt = build_system_prompt("narrator")
+    assert "Narrator" in prompt or "Tell stories" in prompt

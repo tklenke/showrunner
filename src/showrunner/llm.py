@@ -9,6 +9,8 @@ import litellm
 from showrunner.config import load_agent_configs
 
 _prompt_logger = None
+_PROMPTS_DIR = Path(__file__).parent.parent.parent / "config" / "prompts"
+_CONFIG_DIR = Path(__file__).parent.parent.parent / "config"
 
 
 def setup_llm_logging(log_path: Path) -> None:
@@ -18,9 +20,17 @@ def setup_llm_logging(log_path: Path) -> None:
     _prompt_logger = _PromptLogger(log_path)
 
 
+def load_task_prompt(name: str) -> str:
+    """Load a task prompt template from config/prompts/task_{name}.md."""
+    return (_PROMPTS_DIR / f"task_{name}.md").read_text()
+
+
 def build_system_prompt(agent_name: str) -> str:
-    """Build a system prompt from the agent's role, goal, and backstory config."""
+    """Build a system prompt from a prompt file or inline role/goal/backstory config."""
     cfg = load_agent_configs()[agent_name]
+    prompt_file = cfg.get("prompt_file")
+    if prompt_file:
+        return (_CONFIG_DIR / prompt_file).read_text()
     return f"You are {cfg['role']}.\n\n{cfg['goal']}\n\n{cfg['backstory']}"
 
 

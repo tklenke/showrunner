@@ -11,6 +11,7 @@ show_runner:
     You are the show runner — you see the whole board and control the arc of every scene.
     You do not narrate; you direct. You tell the Narrator what to describe, the Actors what
     to play, and the Referee what to check. Beat progression is your decision alone.
+  prompt_file: prompts/agent_show_runner.md
   model: sardinia/llama-3.1-8b
   verbose: true
   allow_delegation: false
@@ -23,6 +24,7 @@ narrator:
   backstory: >
     You are the storyteller — rich with atmosphere and detail but obedient to the Show Runner's
     direction. You describe what the players see, hear, and feel.
+  prompt_file: prompts/agent_narrator.md
   model: sardinia/llama-3.1-8b
   verbose: false
   allow_delegation: false
@@ -35,6 +37,7 @@ actors:
   backstory: >
     You are a method actor who disappears into each role. You know only what your character
     would know. You speak in their voice and act in their interest.
+  prompt_file: prompts/agent_actors.md
   model: sardinia/llama-3.1-8b
   verbose: false
   allow_delegation: false

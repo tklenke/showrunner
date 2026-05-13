@@ -60,6 +60,7 @@ def load_agent_configs() -> dict:
             "model_alias": model_alias,
             "verbose": cfg.get("verbose", False),
             "allow_delegation": cfg.get("allow_delegation", False),
+            "prompt_file": cfg.get("prompt_file"),
         }
     return result
 

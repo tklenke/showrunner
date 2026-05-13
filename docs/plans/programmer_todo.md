@@ -482,7 +482,7 @@ Actual content is authored in 4.32. This task just creates the file and schema.
 
 ---
 
-### [ ] 4.31 — Prompt files: extract task prompts from runner.py into config/prompts/
+### [x] 4.31 — Prompt files: extract task prompts from runner.py into config/prompts/
 
 Each runner function that calls `call_llm()` has a task description baked as an
 inline f-string. Move the static frame of each task description into a `.md` file

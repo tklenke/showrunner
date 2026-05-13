@@ -1,7 +1,7 @@
 # ABOUTME: Phase runners — each function drives one phase of the turn loop via direct LLM calls.
 # ABOUTME: Replaces CrewAI crew builders; returns plain dicts/strings, no crew objects.
 
-from showrunner.llm import build_system_prompt, call_llm
+from showrunner.llm import build_system_prompt, call_llm, load_task_prompt
 
 
 def run_npc_wave(
@@ -73,7 +73,7 @@ def run_companion_wave(
 def run_summaries(party_actions: dict[str, str], summaries_log_path) -> None:
     """Step 4: Narrator summarises each party member's action, appending to summaries log."""
     for actor_id, action_text in party_actions.items():
-        msg = f"Summarise in 1-2 sentences what {actor_id} did: {action_text}"
+        msg = load_task_prompt("run_summaries").format(actor_id=actor_id, action_text=action_text)
         summary = call_llm("narrator", build_system_prompt("narrator"), msg)
         with open(summaries_log_path, "a") as f:
             f.write(f"{actor_id}: {summary}\n")
@@ -84,13 +84,7 @@ def run_checks(char_summaries: dict[str, str], char_stats: dict[str, str]) -> st
     check_lines: list[str] = []
     for char_id, summary in char_summaries.items():
         stats = char_stats.get(char_id, "")
-        msg = (
-            f"## {char_id} summary\n{summary}\n\n"
-            f"## {char_id} stats\n{stats}\n\n"
-            "Does this character need a skill check, opposed roll, or attack this turn?\n"
-            "If yes, output one line: {actor} | {skill} | {characteristic} {value} | {skill_rank} | {difficulty} | {notes}\n"
-            "If no check needed, output exactly: NO_CHECKS"
-        )
+        msg = load_task_prompt("run_checks").format(char_id=char_id, summary=summary, stats=stats)
         output = call_llm("show_runner", build_system_prompt("show_runner"), msg)
         if "NO_CHECKS" not in output:
             check_lines.append(output.strip())
@@ -109,11 +103,12 @@ def run_rulings(check_specs: list[dict], *, on_ruling=None) -> dict[str, str]:
     rulings: dict[str, str] = {}
     next_context = ""
     for spec in check_specs:
-        msg = (
-            f"Resolve this check:\n"
-            f"Actor: {spec['actor']} | Skill: {spec['skill']} | Difficulty: {spec['difficulty']}\n"
-            f"Notes: {spec.get('notes', '')}\n\n"
-            f"Dice roll result: {spec.get('roll_result', '')}"
+        msg = load_task_prompt("run_rulings").format(
+            actor=spec["actor"],
+            skill=spec["skill"],
+            difficulty=spec["difficulty"],
+            notes=spec.get("notes", ""),
+            roll_result=spec.get("roll_result", ""),
         )
         if next_context:
             msg += f"\n\n## Current party status:\n{next_context}"
@@ -126,11 +121,7 @@ def run_rulings(check_specs: list[dict], *, on_ruling=None) -> dict[str, str]:
 
 def run_narrative(summaries: str, checks: str, results: str) -> str:
     """Step 3d: Generate player-facing narrative prose from the full resolution record."""
-    msg = (
-        f"## Action Summaries\n{summaries}\n\n"
-        f"## Checks\n{checks}\n\n"
-        f"## Results\n{results}"
-    )
+    msg = load_task_prompt("run_narrative").format(summaries=summaries, checks=checks, results=results)
     return call_llm("show_runner", build_system_prompt("show_runner"), msg)
 
 
@@ -143,7 +134,7 @@ def run_last_actions(actor_summaries: dict[str, str]) -> dict[str, str]:
         return {}
     last_actions: dict[str, str] = {}
     for actor_id, summary in actor_summaries.items():
-        msg = f"What was {actor_id}'s last action this turn? One sentence.\n\n{summary}"
+        msg = load_task_prompt("run_last_actions").format(actor_id=actor_id, summary=summary)
         last_actions[actor_id] = call_llm("narrator", build_system_prompt("narrator"), msg)
     return last_actions
 
@@ -164,11 +155,8 @@ def run_plan_update(
         return {}
 
     last_actions_text = "\n".join(f"{k}: {v}" for k, v in last_actions.items())
-    overall_msg = (
-        f"## Action Summaries\n{summaries}\n\n"
-        f"## Results\n{results}\n\n"
-        f"## Last Actions\n{last_actions_text}\n\n"
-        "Based on this turn, what is the overall tactical situation and plan for next turn?"
+    overall_msg = load_task_prompt("run_plan_update").format(
+        summaries=summaries, results=results, last_actions_text=last_actions_text
     )
     overall_plan = call_llm("show_runner", build_system_prompt("show_runner"), overall_msg)
 
@@ -178,10 +166,8 @@ def run_plan_update(
 
     individual_plans: dict[str, str] = {}
     for char_id, char_context in characters.items():
-        msg = (
-            f"## Overall plan\n{overall_plan}\n\n"
-            f"## Character: {char_id}\n{char_context}\n\n"
-            f"What is {char_id}'s specific plan for the next turn? One concise paragraph."
+        msg = load_task_prompt("run_plan_update_individual").format(
+            overall_plan=overall_plan, char_id=char_id, char_context=char_context
         )
         individual_plans[char_id] = call_llm("show_runner", build_system_prompt("show_runner"), msg)
 
@@ -190,10 +176,9 @@ def run_plan_update(
 
 def run_beat_opener(beat: dict, last_log_entry: str, verbose: bool = False) -> None:
     """Print a 2-3 sentence player-facing opener for the start of a new beat."""
-    msg = (
-        f"## Beat Director Notes\n"
-        f"Show Runner: {beat.get('show_runner_notes', '')}\n"
-        f"Narrator: {beat.get('narrator_notes', '')}"
+    msg = load_task_prompt("run_beat_opener").format(
+        show_runner_notes=beat.get("show_runner_notes", ""),
+        narrator_notes=beat.get("narrator_notes", ""),
     )
     if last_log_entry:
         msg += f"\n\n## Previous session log entry:\n{last_log_entry}"
