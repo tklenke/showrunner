@@ -83,15 +83,20 @@ Kae (Companion)  →  plan + beat context + user action  →  dialogue + actions
 ## Step 3 — NPC Wave (`run_npc_wave()`)
 
 ```
-NPC_1  →  plan + beat context + user action + companion outputs  →  dialogue + actions
-NPC_2  →  plan + beat context + user action + companion outputs + NPC_1 output  →  dialogue + actions
+NPC_1   →  plan + beat context + user action + companion outputs  →  full output (printed)
+Narrator →  NPC_1 full output  →  compact summary  →  written to summaries log
+NPC_2   →  plan + beat context + user action + companion outputs + NPC_1 SUMMARY  →  full output (printed)
+Narrator →  NPC_2 full output  →  compact summary  →  written to summaries log
 ...
 ```
 
-- One `call_llm()` per NPC; each receives their current plan from `character_plans`, the
-  user action, all Companion outputs, and all prior NPC outputs.
-- NPC outputs printed to terminal as they arrive.
-- Returns `{npc_id: output, ...}` for use in Steps 4–7.
+- One `call_llm()` per NPC; each receives their plan, beat context, user action, Companion
+  outputs, and compact Narrator summaries of all prior NPCs (not the full outputs).
+- After each NPC acts, Narrator produces a 1–2 sentence summary immediately.
+  The summary is passed to the next NPC (CW management) and appended to
+  `logs/turn_{ts}_{beat}_summaries.txt` (for use in Steps 5, 8, 9).
+- Full NPC outputs printed to terminal as they arrive; summaries are pipeline-internal.
+- Returns `{npc_id: output, ...}` for use in Steps 5–7.
 
 ---
 
@@ -99,12 +104,13 @@ NPC_2  →  plan + beat context + user action + companion outputs + NPC_1 output
 
 | | |
 |---|---|
-| Agent | Actors (sardinia 8B), one call per character that acted |
-| Input | One character's action text |
+| Agent | Narrator (sardinia 8B), one call per non-NPC character that acted |
+| Input | One character's action text (User action, Companion outputs) |
 | Output | 1–2 sentence plain-language summary of what they did |
-| Writes | `logs/turn_{ts}_{beat}_summaries.txt` |
+| Writes | `logs/turn_{ts}_{beat}_summaries.txt` (appended; NPC summaries already written in Step 3) |
 
-One focused call per actor; no rules reasoning required.
+NPC summaries are generated inline during Step 3. This step covers the User action and
+any Companions. Uses the same Narrator agent and same log file for a consistent pipeline.
 
 ---
 
@@ -209,8 +215,8 @@ the scene ends.
 | Agent | Model | Steps |
 |---|---|---|
 | Show Runner | sardinia 8B | 5 (check id), 6 (rulings), 7 (narrative), 9 (plan update) |
-| Narrator | sardinia 8B | 0 (beat opener), 8 (last-action extraction) |
-| Actors | sardinia 8B | 2 (Companion voicing), 3 (NPC voicing), 4 (summaries) |
+| Narrator | sardinia 8B | 0 (beat opener), 3 (NPC summaries), 4 (User/Companion summaries), 8 (last-action extraction) |
+| Actors | sardinia 8B | 2 (Companion voicing), 3 (NPC voicing) |
 | Scribe | alien 3B | 10 (session log) |
 
 The `referee` agent is configured in `config/agents.yaml` but not called by the current pipeline.

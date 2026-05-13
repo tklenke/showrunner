@@ -78,6 +78,7 @@ via `config/litellm.yaml`.
 | Abbreviation | Meaning | Notes |
 |-------------|---------|-------|
 | **SR** | Show Runner | The GM-brain agent |
+| **CW** | Context Window | Maximum token capacity of an LLM inference call |
 | **PC** | Player Character | `player: "human"` |
 | **NPC** | Non-Player Character | No `player` field |
 | **GM** | Game Master | The human role SR emulates |
