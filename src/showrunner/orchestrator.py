@@ -7,6 +7,7 @@ from pathlib import Path
 
 
 from showrunner.agents.actors import load_scene_characters
+from showrunner.config import load_agent_configs
 from showrunner.agents.narrator import render_narrator_context
 from showrunner.agents.referee import render_referee_context
 from showrunner.agents.scribe import render_scribe_context
@@ -93,6 +94,10 @@ def run_turn_loop(scene: dict) -> None:
     verbose_path, prompts_path, prompt_logger = setup_instrumentation(
         timestamp, config_path=Path("config/litellm.yaml")
     )
+    agent_configs = load_agent_configs()
+    print("Agents:")
+    for name, cfg in agent_configs.items():
+        print(f"  {name:<14} {cfg['model_alias']}")
     print(f"Verbose log: logs/verbose_{timestamp}.log  (tail -f to watch)")
     print(f"Prompt log:  logs/prompts_{timestamp}.log")
 

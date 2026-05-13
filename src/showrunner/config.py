@@ -58,6 +58,7 @@ def load_agent_configs() -> dict:
             "goal": cfg["goal"].strip(),
             "backstory": cfg["backstory"].strip(),
             "llm": llm,
+            "model_alias": model_alias,
             "verbose": cfg.get("verbose", False),
             "allow_delegation": cfg.get("allow_delegation", False),
         }

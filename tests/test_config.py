@@ -24,10 +24,10 @@ def test_each_agent_has_required_fields():
             assert field in cfg, f"{name} missing field: {field}"
 
 
-def test_show_runner_uses_gemini():
+def test_show_runner_uses_sardinia():
     from showrunner.config import load_agent_configs
     configs = load_agent_configs()
-    assert "gemini" in configs["show_runner"]["llm"].model.lower()
+    assert "llama-3.1-8b" in configs["show_runner"]["llm"].model.lower()
 
 
 def test_show_runner_allows_delegation():
