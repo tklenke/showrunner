@@ -14,6 +14,8 @@ docs, and comments. When in doubt, come here first.
 | **Companion** | A party character driven by AI (Actors agent), but taking major direction from the User through natural language. `player: "companion"` in character YAML. |
 | **NPC** (Non-Player Character) | Any character driven entirely by the Show Runner and plot logic. No `player` field in character YAML. |
 
+**Character** = any entity in the fiction: PC, Companion, or NPC. The User is not a Character — they exist outside the fiction.
+
 **Party** = all PCs and Companions together. NPCs are not party members even if they
 travel with the group.
 
