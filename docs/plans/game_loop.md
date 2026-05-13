@@ -92,9 +92,10 @@ Narrator →  NPC_2 full output  →  compact summary  →  written to summaries
 
 - One `call_llm()` per NPC; each receives their plan, beat context, user action, Companion
   outputs, and compact Narrator summaries of all prior NPCs (not the full outputs).
-- After each NPC acts, Narrator produces a 1–2 sentence summary immediately.
+- One `call_llm()` (Narrator) immediately after each NPC; produces a 1–2 sentence summary.
   The summary is passed to the next NPC (CW management) and appended to
   `logs/turn_{ts}_{beat}_summaries.txt` (for use in Steps 5, 8, 9).
+- Total: 2N `call_llm()` calls for N NPCs in this step.
 - Full NPC outputs printed to terminal as they arrive; summaries are pipeline-internal.
 - Returns `{npc_id: output, ...}` for use in Steps 5–7.
 
