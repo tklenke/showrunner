@@ -279,21 +279,3 @@ def test_run_last_actions_returns_dict_keyed_by_actor():
         result = run_last_actions({"bargos": "s1", "kaelen": "s2"})
     assert result == {"bargos": "Bargos spoke.", "kaelen": "Kaelen fled."}
 
-
-# ---------------------------------------------------------------------------
-# run_scribe_phase
-# ---------------------------------------------------------------------------
-
-def test_run_scribe_phase_calls_scribe_once():
-    from showrunner.runner import run_scribe_phase
-    with patch("showrunner.runner.call_llm", return_value="log entry") as mock:
-        run_scribe_phase("scribe ctx", "full turn summary")
-    scribe_calls = [c for c in mock.call_args_list if c.args[0] == "scribe"]
-    assert len(scribe_calls) == 1
-
-
-def test_run_scribe_phase_returns_llm_output():
-    from showrunner.runner import run_scribe_phase
-    with patch("showrunner.runner.call_llm", return_value="2026-05-13 — Bargos makes demands."):
-        result = run_scribe_phase("ctx", "summary")
-    assert result == "2026-05-13 — Bargos makes demands."

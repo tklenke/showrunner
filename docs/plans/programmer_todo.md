@@ -107,7 +107,7 @@ Revise those tests to match the `inspect`-based design:
 
 ---
 
-### [ ] 4.19 — Remove Scribe; orchestrator appends Step 7 output to session_log.md
+### [x] 4.19 — Remove Scribe; orchestrator appends Step 7 output to session_log.md
 
 Session log is now written by the orchestrator directly — no LLM call needed.
 

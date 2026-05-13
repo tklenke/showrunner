@@ -7,7 +7,6 @@ from pathlib import Path
 
 from showrunner.agents.actors import load_scene_characters, load_scene_yamls
 from showrunner.agents.narrator import render_narrator_context
-from showrunner.agents.scribe import render_scribe_context
 from showrunner.agents.show_runner import render_show_runner_context
 from showrunner.config import apply_litellm_settings, load_agent_configs
 from showrunner.instrumentation import setup_instrumentation
@@ -17,7 +16,6 @@ from showrunner.runner import (
     run_narrative,
     run_companion_wave,
     run_rulings,
-    run_scribe_phase,
     run_summaries,
     run_checks,
 )
@@ -249,7 +247,6 @@ def run_turn_loop(scene: dict) -> None:
 
         sr_ctx = render_show_runner_context(scene, scene_state, party_stats, last_actions)
         narrator_ctx = render_narrator_context(scene, current_beat, last_actions, party_stats)
-        scribe_ctx = render_scribe_context(scene_state, party_stats)
 
         npc_chars = load_scene_characters(scene, scene_state, player_filter="npc")
         companion_chars = load_scene_characters(scene, scene_state, player_filter="companion")
@@ -314,19 +311,11 @@ def run_turn_loop(scene: dict) -> None:
         # ── State writes ──────────────────────────────────────────────────────
         update_scene_state({"last_actions": last_actions_extracted})
 
-        # Scribe — session log entry
-        full_turn_summary = (
-            f"Beat: {current_beat}\n"
-            f"NPCs active: {', '.join(npc_outputs.keys()) or 'none'}\n"
-            f"Companions active: {', '.join(companion_outputs.keys()) or 'none'}\n"
-            f"Player action: {player_action}"
-        )
-        scribe_summary = run_scribe_phase(scribe_ctx, full_turn_summary)
-        if scribe_summary:
-            log_path = Path("state/session_log.md")
-            with log_path.open("a") as f:
-                f.write(f"{scribe_summary}\n")
-            log.info(f"Session log: {scribe_summary[:120]}")
+        if narrative:
+            session_log_path = Path("state/session_log.md")
+            with session_log_path.open("a") as f:
+                f.write(f"{narrative}\n\n")
+            log.info(f"Session log: {narrative[:120]}")
 
         # ── Beat advancement ──────────────────────────────────────────────────
         choice = _beat_prompt(scene, current_beat)

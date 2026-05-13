@@ -130,9 +130,3 @@ def run_last_actions(actor_summaries: dict[str, str]) -> dict[str, str]:
         msg = f"What was {actor_id}'s last action this turn? One sentence.\n\n{summary}"
         last_actions[actor_id] = call_llm("narrator", build_system_prompt("narrator"), msg)
     return last_actions
-
-
-def run_scribe_phase(scribe_context: str, full_turn_summary: str) -> str:
-    """Step 3f: Scribe writes one-sentence session log entry for the turn."""
-    msg = f"{scribe_context}\n\n## This turn:\n{full_turn_summary}"
-    return call_llm("scribe", build_system_prompt("scribe"), msg)
