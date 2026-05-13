@@ -80,6 +80,38 @@ Revise those tests to match the `inspect`-based design:
 
 ---
 
+### [ ] 4.18 — Step 0: beat initialization on first turn of each beat
+
+On the first turn of a new beat the orchestrator injects beat-specific context into
+Step 1 (NPC wave). Subsequent turns within the same beat skip Step 0 entirely.
+
+**Beat transition detection** — in `run_turn_loop()`:
+- Track `_last_beat: str = ""` before the `while True:` loop
+- After loading `scene_state`, compare `current_beat != _last_beat`
+- If transition: run Step 0, then set `_last_beat = current_beat`
+
+**Step 0 (turn 1 of beat only):**
+1. Look up the current beat dict from `scene["beats"]` by `id == current_beat`
+2. Append `show_runner_notes` and `narrator_notes` from the beat to the
+   `sr_ctx` and `narrator_ctx` strings passed into `run_npc_wave()` —
+   prefix them with a clear header so the agents treat them as authoritative context:
+   ```
+   ## Beat Director Notes:\n{beat["show_runner_notes"]}
+   ```
+3. If `verbose` flag is set: print `\n=== {beat["title"]} ===` to terminal
+4. Log the beat transition regardless of verbose: `log.info(f"Beat transition: {current_beat}")`
+
+**`verbose` flag** — add to `run_turn_loop(scene, verbose=False)` signature.
+Pass it through from `main.py`. Wire a `--verbose` / `-v` CLI flag in `main.py`.
+
+**Tests:**
+- Beat notes injected into sr_ctx on turn 1 (mock scene with beat that has notes)
+- Beat notes NOT injected on turn 2 of same beat
+- `verbose=True` → beat title printed; `verbose=False` → not printed
+- `_last_beat` updates after transition
+
+---
+
 ### [~] 4.8 — End-to-End Scene Playthrough
 
 No tests for this task — this is exploratory play. Run `src/showrunner/main.py` and
