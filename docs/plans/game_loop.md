@@ -170,7 +170,7 @@ Orchestrator appends output to `state/session_log.md`.
 
 ---
 
-## Beat Advancement
+## Step 9 — Beat Advancement
 
 ```
 CLI: [Enter] stay  |  [a] advance  |  [beat ID] jump  |  [q] quit
@@ -181,7 +181,7 @@ the scene ends.
 
 ---
 
-## Agent Summary
+## Ref A — Agent Summary
 
 | Agent | Model | Steps |
 |---|---|---|
@@ -194,7 +194,7 @@ The `referee` agent is configured in `config/agents.yaml` but not called by the 
 
 ---
 
-## State Files Changed Per Turn
+## Ref B — State Files Changed Per Turn
 
 | File | Changed by | Step |
 |---|---|---|
