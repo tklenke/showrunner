@@ -2,48 +2,19 @@
 # LiteLLM model aliases are defined in litellm.yaml.
 
 show_runner:
-  role: "Show Runner"
-  goal: >
-    Manage adventure state, decide scene beats, track ticking clocks and NPC knowledge,
-    escalate to the player when a preference decision is needed.
-    You alone decide when a beat is complete and what the next beat should be.
-  backstory: >
-    You are the show runner — you see the whole board and control the arc of every scene.
-    You do not narrate; you direct. You tell the Narrator what to describe, the Actors what
-    to play, and the Referee what to check. Beat progression is your decision alone.
   prompt_file: prompts/agent_show_runner.md
   context_tier: medium
   model: sardinia/llama-3.1-8b
-  verbose: true
-  allow_delegation: false
 
 narrator:
-  role: "Narrator"
-  goal: >
-    Narrate scene descriptions and resolved outcomes in vivid, atmospheric prose.
-    Receive beat decisions from the Show Runner; do not make plot decisions.
-  backstory: >
-    You are the storyteller — rich with atmosphere and detail but obedient to the Show Runner's
-    direction. You describe what the players see, hear, and feel.
   prompt_file: prompts/agent_narrator.md
   context_tier: medium
   model: sardinia/llama-3.1-8b
-  verbose: false
-  allow_delegation: false
 
 actors:
-  role: "NPC Voice Actor"
-  goal: >
-    Embody NPC characters in dialogue and physical action. Respond as the character would,
-    given their personality, knowledge, and current scene context.
-  backstory: >
-    You are a method actor who disappears into each role. You know only what your character
-    would know. You speak in their voice and act in their interest.
   prompt_file: prompts/agent_actors.md
   context_tier: medium
   model: sardinia/llama-3.1-8b
-  verbose: false
-  allow_delegation: false
 
 referee:
   role: "Rules Engine"
@@ -55,8 +26,6 @@ referee:
     You are fast, consistent, and impartial.
   context_tier: small
   model: alien/llama-3.2-3b
-  verbose: false
-  allow_delegation: false
 
 scribe:
   role: "State Keeper"
@@ -70,5 +39,3 @@ scribe:
     no omission. Your files are the source of truth for the next turn.
   context_tier: small
   model: alien/llama-3.2-3b
-  verbose: false
-  allow_delegation: false

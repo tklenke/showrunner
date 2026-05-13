@@ -20,7 +20,7 @@ def test_each_agent_has_required_fields():
     from showrunner.config import load_agent_configs
     configs = load_agent_configs()
     for name, cfg in configs.items():
-        for field in ("role", "goal", "backstory", "litellm_params", "verbose", "allow_delegation"):
+        for field in ("role", "goal", "backstory", "litellm_params"):
             assert field in cfg, f"{name} missing field: {field}"
 
 
@@ -36,11 +36,6 @@ def test_show_runner_uses_sardinia():
     configs = load_agent_configs()
     assert "llama-3.1-8b" in configs["show_runner"]["litellm_params"]["model"].lower()
 
-
-def test_show_runner_disables_delegation():
-    from showrunner.config import load_agent_configs
-    configs = load_agent_configs()
-    assert configs["show_runner"]["allow_delegation"] is False
 
 
 def test_narrator_uses_sardinia_endpoint():
@@ -65,6 +60,20 @@ def test_actors_uses_sardinia_endpoint():
     from showrunner.config import load_agent_configs
     configs = load_agent_configs()
     assert "192.168.1.45" in (configs["actors"]["litellm_params"].get("api_base") or "")
+
+
+def test_load_agent_configs_has_no_verbose_field():
+    from showrunner.config import load_agent_configs
+    configs = load_agent_configs()
+    for name, cfg in configs.items():
+        assert "verbose" not in cfg, f"{name} config unexpectedly has 'verbose' field"
+
+
+def test_load_agent_configs_has_no_allow_delegation_field():
+    from showrunner.config import load_agent_configs
+    configs = load_agent_configs()
+    for name, cfg in configs.items():
+        assert "allow_delegation" not in cfg, f"{name} config unexpectedly has 'allow_delegation' field"
 
 
 def test_apply_litellm_settings_sets_drop_params():

@@ -202,6 +202,18 @@ def test_build_system_prompt_uses_context_tier():
     assert "MEDIUM world description" not in prompt
 
 
+def test_build_system_prompt_referee_fallback_contains_role():
+    from showrunner.llm import build_system_prompt
+    prompt = build_system_prompt("referee")
+    assert "Rules Engine" in prompt
+
+
+def test_build_system_prompt_narrator_returns_nonempty():
+    from showrunner.llm import build_system_prompt
+    prompt = build_system_prompt("narrator")
+    assert len(prompt) > 100
+
+
 def test_build_system_prompt_missing_tier_falls_back_to_medium():
     from showrunner.llm import build_system_prompt
     fake_world = {

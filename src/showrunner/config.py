@@ -41,7 +41,8 @@ def load_agent_configs() -> dict:
     """Return {agent_name: config_dict} with litellm call params.
 
     Each config dict has: role, goal, backstory, litellm_params, model_alias,
-    verbose, allow_delegation.
+    prompt_file, context_tier.
+    role/goal/backstory are empty strings for agents with a prompt_file.
     litellm_params contains: model, and optionally api_base and api_key.
     """
     agents_yaml = _load_yaml("agents.yaml")
@@ -53,13 +54,11 @@ def load_agent_configs() -> dict:
         if litellm_params is None:
             raise ValueError(f"Agent '{name}' references unknown model alias '{model_alias}'")
         result[name] = {
-            "role": cfg["role"],
-            "goal": cfg["goal"].strip(),
-            "backstory": cfg["backstory"].strip(),
+            "role": cfg.get("role", ""),
+            "goal": (cfg.get("goal") or "").strip(),
+            "backstory": (cfg.get("backstory") or "").strip(),
             "litellm_params": litellm_params,
             "model_alias": model_alias,
-            "verbose": cfg.get("verbose", False),
-            "allow_delegation": cfg.get("allow_delegation", False),
             "prompt_file": cfg.get("prompt_file"),
             "context_tier": cfg.get("context_tier", "medium"),
         }

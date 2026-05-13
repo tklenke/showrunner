@@ -16,26 +16,40 @@ Reference documents:
 
 ---
 
-### [ ] 4.36 — Remove dead goal/backstory fields from agents with prompt_file
+### [x] 4.36 — Remove all dead fields from agents.yaml and config.py
 
-`show_runner`, `narrator`, and `actors` in `config/agents.yaml` each have a `prompt_file`
-field. `build_system_prompt()` reads from the file when `prompt_file` is present and
-ignores `role`, `goal`, and `backstory` entirely. Those three fields are dead weight for
-these agents — the content now lives exclusively in `config/prompts/agent_*.md`.
+Three categories of dead fields identified. Remove all in one pass.
 
-`referee` and `scribe` have no `prompt_file` and still use `role`/`goal`/`backstory` via
-the fallback path — do not touch those entries.
+**Dead for `show_runner`, `narrator`, `actors` (have `prompt_file`):**
+
+`role`, `goal`, `backstory` — `build_system_prompt()` reads from `prompt_file` and
+never touches these fields for these three agents. Content lives in `config/prompts/agent_*.md`.
+
+Do NOT remove from `referee` and `scribe` — they have no `prompt_file` and still use the
+fallback path `f"You are {cfg['role']}.\n\n{cfg['goal']}\n\n{cfg['backstory']}"`.
+
+**Fully dead for all agents (CrewAI remnants):**
+
+`verbose` and `allow_delegation` — loaded by `load_agent_configs()` into the config dict
+but never read by any code. Were CrewAI agent constructor parameters; nothing in the
+current engine uses them.
+
+Remove from all five agents in `config/agents.yaml` and from `load_agent_configs()` in
+`config.py`.
 
 **Changes:**
-- Remove `role`, `goal`, and `backstory` from the `show_runner`, `narrator`, and `actors`
-  entries in `config/agents.yaml`
-- Verify `load_agent_configs()` does not require those fields (it should not — they are
-  only read inside `build_system_prompt()`, which bypasses them when `prompt_file` exists)
+- `config/agents.yaml`: remove `role`, `goal`, `backstory` from `show_runner`, `narrator`,
+  `actors`; remove `verbose` and `allow_delegation` from all five agents
+- `config.py` `load_agent_configs()`: remove `"verbose"` and `"allow_delegation"` from
+  the returned dict; make `"role"`, `"goal"`, `"backstory"` optional (use `.get()`) so
+  the fallback path still works for `referee`/`scribe` without crashing on missing keys
+  for the others
 
 **Tests:**
-- `build_system_prompt("narrator")` still returns a non-empty string containing world
-  context and narrator role text after the YAML fields are removed
+- `build_system_prompt("narrator")` still returns non-empty string with world context
+- `build_system_prompt("referee")` still works via fallback path (no `prompt_file`)
 - `load_agent_configs()` does not raise for entries missing `role`/`goal`/`backstory`
+- No test references `cfg["verbose"]` or `cfg["allow_delegation"]` (remove those assertions)
 
 ---
 
