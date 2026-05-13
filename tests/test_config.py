@@ -1,4 +1,4 @@
-# ABOUTME: Tests for the YAML config loader — verifies agent configs and LLM routing.
+# ABOUTME: Tests for the YAML config loader — verifies agent configs and LiteLLM routing.
 # ABOUTME: Checks all five agents load correctly with the right models and endpoints.
 
 import os
@@ -20,14 +20,21 @@ def test_each_agent_has_required_fields():
     from showrunner.config import load_agent_configs
     configs = load_agent_configs()
     for name, cfg in configs.items():
-        for field in ("role", "goal", "backstory", "llm", "verbose", "allow_delegation"):
+        for field in ("role", "goal", "backstory", "litellm_params", "verbose", "allow_delegation"):
             assert field in cfg, f"{name} missing field: {field}"
+
+
+def test_litellm_params_contains_model():
+    from showrunner.config import load_agent_configs
+    configs = load_agent_configs()
+    for name, cfg in configs.items():
+        assert "model" in cfg["litellm_params"], f"{name} litellm_params missing model"
 
 
 def test_show_runner_uses_sardinia():
     from showrunner.config import load_agent_configs
     configs = load_agent_configs()
-    assert "llama-3.1-8b" in configs["show_runner"]["llm"].model.lower()
+    assert "llama-3.1-8b" in configs["show_runner"]["litellm_params"]["model"].lower()
 
 
 def test_show_runner_disables_delegation():
@@ -39,22 +46,43 @@ def test_show_runner_disables_delegation():
 def test_narrator_uses_sardinia_endpoint():
     from showrunner.config import load_agent_configs
     configs = load_agent_configs()
-    assert "192.168.1.45" in (configs["narrator"]["llm"].base_url or "")
+    assert "192.168.1.45" in (configs["narrator"]["litellm_params"].get("api_base") or "")
 
 
 def test_referee_uses_alien_endpoint():
     from showrunner.config import load_agent_configs
     configs = load_agent_configs()
-    assert "192.168.1.144" in (configs["referee"]["llm"].base_url or "")
+    assert "192.168.1.144" in (configs["referee"]["litellm_params"].get("api_base") or "")
 
 
 def test_scribe_uses_alien_endpoint():
     from showrunner.config import load_agent_configs
     configs = load_agent_configs()
-    assert "192.168.1.144" in (configs["scribe"]["llm"].base_url or "")
+    assert "192.168.1.144" in (configs["scribe"]["litellm_params"].get("api_base") or "")
 
 
 def test_actors_uses_sardinia_endpoint():
     from showrunner.config import load_agent_configs
     configs = load_agent_configs()
-    assert "192.168.1.45" in (configs["actors"]["llm"].base_url or "")
+    assert "192.168.1.45" in (configs["actors"]["litellm_params"].get("api_base") or "")
+
+
+def test_apply_litellm_settings_sets_drop_params():
+    import litellm
+    from showrunner.config import apply_litellm_settings
+    apply_litellm_settings()
+    assert litellm.drop_params is True
+
+
+def test_apply_litellm_settings_sets_timeout():
+    import litellm
+    from showrunner.config import apply_litellm_settings
+    apply_litellm_settings()
+    assert litellm.request_timeout == 120
+
+
+def test_apply_litellm_settings_sets_retries():
+    import litellm
+    from showrunner.config import apply_litellm_settings
+    apply_litellm_settings()
+    assert litellm.num_retries == 2

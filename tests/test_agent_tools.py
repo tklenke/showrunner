@@ -3,6 +3,7 @@
 
 import json
 import pytest
+pytest.importorskip("crewai", reason="crewai removed in 4.15")
 
 
 def test_roll_dice_returns_string():

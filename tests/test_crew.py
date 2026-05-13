@@ -3,6 +3,7 @@
 
 import os
 import pytest
+pytest.importorskip("crewai", reason="crewai removed in 4.15")
 from crewai import Crew, Process
 
 

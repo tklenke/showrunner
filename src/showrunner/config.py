@@ -1,11 +1,11 @@
-# ABOUTME: Loads agent and LiteLLM config from YAML files and resolves CrewAI LLM objects.
+# ABOUTME: Loads agent and LiteLLM config from YAML files.
 # ABOUTME: Single source of truth for model routing — all agents call load_agent_configs().
 
 import os
 from pathlib import Path
 
+import litellm
 import yaml
-from crewai import LLM
 
 _CONFIG_DIR = Path(__file__).parent.parent.parent / "config"
 
@@ -22,44 +22,55 @@ def _resolve_api_key(raw: str) -> str:
     return raw
 
 
-def _build_llm_registry() -> dict:
-    """Return {model_alias: LLM instance} from litellm.yaml."""
+def _build_litellm_registry() -> dict:
+    """Return {model_alias: litellm_params_dict} from litellm.yaml."""
     litellm_cfg = _load_yaml("litellm.yaml")
     registry = {}
     for entry in litellm_cfg.get("model_list", []):
         alias = entry["model_name"]
         params = entry["litellm_params"]
-        kwargs = {"model": params["model"]}
+        result: dict = {"model": params["model"]}
         if "api_base" in params:
-            kwargs["base_url"] = params["api_base"]
-        kwargs["api_key"] = _resolve_api_key(params.get("api_key", "not-required"))
-        # Gemini 2.5 thinking mode is disabled — we want direct answers, not chain-of-thought
-        if "gemini-2.5" in params["model"]:
-            kwargs["thinking"] = {"type": "disabled"}
-        registry[alias] = LLM(**kwargs)
+            result["api_base"] = params["api_base"]
+        result["api_key"] = _resolve_api_key(params.get("api_key", "not-required"))
+        registry[alias] = result
     return registry
 
 
 def load_agent_configs() -> dict:
-    """Return {agent_name: config_dict} with resolved LLM objects.
+    """Return {agent_name: config_dict} with litellm call params.
 
-    Each config dict has: role, goal, backstory, llm, verbose, allow_delegation.
+    Each config dict has: role, goal, backstory, litellm_params, model_alias,
+    verbose, allow_delegation.
+    litellm_params contains: model, and optionally api_base and api_key.
     """
     agents_yaml = _load_yaml("agents.yaml")
-    llm_registry = _build_llm_registry()
+    litellm_registry = _build_litellm_registry()
     result = {}
     for name, cfg in agents_yaml.items():
         model_alias = cfg.get("model", "")
-        llm = llm_registry.get(model_alias)
-        if llm is None:
+        litellm_params = litellm_registry.get(model_alias)
+        if litellm_params is None:
             raise ValueError(f"Agent '{name}' references unknown model alias '{model_alias}'")
         result[name] = {
             "role": cfg["role"],
             "goal": cfg["goal"].strip(),
             "backstory": cfg["backstory"].strip(),
-            "llm": llm,
+            "litellm_params": litellm_params,
             "model_alias": model_alias,
             "verbose": cfg.get("verbose", False),
             "allow_delegation": cfg.get("allow_delegation", False),
         }
     return result
+
+
+def apply_litellm_settings() -> None:
+    """Apply litellm_settings from litellm.yaml to litellm globals."""
+    litellm_cfg = _load_yaml("litellm.yaml")
+    settings = litellm_cfg.get("litellm_settings", {})
+    if "drop_params" in settings:
+        litellm.drop_params = settings["drop_params"]
+    if "request_timeout" in settings:
+        litellm.request_timeout = settings["request_timeout"]
+    if "num_retries" in settings:
+        litellm.num_retries = settings["num_retries"]
