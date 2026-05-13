@@ -34,6 +34,18 @@ A beat spans one or more turns. A scene spans one or more beats.
 
 ---
 
+## System Components
+
+| Component | Definition |
+|-----------|-----------|
+| **Orchestrator** | The Python program (`src/showrunner/orchestrator.py`) that manages the turn loop, routes data between steps, reads/writes all state files, and makes every deterministic decision. When the docs say "the orchestrator does X," that means pure Python — no LLM involved. |
+
+The two-action vocabulary of the game loop:
+- **`call_llm()`** — non-deterministic; an LLM produces the output
+- **the orchestrator** — deterministic; Python produces the output
+
+---
+
 ## Agents
 
 | Agent | Config key | Server | Role |
@@ -80,6 +92,7 @@ via `config/litellm.yaml`.
 | Abbreviation | Meaning | Notes |
 |-------------|---------|-------|
 | **SR** | Show Runner | The GM-brain agent |
+| **Orch** | Orchestrator | The Python turn-loop program; deterministic decisions |
 | **CW** | Context Window | Maximum token capacity of an LLM inference call |
 | **PC** | Player Character | `player: "human"` |
 | **NPC** | Non-Player Character | No `player` field |

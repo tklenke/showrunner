@@ -148,10 +148,9 @@ dice pool without further lookups.
 | Output | Outcome ruling: passed/failed, wounds, triumph/despair effects |
 | Writes | `logs/turn_{ts}_{beat}_results.txt` |
 
-- One `call_llm()` per check. Skipped entirely if `NO_CHECKS`.
-- The **orchestrator** rolls dice in Python (`roll_pool()`) before each call — the LLM
-  receives a pre-computed result and rules on it; it does not roll.
-- Each call receives all prior rulings as context.
+- The orchestrator parses the checks log, builds each dice pool, and calls `roll_pool()` — deterministic.
+- One `call_llm()` per check; the LLM receives the pre-computed roll result and rules on it.
+- Each `call_llm()` receives all prior rulings as context. Skipped entirely if `NO_CHECKS`.
 
 ---
 
