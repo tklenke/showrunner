@@ -69,16 +69,16 @@ Free-form text. Direction to AI party members is embedded naturally — no speci
 
 ---
 
-## Step 3 — AI PC Wave (`run_pc_wave()`)
+## Step 3 — Companion Wave (`run_companion_wave()`)
 
 ```
-Kae (AI PC)  →  dialogue + actions (receives NPC wave text + player action)
+Kae (Companion)  →  dialogue + actions (receives NPC wave text + user action)
 ...
 ```
 
-- One `call_llm()` per AI party member (`player: "ai"` in character YAML).
-- Each call receives the full NPC wave text and player action.
-- AI PC outputs printed to terminal as they arrive.
+- One `call_llm()` per Companion (`player: "companion"` in character YAML).
+- Each call receives the full NPC wave text and user action.
+- Companion outputs printed to terminal as they arrive.
 
 ---
 
@@ -179,7 +179,7 @@ the scene ends.
 |---|---|---|
 | Show Runner | sardinia 8B | 1 (beat plan), 5 (check id), 6 (rulings), 7 (narrative) |
 | Narrator | sardinia 8B | 1 (narration), 8 (last-action extraction) |
-| Actors | sardinia 8B | 1 (NPC voicing), 3 (AI PC voicing), 4 (summaries) |
+| Actors | sardinia 8B | 1 (NPC voicing), 3 (Companion voicing), 4 (summaries) |
 | Scribe | alien 3B | 9 (session log) |
 
 The `referee` agent is configured in `config/agents.yaml` but not called by the current pipeline.

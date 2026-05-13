@@ -53,6 +53,8 @@ modules under `src/showrunner/`. See `docs/plans/programmer_todo.md` for current
 ### Current Structure
 
 - `docs/plans/` - Design specifications and implementation plans
+  - **`terminology.md` — CANONICAL TERMS.** User, PC, Companion, NPC, and all narrative
+    hierarchy terms are defined here. Read before touching character files or turn-loop code.
   - **`game_loop.md` — SOURCE OF TRUTH for turn execution.** Defines every step, which
     agent runs it, what files are read/written, and the session→scene→beat→turn hierarchy.
     When implementing or reviewing any part of the turn loop, read this file first. If

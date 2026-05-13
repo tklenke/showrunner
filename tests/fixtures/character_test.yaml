@@ -3,7 +3,7 @@ identity:
   species: "Human"
   career: "Hired Gun"
   specialization: "Mercenary Soldier"
-  player: "ai"
+  player: "companion"
 
 characteristics:
   brawn: 3

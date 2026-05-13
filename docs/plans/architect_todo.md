@@ -67,7 +67,7 @@ smaller and more reliable.
 #### Pipeline steps
 
 **3a — Action summaries** (alien 3B, one task per character that acted)
-- Input: one character's action text (from NPC/AI PC outputs + player action)
+- Input: one character's action text (from NPC/Companion outputs + user action)
 - Output: 1–2 sentence plain-language summary of what that character did
 - No tools. No stats. No rules reasoning.
 - Orchestrator collects all outputs and writes `logs/turn_{turn_ts}_{beat}_summaries.txt`
@@ -186,14 +186,14 @@ and outputs: dice pool, roll result (auto-rolled or prompted), and outcome rulin
   second). Each NPC sees all prior NPC outputs via chained task context.
 - Player inputs a single free-form action. Can include direction to Kaelen embedded
   in natural language ("I yell to Kae, 'cover the door' then I approach Bargos").
-- Kaelen (AI party member, `player: "ai"`) sees all NPC outputs + player action text.
+- Kaelen (Companion, `player: "companion"`) sees all NPC outputs + user action text.
 - Show Runner review sees everything (NPC outputs + Kaelen + player action).
 - Referee handles each check in isolation.
 - Scribe records outcomes.
 
 **Characters filtered by `player` field:**
 - No `player` field (or `player: null`) → pure NPC → NPC wave
-- `player: "ai"` → AI party member → PC wave (Kaelen)
+- `player: "companion"` → Companion → Companion wave (Kaelen)
 - `player: "human"` → human player → prompted directly (Z-4P0)
 
 ---

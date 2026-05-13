@@ -3,7 +3,7 @@ identity:
   species: "Human"
   career: "Smuggler"
   specialization: "Thief"
-  player: "ai"
+  player: "companion"
   npc_tier: "rival"
   obligation:
     amount: 15

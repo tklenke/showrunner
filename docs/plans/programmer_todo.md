@@ -4,6 +4,7 @@ Implementation tasks for the showrunner engine.
 Follow TDD: write the failing test first, then write only enough code to make it pass.
 
 Reference documents:
+- `docs/plans/terminology.md` — **canonical terms; read before touching any character or turn-loop code**
 - `docs/plans/architecture.md` — system design
 - `docs/plans/character_schema.md` — character file schema and `render_actor_prompt` spec
 - `docs/plans/architect_todo.md` — phased plan with open decisions
@@ -11,6 +12,29 @@ Reference documents:
 ---
 
 ## Current Priority: Phase 4 — End-to-End Scene Playthrough
+
+### [ ] 4.19 — Terminology: rename `player: "ai"` → `"companion"` across Python code
+
+Docs and YAML files are already updated. This task propagates the change into Python.
+
+**`player` field value:** `"ai"` → `"companion"` in all comparisons and string literals.
+
+Files to update:
+- `src/showrunner/runner.py` — `player == "ai"` guard in `run_pc_wave()`
+- `src/showrunner/orchestrator.py` — any `player == "ai"` filtering
+- `src/showrunner/agents/actors.py` — any `"ai"` string references
+- `tests/test_runner.py`, `tests/test_actors.py`, `tests/test_orchestrator.py` — fixture data and assertions
+
+**Function rename:** `run_pc_wave` → `run_companion_wave` in `runner.py` and all call sites
+(`orchestrator.py`, `tests/test_runner.py`, `tests/test_orchestrator.py`).
+
+Note: update 4.17's "keep them" note — `run_pc_wave` is now included in the rename list.
+
+**Terms to replace in comments/docstrings:** "AI PC", "ai party member", "AI party member" → "Companion".
+
+No logic changes — pure rename/string substitution. Run full test suite after.
+
+---
 
 ### [ ] 4.17 — Rename runner.py functions: drop `_phase` suffix
 

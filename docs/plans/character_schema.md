@@ -1,7 +1,7 @@
 # Character Sheet Schema
 
 Character sheets are YAML files stored in `swskin/characters/[name].yaml`.
-The `player` field controls who drives the character: `"human"` prompts Tom via CLI, `"ai"` lets the Actors agent run the character.
+The `player` field controls who drives the character: `"human"` = User-controlled via CLI, `"companion"` = Actors agent drives as a party Companion, omitted/null = NPC driven entirely by Show Runner/plot.
 
 ```yaml
 identity:
@@ -9,7 +9,7 @@ identity:
   species: string            # e.g. "Human", "Twi'lek", "Rodian"
   career: string             # e.g. "Smuggler", "Hired Gun", "Explorer"
   specialization: string     # e.g. "Pilot", "Mercenary Soldier"
-  player: "human" | "ai"
+  player: "human" | "companion"   # omit for NPC
   obligation:
     amount: int              # total obligation value
     type: string             # e.g. "Debt", "Bounty", "Family"

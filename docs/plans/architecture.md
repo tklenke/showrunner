@@ -60,7 +60,7 @@ Runtime state files and character sheets live in `showrunner/`, not `swskin/`.
 |-------|-----------|-------|------|------|
 | **Show Runner** | `show_runner` | Llama 3.1 8B | Sardinia | GM brain: beat decisions, check identification, dice rulings, resolution narrative |
 | **Narrator** | `narrator` | Llama 3.1 8B | Sardinia | GM voice: prose narration, last-action extraction |
-| **Actors** | `actors` | Llama 3.1 8B | Sardinia | NPC and AI PC dialogue, physical actions, action summaries |
+| **Actors** | `actors` | Llama 3.1 8B | Sardinia | NPC and Companion dialogue, physical actions, action summaries |
 | **Scribe** | `scribe` | Llama 3.2 3B | Alien | State keeper: one-sentence session log entry per turn |
 
 Gemini (gemini-2.5-flash) is configured in `config/litellm.yaml` but not currently assigned to an agent.
@@ -110,8 +110,8 @@ directly.
 receives the beat plan and produces read-aloud narration. Each NPC (in scene order) receives
 the beat plan and all prior NPC outputs, then voices its dialogue and actions.
 
-**Phase 2 — PC Wave** — Collected after player CLI input. Each AI PC receives the assembled
-NPC wave text and the player's action, then responds. Human PCs act via CLI prompt only.
+**Phase 2 — Companion Wave** — Collected after user CLI input. Each Companion receives the assembled
+NPC wave text and the user's action, then responds. The PC acts via CLI prompt only.
 
 **Phase 3 — Resolution Pipeline** — Five orchestrator-driven steps: action summaries (3a) →
 check identification (3b) → Python dice rolling + LLM rulings (3c) → resolution narrative
@@ -160,7 +160,7 @@ while True:
     CLI: "What do you and your companions do?"
 
     ── Phase 2: PC Wave ──────────────────────────────────────────────
-    AI PCs in order → npc_wave_text + player action → response (printed)
+    Companions in order → npc_wave_text + user action → response (printed)
 
     ── Phase 3: Resolution Pipeline ──────────────────────────────────
     3a  Actors      → 1 call per actor → 1–2 sentence summary
@@ -242,8 +242,9 @@ Each character has two files in `characters/`:
 | `[name].yaml` | Mechanical stats, skills, equipment, status | Partly volatile (status section changes in play) |
 | `[name].md` | Persona: backstory, voice, personality, scene notes | Static — rarely changes |
 
-`player: "human"` in the YAML = Tom drives this character via CLI.
-`player: "ai"` = Actors agent drives this character.
+`player: "human"` = User drives this character via CLI (PC).
+`player: "companion"` = Actors agent drives this character (Companion).
+No `player` field = NPC, driven entirely by Show Runner/plot.
 
 See `docs/plans/character_schema.md` for the full YAML schema.
 
