@@ -32,7 +32,7 @@ actually fires when LiteLLM processes a call.
 
 ---
 
-### [ ] 4.8d — Pass NPC Character Data to Actors Agent
+### [x] 4.8d — Pass NPC Character Data to Actors Agent
 
 `create_actors()` is called with no arguments. The Actors agent's backstory is the
 generic config text — no NPC data. `load_scene_characters()` and `render_actor_prompt()`

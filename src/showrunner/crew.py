@@ -13,6 +13,7 @@ from showrunner.agents.show_runner import create_show_runner
 def build_crew(
     show_runner_context: str,
     narrator_context: str = "",
+    actors_context: str = "",
     referee_context: str = "",
     scribe_context: str = "",
 ) -> Crew:
@@ -24,7 +25,7 @@ def build_crew(
     """
     show_runner = create_show_runner()
     narrator = create_narrator(context=narrator_context)
-    actors = create_actors()
+    actors = create_actors(context=actors_context)
     referee = create_referee(context=referee_context)
     scribe = create_scribe(context=scribe_context)
 

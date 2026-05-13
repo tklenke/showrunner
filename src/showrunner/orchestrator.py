@@ -7,6 +7,7 @@ from pathlib import Path
 
 import litellm
 
+from showrunner.agents.actors import load_scene_characters
 from showrunner.agents.narrator import render_narrator_context
 from showrunner.agents.referee import render_referee_context
 from showrunner.agents.scribe import render_scribe_context
@@ -108,10 +109,18 @@ def run_turn_loop(scene: dict) -> None:
         narrator_ctx = render_narrator_context(scene, current_beat, last_action, party_stats)
         referee_ctx = render_referee_context(scene, current_beat)
         scribe_ctx = render_scribe_context(scene_state, party_stats)
+        scene_chars = load_scene_characters(scene, scene_state)
+        actors_ctx = "\n\n---\n\n".join(scene_chars.values()) if scene_chars else ""
         log.debug(f"Beat: {current_beat}  last_action: {last_action!r}")
 
         print(f"\n--- Beat: {current_beat} ---")
-        crew = build_crew(show_runner_ctx, narrator_ctx, referee_ctx, scribe_ctx)
+        crew = build_crew(
+            show_runner_ctx,
+            narrator_context=narrator_ctx,
+            actors_context=actors_ctx,
+            referee_context=referee_ctx,
+            scribe_context=scribe_ctx,
+        )
         litellm.callbacks = [prompt_logger]
         with verbose_to_file(verbose_path):
             result = crew.kickoff()

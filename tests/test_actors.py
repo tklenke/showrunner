@@ -37,3 +37,19 @@ def test_inline_npc_uses_key_traits():
     result = load_scene_characters(SCENE_WITH_INLINE, SCENE_STATE, characters_dir=str(FIXTURES))
     assert "c3p9" in result
     assert "Deferential" in result["c3p9"]
+
+
+def test_create_actors_includes_context_in_backstory():
+    import os
+    os.environ.setdefault("GEMINI_API_KEY", "test-key")
+    from showrunner.agents.actors import create_actors
+    actor = create_actors(context="## Rix Vardan\nHired Gun, species Human.")
+    assert "Rix Vardan" in actor.backstory
+
+
+def test_create_actors_no_context_uses_base_backstory():
+    import os
+    os.environ.setdefault("GEMINI_API_KEY", "test-key")
+    from showrunner.agents.actors import create_actors
+    actor = create_actors()
+    assert actor.backstory  # has some backstory even with no context

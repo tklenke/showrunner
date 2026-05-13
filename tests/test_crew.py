@@ -50,3 +50,10 @@ def test_crew_has_tasks():
     from showrunner.crew import build_crew
     crew = build_crew("A test scene.")
     assert len(crew.tasks) > 0
+
+
+def test_crew_actors_context_in_backstory():
+    from showrunner.crew import build_crew
+    crew = build_crew("A test scene.", actors_context="## Bargos the Hutt\nHutt crime lord.")
+    actors_agent = next(a for a in crew.agents if a.role == "NPC Voice Actor")
+    assert "Bargos the Hutt" in actors_agent.backstory
