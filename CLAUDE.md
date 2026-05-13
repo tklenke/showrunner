@@ -46,15 +46,26 @@ Tom may also explicitly ask you to switch roles during a session.
 
 ## Project Status
 
-This repository is in early design. No implementation code exists yet. The architecture plan is in `docs/plans/architect_todo.md`.
+Phase 4 (MVP Scene — Bargos Mansion) is in active development. Core engine is implemented:
+`llm.py`, `runner.py`, `orchestrator.py`, `instrumentation.py`, `config.py`, and supporting
+modules under `src/showrunner/`. See `docs/plans/programmer_todo.md` for current task status.
 
 ### Current Structure
 
 - `docs/plans/` - Design specifications and implementation plans
+  - **`game_loop.md` — SOURCE OF TRUTH for turn execution.** Defines every step, which
+    agent runs it, what files are read/written, and the session→scene→beat→turn hierarchy.
+    When implementing or reviewing any part of the turn loop, read this file first. If
+    code diverges from it, the code is wrong — or `game_loop.md` must be updated first.
   - `architect_todo.md` - Architecture decisions and phased implementation plan
-  - `programmer_todo.md` - Implementation tasks for the Programmer role (to be created)
+  - `programmer_todo.md` - Active implementation task queue
+  - `architecture.md` - Stable system design reference
 - `docs/references/` - Reference materials (READ ONLY)
   - `Genesys_Core_Rulebook.pdf` - Genesys core rules
+- `src/showrunner/` - Engine implementation
+- `tests/` - Test suite (pytest)
+- `config/` - Agent, model, and LiteLLM routing config
+- `state/` - Scene and party state files
 - `claude/roles/` - Role definitions for Claude Code sessions
 
 ## Documentation Management
