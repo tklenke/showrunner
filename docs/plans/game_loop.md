@@ -39,9 +39,13 @@ end of each turn. Multiple turns can execute within the same beat.
 5. If `verbose`: print `\n=== {beat["title"]} ===` to terminal
 6. Log the transition: `log.info(f"Beat transition: {current_beat}")`
 7. Set `_last_beat = current_beat`
+8. Reset `_turn_num = 1`
 
-`_beat_notes_pending = True` is set before the turn loop starts so the first beat always
-initializes correctly.
+`_beat_notes_pending = True` and `_turn_num = 1` are set before the turn loop starts.
+`_turn_num` increments at the end of each turn and resets on beat transition.
+
+**Log file naming:** `{scene:02d}_{beat:02d}_{beat_id}_{turn:04d}_{type}.txt`
+Zero-padded numbers ensure correct sort order by scene → beat → turn.
 
 **Beat opener — `run_beat_opener()` (first turn of each beat only):**
 
@@ -95,7 +99,7 @@ Narrator →  NPC_2 full output  →  compact summary  →  written to summaries
   outputs, and compact Narrator summaries of all prior NPCs (not the full outputs).
 - One `call_llm()` (Narrator) immediately after each NPC; produces a 1–2 sentence summary.
   The summary is passed to the next NPC (CW management) and appended to
-  `logs/turn_{ts}_{beat}_summaries.txt` (for use in Steps 5, 8, 9).
+  `logs/{scene:02d}_{beat:02d}_{beat_id}_{turn:04d}_summaries.txt` (for use in Steps 5, 8, 9).
 - Total: 2N `call_llm()` calls for N NPCs in this step.
 - Full NPC outputs printed to terminal as they arrive; summaries are pipeline-internal.
 - Returns `{npc_id: output, ...}` for use in Steps 5–7.
@@ -109,7 +113,7 @@ Narrator →  NPC_2 full output  →  compact summary  →  written to summaries
 | Agent | Narrator (sardinia 8B), one call per party member that acted |
 | Input | One character's action text (User action or Companion output) |
 | Output | 1–2 sentence plain-language summary of what they did |
-| Writes | `logs/turn_{ts}_{beat}_summaries.txt` (appended; NPC summaries already written in Step 3) |
+| Writes | `logs/{scene:02d}_{beat:02d}_{beat_id}_{turn:04d}_summaries.txt` (appended; NPC summaries already written in Step 3) |
 
 - One `call_llm()` per party member that acted (User + any Companions).
 - NPC summaries are generated inline during Step 3; this step covers the party only.
@@ -124,7 +128,7 @@ Narrator →  NPC_2 full output  →  compact summary  →  written to summaries
 | Agent | Show Runner (sardinia 8B), one call per character that acted |
 | Input | That character's summary + their stats (characteristic values, skill ranks) |
 | Output | Check spec(s) for that character, or `NO_CHECKS` |
-| Writes | `logs/turn_{ts}_{beat}_checks.txt` |
+| Writes | `logs/{scene:02d}_{beat:02d}_{beat_id}_{turn:04d}_checks.txt` |
 
 - One `call_llm()` per character — focused on one actor at a time rather than the full
   batch, keeping the task within 8B capability.
@@ -146,7 +150,7 @@ dice pool without further lookups.
 | Agent | Show Runner (sardinia 8B), one call per check |
 | Input | Check spec + pre-computed roll result string |
 | Output | Outcome ruling: passed/failed, wounds, triumph/despair effects |
-| Writes | `logs/turn_{ts}_{beat}_results.txt` |
+| Writes | `logs/{scene:02d}_{beat:02d}_{beat_id}_{turn:04d}_results.txt` |
 
 - The orchestrator parses the checks log, builds each dice pool, and calls `roll_pool()` — deterministic.
 - One `call_llm()` per check; the LLM receives the pre-computed roll result and rules on it.
@@ -232,13 +236,13 @@ The `referee` agent is configured in `config/agents.yaml` but not called by the 
 | Step | File | Changed by |
 |---|---|---|
 | 0 (beat init), 9 | `state/scene_state.yaml` `character_plans` | Orchestrator |
-| 4 | `logs/turn_{ts}_{beat}_summaries.txt` | Orchestrator |
-| 5 | `logs/turn_{ts}_{beat}_checks.txt` | Orchestrator |
-| 6 | `logs/turn_{ts}_{beat}_results.txt` | Orchestrator |
+| 4 | `logs/{scene:02d}_{beat:02d}_{beat_id}_{turn:04d}_summaries.txt` | Orchestrator |
+| 5 | `logs/{scene:02d}_{beat:02d}_{beat_id}_{turn:04d}_checks.txt` | Orchestrator |
+| 6 | `logs/{scene:02d}_{beat:02d}_{beat_id}_{turn:04d}_results.txt` | Orchestrator |
 | 6 | `state/party_stats.yaml` | Orchestrator *(not yet implemented)* |
 | 7 | `state/session_log.md` | Orchestrator |
 | 8 | `state/scene_state.yaml` `last_actions` | Orchestrator |
-| 9 | `logs/turn_{ts}_{beat}_sr_plan.txt` | Orchestrator |
+| 9 | `logs/{scene:02d}_{beat:02d}_{beat_id}_{turn:04d}_sr_plan.txt` | Orchestrator |
 | 10 | `state/scene_state.yaml` `current_beat` | `advance_beat()` |
 
 ---
