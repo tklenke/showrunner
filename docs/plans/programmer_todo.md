@@ -267,7 +267,7 @@ Or `NO_CHECKS` if no check needed for that character.
 
 ---
 
-### [~] 4.25 — Structured Output Chain: parse-repair loop in orchestrator
+### [x] 4.25 — Structured Output Chain: parse-repair loop in orchestrator
 
 Per `game_loop.md` Ref C: the orchestrator never parses free-form LLM output cold.
 It always leads with a programmatic best-guess (regex, keyword extraction), then hands
@@ -294,7 +294,7 @@ Every recovery and escalation is appended to `state/session_log.md`.
 
 ---
 
-### [ ] 4.26 — Step 6: party_stats.yaml tracking after each ruling
+### [~] 4.26 — Step 6: party_stats.yaml tracking after each ruling
 
 Per `game_loop.md` Step 6: the orchestrator updates `party_stats.yaml` after parsing each
 ruling. Each `call_llm()` for Step 6 receives current `party_stats` (not prior ruling text)

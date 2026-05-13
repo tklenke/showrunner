@@ -384,3 +384,58 @@ def test_parse_structured_all_fail_writes_warning_to_session_log(tmp_path, monke
         parse_structured("bad", _fail_parser, context="ctx")
     log_content = (tmp_path / "state" / "session_log.md").read_text()
     assert "WARNING" in log_content
+
+
+# ---------------------------------------------------------------------------
+# _extract_stat_changes
+# ---------------------------------------------------------------------------
+
+def test_extract_stat_changes_parses_wounds():
+    from showrunner.orchestrator import _extract_stat_changes
+    result = _extract_stat_changes("Z-4P0 takes 3 wounds.")
+    assert result.get("wounds") == 3
+
+
+def test_extract_stat_changes_parses_strain():
+    from showrunner.orchestrator import _extract_stat_changes
+    result = _extract_stat_changes("Kaelen suffers 2 strain from the exertion.")
+    assert result.get("strain") == 2
+
+
+def test_extract_stat_changes_returns_zero_for_no_damage():
+    from showrunner.orchestrator import _extract_stat_changes
+    result = _extract_stat_changes("Z-4P0 succeeds with Triumph. No damage taken.")
+    assert result.get("wounds", 0) == 0
+    assert result.get("strain", 0) == 0
+
+
+# ---------------------------------------------------------------------------
+# _make_ruling_callback (orchestrator's on_ruling factory)
+# ---------------------------------------------------------------------------
+
+def test_make_ruling_callback_updates_party_stats_on_ruling(tmp_path, monkeypatch):
+    from showrunner.orchestrator import _make_ruling_callback
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "state").mkdir()
+    import yaml
+    (tmp_path / "state" / "party_stats.yaml").write_text(
+        yaml.dump({"characters": {"z_4p0": {"wounds_current": 0, "wounds_threshold": 12}}})
+    )
+    callback = _make_ruling_callback(tmp_path / "state" / "party_stats.yaml")
+    callback("z_4p0", "Z-4P0 takes 2 wounds.")
+    updated = yaml.safe_load((tmp_path / "state" / "party_stats.yaml").read_text())
+    assert updated["characters"]["z_4p0"]["wounds_current"] == 2
+
+
+def test_make_ruling_callback_returns_stats_text_for_next_ruling(tmp_path, monkeypatch):
+    from showrunner.orchestrator import _make_ruling_callback
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "state").mkdir()
+    import yaml
+    (tmp_path / "state" / "party_stats.yaml").write_text(
+        yaml.dump({"characters": {"z_4p0": {"wounds_current": 0, "wounds_threshold": 12}}})
+    )
+    callback = _make_ruling_callback(tmp_path / "state" / "party_stats.yaml")
+    context = callback("z_4p0", "Z-4P0 takes 2 wounds.")
+    assert context is not None
+    assert isinstance(context, str)

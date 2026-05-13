@@ -1,9 +1,13 @@
 characters:
-  kaelen_sunara:
-    wounds: 0
-    strain: 0
-    credits: 500
   z_4p0:
-    wounds: 0
-    strain: 0
+    wounds_current: 0
+    wounds_threshold: 12
+    strain_current: 0
+    strain_threshold: 13
     credits: 50
+  kaelen_sunara:
+    wounds_current: 0
+    wounds_threshold: 12
+    strain_current: 0
+    strain_threshold: 12
+    credits: 500

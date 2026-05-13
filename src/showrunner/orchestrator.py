@@ -23,7 +23,7 @@ from showrunner.runner import (
 )
 from showrunner.tools.dice_roller import roll_pool
 from showrunner.tools.state_reader import load_party_stats, load_scene_state
-from showrunner.tools.state_writer import advance_beat, initialize_scene_state, update_scene_state
+from showrunner.tools.state_writer import advance_beat, initialize_scene_state, update_party_stats, update_scene_state
 
 # Difficulty name → number of difficulty dice
 _DIFFICULTY_MAP = {
@@ -311,6 +311,53 @@ def _write_turn_file(
     return content
 
 
+def _extract_stat_changes(ruling_text: str) -> dict[str, int]:
+    """Extract wounds and strain applied from a ruling text. Returns {wounds: N, strain: N}."""
+    import re
+    result: dict[str, int] = {}
+    wounds_match = re.search(r"(\d+)\s+wound", ruling_text, re.IGNORECASE)
+    strain_match = re.search(r"(\d+)\s+strain", ruling_text, re.IGNORECASE)
+    if wounds_match:
+        result["wounds"] = int(wounds_match.group(1))
+    if strain_match:
+        result["strain"] = int(strain_match.group(1))
+    return result
+
+
+def _make_ruling_callback(stats_path: Path):
+    """Return an on_ruling callback that updates party_stats after each ruling."""
+    def callback(actor: str, ruling_text: str) -> str:
+        changes = _extract_stat_changes(ruling_text)
+        if changes:
+            try:
+                party_stats = load_party_stats(str(stats_path))
+            except FileNotFoundError:
+                party_stats = {"characters": {}}
+            chars = party_stats.get("characters", {})
+            char = chars.get(actor, {})
+            if "wounds" in changes:
+                char["wounds_current"] = char.get("wounds_current", 0) + changes["wounds"]
+                threshold = char.get("wounds_threshold", 0)
+                if threshold and char["wounds_current"] >= threshold:
+                    session_log_path = Path("state/session_log.md")
+                    with session_log_path.open("a") as f:
+                        f.write(f"\n{actor} has reached wound threshold ({threshold})!\n")
+            if "strain" in changes:
+                char["strain_current"] = char.get("strain_current", 0) + changes["strain"]
+            chars[actor] = char
+            update_party_stats({"characters": chars}, str(stats_path))
+        try:
+            party_stats = load_party_stats(str(stats_path))
+        except FileNotFoundError:
+            party_stats = {"characters": {}}
+        return "\n".join(
+            f"{cid}: wounds {c.get('wounds_current', 0)}/{c.get('wounds_threshold', '?')}, "
+            f"strain {c.get('strain_current', 0)}/{c.get('strain_threshold', '?')}"
+            for cid, c in party_stats.get("characters", {}).items()
+        )
+    return callback
+
+
 def _roll_specs(specs: list[dict]) -> None:
     """Add roll_result to each spec in-place using the embedded stat values."""
     for spec in specs:
@@ -411,8 +458,12 @@ def run_turn_loop(scene: dict, verbose: bool = False) -> None:
         log.info(f"Step 5 complete: {len(ruling_specs)} checks identified")
 
         # ── Step 6: Dice rolling + rulings ──────────────────────────────────
+        party_stats_path = Path("state/party_stats.yaml")
         _roll_specs(ruling_specs)
-        rulings = run_rulings(ruling_specs)
+        rulings = run_rulings(
+            ruling_specs,
+            on_ruling=_make_ruling_callback(party_stats_path) if ruling_specs else None,
+        )
         results_text = "\n".join(f"{k}: {v}" for k, v in rulings.items()) if rulings else "No checks this turn."
         _write_turn_file(logs_dir, scene_num, _beat_num, current_beat, _turn_num, "results", results_text)
         log.info(f"Step 6 complete: {len(ruling_specs)} checks resolved")

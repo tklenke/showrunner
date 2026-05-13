@@ -222,16 +222,34 @@ def test_run_rulings_calls_show_runner_once_per_spec():
     assert len(sr_calls) == 2
 
 
-def test_run_rulings_second_call_contains_first_ruling():
+def test_run_rulings_on_ruling_callback_called_after_each_ruling():
     from showrunner.runner import run_rulings
     specs = [
         {"actor": "A", "skill": "S", "difficulty": "Easy", "notes": "", "roll_result": "passed"},
         {"actor": "B", "skill": "S", "difficulty": "Easy", "notes": "", "roll_result": "failed"},
     ]
-    with patch("showrunner.runner.call_llm", side_effect=["first ruling text", "second ruling"]) as mock:
-        run_rulings(specs)
+    called_with = []
+    def on_ruling(actor, text):
+        called_with.append((actor, text))
+        return f"updated stats after {actor}"
+    with patch("showrunner.runner.call_llm", side_effect=["ruling1", "ruling2"]):
+        run_rulings(specs, on_ruling=on_ruling)
+    assert called_with[0] == ("A", "ruling1")
+    assert called_with[1] == ("B", "ruling2")
+
+
+def test_run_rulings_second_call_contains_context_from_on_ruling():
+    from showrunner.runner import run_rulings
+    specs = [
+        {"actor": "A", "skill": "S", "difficulty": "Easy", "notes": "", "roll_result": "passed"},
+        {"actor": "B", "skill": "S", "difficulty": "Easy", "notes": "", "roll_result": "failed"},
+    ]
+    def on_ruling(actor, text):
+        return f"UPDATED_STATS_FROM_{actor}"
+    with patch("showrunner.runner.call_llm", side_effect=["ruling1", "ruling2"]) as mock:
+        run_rulings(specs, on_ruling=on_ruling)
     second_call_msg = mock.call_args_list[1].args[2]
-    assert "first ruling text" in second_call_msg
+    assert "UPDATED_STATS_FROM_A" in second_call_msg
 
 
 def test_run_rulings_returns_dict_keyed_by_actor():

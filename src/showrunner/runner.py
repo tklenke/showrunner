@@ -97,15 +97,17 @@ def run_checks(char_summaries: dict[str, str], char_stats: dict[str, str]) -> st
     return "\n".join(check_lines) if check_lines else "NO_CHECKS"
 
 
-def run_rulings(check_specs: list[dict]) -> dict[str, str]:
-    """Step 3c: Issue a ruling for each check spec.
+def run_rulings(check_specs: list[dict], *, on_ruling=None) -> dict[str, str]:
+    """Step 6: Issue a ruling for each check spec.
 
-    Each call sees all prior rulings for context. Returns {} for empty specs.
+    on_ruling(actor, ruling_text) -> str | None is called after each ruling;
+    its return value becomes the party-status context for the next ruling call.
+    Returns {} for empty specs.
     """
     if not check_specs:
         return {}
     rulings: dict[str, str] = {}
-    prior_rulings = ""
+    next_context = ""
     for spec in check_specs:
         msg = (
             f"Resolve this check:\n"
@@ -113,11 +115,12 @@ def run_rulings(check_specs: list[dict]) -> dict[str, str]:
             f"Notes: {spec.get('notes', '')}\n\n"
             f"Dice roll result: {spec.get('roll_result', '')}"
         )
-        if prior_rulings:
-            msg += f"\n\n## Prior rulings this turn:\n{prior_rulings}"
+        if next_context:
+            msg += f"\n\n## Current party status:\n{next_context}"
         ruling = call_llm("show_runner", build_system_prompt("show_runner"), msg)
         rulings[spec["actor"]] = ruling
-        prior_rulings += f"\n{spec['actor']}: {ruling}"
+        if on_ruling:
+            next_context = on_ruling(spec["actor"], ruling) or ""
     return rulings
 
 
