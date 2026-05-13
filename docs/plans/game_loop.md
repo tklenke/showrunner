@@ -101,7 +101,7 @@ Narrator →  NPC_2 full output  →  compact summary  →  written to summaries
 
 ---
 
-## Step 4 — Action Summaries (`run_summaries()`)
+## Step 4 — Party Action Summaries (`run_summaries()`)
 
 | | |
 |---|---|
