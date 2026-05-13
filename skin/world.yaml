@@ -2,8 +2,55 @@ world:
   name: "Star Wars: Edge of the Empire"
   description:
     large: |
-      [TODO: full world description for large-context models]
+      Star Wars: Edge of the Empire — set during the height of the Galactic Empire,
+      approximately one year before the Battle of Yavin.
+
+      The galaxy is ruled by an authoritarian Empire built from the ashes of the Old
+      Republic. Emperor Palpatine and his enforcer Darth Vader maintain order through
+      the Imperial Military: Star Destroyers, stormtroopers, and the ever-present threat
+      of the Death Star. The Core Worlds gleam with prosperity; the Outer Rim festers
+      with neglect, exploitation, and opportunity.
+
+      Edge of the Empire follows the scum and villainy who inhabit the margins of galactic
+      society — smugglers, bounty hunters, hired guns, colonists, and outcasts who live
+      beyond the reach of Imperial law. These characters survive by their wits, their
+      contacts, and their willingness to take jobs that respectable citizens won't touch.
+      Obligation binds them: debts owed to crime lords, bounties on their heads, or dark
+      secrets that keep them running.
+
+      Key factions in play:
+      - The Galactic Empire: omnipresent, bureaucratic, and brutal. Its agents appear
+        wherever smugglers, rebels, and criminals gather.
+      - Hutt Cartels: the dominant criminal power structure of the Outer Rim. Hutts like
+        Bargos control territory, slaves, and legitimate fronts from palatial estates.
+        They honour contracts only as long as it suits them.
+      - Freelancers and crews: the player characters — people who work for whoever pays
+        and survive by staying one step ahead of trouble.
+      - Bounty hunters and fixers: information brokers, hired blades, and trackers who
+        serve the highest bidder.
+
+      Tone and genre: gritty, morally grey space opera. The heroes aren't Jedi; they're
+      people trying to make ends meet in a dangerous galaxy. Moments of dry humour, tense
+      negotiation, and sudden violence mix freely. Protocol droids speak in formal
+      registers; Hutts speak through translators with exaggerated grandeur; Gamorreans
+      grunt and loom. The Force is real but distant — a rumour, not a resource.
+
+      The Genesys/narrative dice system adds texture: successes come with complications,
+      failures sometimes carry unexpected advantages. Nothing is clean. Threats and
+      advantages shape the fiction even when the core outcome is already decided.
     medium: |
-      [TODO: condensed world description for 8B models]
+      Star Wars: Edge of the Empire — Outer Rim, one year before the Battle of Yavin.
+
+      The Galactic Empire rules through fear and bureaucracy. Hutt Cartels dominate
+      Outer Rim crime, controlling territory and contracts from palatial estates. Player
+      characters are freelancers — smugglers, bounty hunters, hired guns — who survive
+      on obligation, guile, and the occasional fortunate dice result.
+
+      Tone: gritty space opera. Morally grey protagonists, tense negotiation, sudden
+      violence. Droids are formal, Hutts are grandiloquent, Gamorreans are dangerous
+      muscle. The Force is a rumour, not a resource. Narrative dice mean outcomes have
+      texture: advantages and threats shape events even when success or failure is clear.
     small: |
-      [TODO: minimal world description for 3B models]
+      Star Wars: Edge of the Empire. Galactic Empire era, Outer Rim. Smugglers, bounty
+      hunters, and hired guns working for Hutt crime lords and whoever else pays. Gritty,
+      morally grey space opera where dice outcomes carry complications even in success.

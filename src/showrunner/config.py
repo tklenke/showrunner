@@ -61,6 +61,7 @@ def load_agent_configs() -> dict:
             "verbose": cfg.get("verbose", False),
             "allow_delegation": cfg.get("allow_delegation", False),
             "prompt_file": cfg.get("prompt_file"),
+            "context_tier": cfg.get("context_tier", "medium"),
         }
     return result
 

@@ -537,7 +537,7 @@ Add `prompt_file: prompts/agent_show_runner.md` to each agent entry in `agents.y
 
 ---
 
-### [ ] 4.32 — Node chunk: world.yaml world context injected into every system prompt
+### [x] 4.32 — Node chunk: world.yaml world context injected into every system prompt
 
 Implements the node layer of the prompt architecture. Every agent call gets a
 world-context prefix sized appropriately for the model.

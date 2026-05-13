@@ -5,12 +5,14 @@ import inspect
 from pathlib import Path
 
 import litellm
+import yaml
 
 from showrunner.config import load_agent_configs
 
 _prompt_logger = None
 _PROMPTS_DIR = Path(__file__).parent.parent.parent / "config" / "prompts"
 _CONFIG_DIR = Path(__file__).parent.parent.parent / "config"
+_WORLD_YAML = Path(__file__).parent.parent.parent / "skin" / "world.yaml"
 
 
 def setup_llm_logging(log_path: Path) -> None:
@@ -25,13 +27,32 @@ def load_task_prompt(name: str) -> str:
     return (_PROMPTS_DIR / f"task_{name}.md").read_text()
 
 
+def _load_world_yaml() -> dict:
+    """Load skin/world.yaml and return the parsed dict."""
+    with open(_WORLD_YAML) as f:
+        return yaml.safe_load(f)
+
+
+def _load_world_description(tier: str) -> str:
+    """Return the world description for the given model tier (large/medium/small)."""
+    data = _load_world_yaml()
+    descriptions = data["world"]["description"]
+    return descriptions.get(tier) or descriptions.get("medium", "")
+
+
 def build_system_prompt(agent_name: str) -> str:
-    """Build a system prompt from a prompt file or inline role/goal/backstory config."""
+    """Build a system prompt: world context prefix + agent role definition."""
     cfg = load_agent_configs()[agent_name]
+    tier = cfg.get("context_tier") or "medium"
+    world = _load_world_description(tier)
+
     prompt_file = cfg.get("prompt_file")
     if prompt_file:
-        return (_CONFIG_DIR / prompt_file).read_text()
-    return f"You are {cfg['role']}.\n\n{cfg['goal']}\n\n{cfg['backstory']}"
+        agent = (_CONFIG_DIR / prompt_file).read_text()
+    else:
+        agent = f"You are {cfg['role']}.\n\n{cfg['goal']}\n\n{cfg['backstory']}"
+
+    return f"{world}\n\n{agent}"
 
 
 def call_llm(agent_name: str, system_prompt: str, user_message: str) -> str:

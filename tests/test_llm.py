@@ -155,3 +155,68 @@ def test_build_system_prompt_uses_prompt_file_when_present(tmp_path, monkeypatch
     with patch("showrunner.llm.load_agent_configs", return_value=fake_configs):
         prompt = build_system_prompt("narrator")
     assert "Narrator" in prompt or "Tell stories" in prompt
+
+
+def test_build_system_prompt_includes_world_context():
+    from showrunner.llm import build_system_prompt
+    prompt = build_system_prompt("narrator")
+    assert "Star Wars" in prompt or "Edge of the Empire" in prompt
+
+
+def test_build_system_prompt_uses_context_tier():
+    from showrunner.llm import build_system_prompt
+    fake_world = {
+        "world": {
+            "name": "TestWorld",
+            "description": {
+                "large": "LARGE world description here.",
+                "medium": "MEDIUM world description here.",
+                "small": "SMALL world description here.",
+            }
+        }
+    }
+    fake_configs_large = {
+        "narrator": {
+            "role": "Narrator",
+            "goal": "Tell stories.",
+            "backstory": "A storyteller.",
+            "prompt_file": None,
+            "context_tier": "large",
+            "litellm_params": {"model": "test/model"},
+            "model_alias": "test",
+        }
+    }
+    with patch("showrunner.llm.load_agent_configs", return_value=fake_configs_large), \
+         patch("showrunner.llm._load_world_yaml", return_value=fake_world):
+        prompt = build_system_prompt("narrator")
+    assert "LARGE world description" in prompt
+    assert "MEDIUM world description" not in prompt
+
+
+def test_build_system_prompt_missing_tier_falls_back_to_medium():
+    from showrunner.llm import build_system_prompt
+    fake_world = {
+        "world": {
+            "name": "TestWorld",
+            "description": {
+                "large": "LARGE world description here.",
+                "medium": "MEDIUM world description here.",
+                "small": "SMALL world description here.",
+            }
+        }
+    }
+    fake_configs = {
+        "narrator": {
+            "role": "Narrator",
+            "goal": "Tell stories.",
+            "backstory": "A storyteller.",
+            "prompt_file": None,
+            "context_tier": None,
+            "litellm_params": {"model": "test/model"},
+            "model_alias": "test",
+        }
+    }
+    with patch("showrunner.llm.load_agent_configs", return_value=fake_configs), \
+         patch("showrunner.llm._load_world_yaml", return_value=fake_world):
+        prompt = build_system_prompt("narrator")
+    assert "MEDIUM world description" in prompt
