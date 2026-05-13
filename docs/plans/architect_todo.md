@@ -154,6 +154,10 @@ Currently at project root. Contents move to `skin/characters/`. Delete after.
 
 ## Phase 4: MVP Scene — Bargos Mansion
 
+Prompt architecture (tasks 4.29–4.32) is Phase 4 work — required to fix the output
+issues found during first playthrough. End-to-end playthrough (4.33) is the
+phase-complete gate.
+
 Target: run the full Bargos mansion scene from *Debts to Pay* end-to-end.
 
 Scene covers: arrival, audience with Bargos, the Gamorrean Rumble combat encounter.
@@ -214,7 +218,6 @@ not for a full adventure.
 
 ## Phase 8: Polish and Extensibility
 
-- [ ] World skin loader: `config/world.yaml` points to any skin-compatible repo
-- [ ] Document the world skin schema so other skins can be built
+- [ ] Document the skin/ schema so other skins can be built (the Star Wars skin is the reference impl)
 - [ ] Session resume: save/restore `state/` between sessions
 - [ ] Consider richer CLI output (colour, formatted stat blocks)
