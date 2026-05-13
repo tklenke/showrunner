@@ -119,10 +119,14 @@ any Companions. Uses the same Narrator agent and same log file for a consistent 
 
 | | |
 |---|---|
-| Agent | Show Runner (sardinia 8B), single call |
-| Input | All summaries + character stats from YAML (characteristic values, skill ranks) |
-| Output | Formatted check list or `NO_CHECKS` |
+| Agent | Show Runner (sardinia 8B), one call per character that acted |
+| Input | That character's summary + their stats (characteristic values, skill ranks) |
+| Output | Check spec(s) for that character, or `NO_CHECKS` |
 | Writes | `logs/turn_{ts}_{beat}_checks.txt` |
+
+- One `call_llm()` per character — focused on one actor at a time rather than the full
+  batch, keeping the task within 8B capability.
+- Orchestrator collects all outputs and writes them to the checks log.
 
 Output format (one line per check):
 ```
