@@ -122,7 +122,7 @@ smaller and more reliable.
 - Printed directly to terminal. Not written to a log.
 - This is a Show Runner task using the show_runner agent config.
 
-**3e — Last action extraction** (sardinia 8B, one task per active character)
+**3e — Last action extraction** (sardinia 8B / Narrator, one task per active character)
 - Input: same three files + character name
 - Output: a single sentence capturing that character's last action for the next turn's
   context (replaces the raw `last_actions` dict currently assembled from output.raw strings)

@@ -520,7 +520,7 @@ Tests:
 Add `build_last_action_crew(actor_ids: list[str], summaries: str, checks: str, results: str) -> Crew`
 to `crew.py`.
 
-One sardinia 8B task per actor (Show Runner agent). Task description:
+One sardinia 8B task per actor (Narrator agent). Task description:
 ```
 Given these events:
 {summaries}

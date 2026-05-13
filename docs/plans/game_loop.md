@@ -139,7 +139,7 @@ Skipped entirely if `NO_CHECKS`.
 
 | | |
 |---|---|
-| Agent | Show Runner (sardinia 8B), one task per active character |
+| Agent | Narrator (sardinia 8B), one task per active character |
 | Input | All three files + character name |
 | Output | One sentence capturing that character's last action |
 | Writes | `scene_state.yaml` → `last_actions` dict |
@@ -164,8 +164,8 @@ Replaces the raw action-text `last_actions` currently assembled from `output.raw
 
 | Agent | Model | Tools | Role in turn |
 |---|---|---|---|
-| Show Runner | sardinia 8B | none | Phase 1 beat plan; 3b check id; 3c rulings; 3d narrative; 3e last actions |
-| Narrator | sardinia 8B | none | Phase 1 narration |
+| Show Runner | sardinia 8B | none | Phase 1 beat plan; 3b check id; 3c rulings; 3d narrative |
+| Narrator | sardinia 8B | none | Phase 1 narration; 3e last action extraction |
 | Actors | sardinia 8B | none | Phase 1 NPC voicing; Phase 2 AI PC voicing; 3a summaries |
 | Referee | alien 3B | none | **Retired in 4.14.** Rulings moved to Show Runner (3c). |
 | Scribe | alien 3B | none | Session log sentence (one task, end of turn) |
