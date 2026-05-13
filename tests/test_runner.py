@@ -121,28 +121,43 @@ def test_run_companion_wave_returns_companion_outputs():
 # run_summaries
 # ---------------------------------------------------------------------------
 
-def test_run_summaries_calls_actors_once_per_actor():
+def test_run_summaries_calls_narrator_once_per_actor(tmp_path):
     from showrunner.runner import run_summaries
+    log_path = tmp_path / "summaries.txt"
     with patch("showrunner.runner.call_llm", side_effect=["sum1", "sum2"]) as mock:
-        run_summaries({"bargos": "did X", "kaelen": "did Y"})
-    actors_calls = [c for c in mock.call_args_list if c.args[0] == "actors"]
-    assert len(actors_calls) == 2
+        run_summaries({"bargos": "did X", "kaelen": "did Y"}, log_path)
+    narrator_calls = [c for c in mock.call_args_list if c.args[0] == "narrator"]
+    assert len(narrator_calls) == 2
 
 
-def test_run_summaries_user_message_contains_action_text():
+def test_run_summaries_user_message_contains_action_text(tmp_path):
     from showrunner.runner import run_summaries
+    log_path = tmp_path / "summaries.txt"
     with patch("showrunner.runner.call_llm", side_effect=["summary"]) as mock:
-        run_summaries({"bargos": "threatened Z-4P0"})
+        run_summaries({"bargos": "threatened Z-4P0"}, log_path)
     user_msg = mock.call_args_list[0].args[2]
     assert "threatened Z-4P0" in user_msg
 
 
-def test_run_summaries_returns_dict_keyed_by_actor():
+def test_run_summaries_appends_to_existing_log(tmp_path):
     from showrunner.runner import run_summaries
-    with patch("showrunner.runner.call_llm", side_effect=["sum1", "sum2"]):
-        result = run_summaries({"bargos": "did X", "kaelen": "did Y"})
-    assert set(result.keys()) == {"bargos", "kaelen"}
-    assert result["bargos"] == "sum1"
+    log_path = tmp_path / "summaries.txt"
+    log_path.write_text("npc_a: existing summary\n")
+    with patch("showrunner.runner.call_llm", side_effect=["pc_summary"]):
+        run_summaries({"bargos": "did X"}, log_path)
+    content = log_path.read_text()
+    assert "existing summary" in content
+    assert "pc_summary" in content
+
+
+def test_run_summaries_empty_makes_no_calls_and_leaves_file_unchanged(tmp_path):
+    from showrunner.runner import run_summaries
+    log_path = tmp_path / "summaries.txt"
+    log_path.write_text("existing\n")
+    with patch("showrunner.runner.call_llm") as mock:
+        run_summaries({}, log_path)
+    mock.assert_not_called()
+    assert log_path.read_text() == "existing\n"
 
 
 # ---------------------------------------------------------------------------

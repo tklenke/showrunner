@@ -349,15 +349,10 @@ def run_turn_loop(scene: dict, verbose: bool = False) -> None:
 
         # ── Step 4: Party action summaries ───────────────────────────────────
         party_actions = {"Z-4P0": player_action, **companion_outputs}
-        actor_summaries = run_summaries(party_actions)
-        summaries_text = "\n".join(f"{k}: {v}" for k, v in actor_summaries.items())
-
-        # Append party summaries to the same summaries log
-        with summaries_log_path.open("a") as f:
-            f.write(summaries_text + "\n")
+        run_summaries(party_actions, summaries_log_path)
 
         # ── Step 5: Check identification ─────────────────────────────────────
-        all_summaries = (summaries_log_path.read_text() if summaries_log_path.exists() else summaries_text)
+        all_summaries = summaries_log_path.read_text() if summaries_log_path.exists() else ""
         stats_text = _build_stats_text(scene_yamls)
         check_output = run_checks(all_summaries, stats_text)
         checks_text = _write_turn_file(logs_dir, scene_num, _beat_num, current_beat, _turn_num, "checks", check_output)
@@ -377,7 +372,7 @@ def run_turn_loop(scene: dict, verbose: bool = False) -> None:
             print(f"\n{narrative}")
 
         # ── Step 8: Last-action extraction ───────────────────────────────────
-        all_actors = {**{k: v for npc in [npc_outputs] for k, v in npc.items()}, **actor_summaries}
+        all_actors = {**npc_outputs, **party_actions}
         last_actions_extracted = run_last_actions(all_actors)
         if not last_actions_extracted:
             last_actions_extracted = all_actors

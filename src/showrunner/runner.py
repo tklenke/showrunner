@@ -70,16 +70,13 @@ def run_companion_wave(
     return outputs
 
 
-def run_summaries(action_map: dict[str, str]) -> dict[str, str]:
-    """Step 3a: Summarise each actor's action in 1–2 sentences.
-
-    Returns {actor_id: summary_text}.
-    """
-    summaries: dict[str, str] = {}
-    for actor_id, action_text in action_map.items():
+def run_summaries(party_actions: dict[str, str], summaries_log_path) -> None:
+    """Step 4: Narrator summarises each party member's action, appending to summaries log."""
+    for actor_id, action_text in party_actions.items():
         msg = f"Summarise in 1-2 sentences what {actor_id} did: {action_text}"
-        summaries[actor_id] = call_llm("actors", build_system_prompt("actors"), msg)
-    return summaries
+        summary = call_llm("narrator", build_system_prompt("narrator"), msg)
+        with open(summaries_log_path, "a") as f:
+            f.write(f"{actor_id}: {summary}\n")
 
 
 def run_checks(summaries_text: str, stats_text: str) -> str:
