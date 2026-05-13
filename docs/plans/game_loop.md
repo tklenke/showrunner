@@ -18,7 +18,7 @@ end of each turn. Multiple turns can execute within the same beat.
 
 ---
 
-## Step 0 — Beat Initialization (turn 1 of each beat only)
+## Step 0a — Beat Initialization (turn 1 of each beat only)
 
 Fires when `current_beat` differs from the previous turn's beat. Skipped on all
 subsequent turns within the same beat.
@@ -38,7 +38,7 @@ correctly-established beat frame.
 
 ---
 
-## Per-Turn Setup (every turn, before any LLM calls)
+## Step 0b — State Loading (every turn, before any LLM calls)
 
 The orchestrator reads current state and renders context strings passed into each step:
 
