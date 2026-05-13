@@ -100,6 +100,7 @@ def test_npc_crew_narrator_has_callback():
     assert narrator_task.callback is not None
 
 
+
 def test_npc_crew_npc_tasks_have_callbacks():
     from showrunner.crew import build_npc_crew
     crew = build_npc_crew("scene", "", {"bargos": "data", "genko": "data"})

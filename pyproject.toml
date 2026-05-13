@@ -15,4 +15,5 @@ testpaths = ["tests"]
 pythonpath = ["src"]
 filterwarnings = [
     "ignore::DeprecationWarning:crewai",
+    "ignore:.*callbacks cannot be serialized.*:UserWarning",
 ]
