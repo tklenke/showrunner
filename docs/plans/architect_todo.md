@@ -67,6 +67,47 @@ first check. See "Resolved Decisions: Resolution Pipeline" below for the chosen 
 
 ## Resolved Decisions
 
+### Remove CrewAI; replace with direct LiteLLM calls (2026-05-13)
+
+**Context:** CrewAI's value proposition is the ReAct tool loop. We have stripped tools
+from every agent because small models (3B/8B) crash in CrewAI's ReAct loop. The
+framework has caused: LiteLLM callback interception (requiring event bus workaround),
+Pydantic serialization warnings (suppressed in pyproject.toml), Rich console leaks
+(requiring verbose_to_file hacks), empty-crew ValidationErrors (requiring None-guard
+wrappers), and batched output (requiring sys.__stdout__ PrintCallback hacks). Every
+workaround we've implemented has been fighting CrewAI rather than using it.
+
+**Decision: Remove crewai. Replace with direct litellm.completion calls.**
+
+New module `src/showrunner/llm.py` provides `call_llm(agent_name, system_prompt, user_message) -> str`.
+New module `src/showrunner/runner.py` provides phase functions (`run_npc_wave`, `run_pc_wave`,
+`run_summary_phase`, etc.) that replace the crew builders in `crew.py`.
+
+`config/agents.yaml` and `config/litellm.yaml` are unchanged — they remain the single
+source of truth for model routing. `config.py` is updated to return raw litellm call
+params instead of `crewai.LLM` objects.
+
+**What is removed:**
+- `crew.py` — replaced by `runner.py`
+- `agent_tools.py` and `test_agent_tools.py` — tools are dead code; all tool calls were
+  stripped from agents; no ReAct loop exists to invoke them
+- `create_*()` functions in all `agents/*.py` — replaced by `call_llm()` with assembled system prompts
+- `verbose_to_file()` context manager in `instrumentation.py` — Rich console no longer present
+- CrewAI event bus prompt logging — replaced by direct logging in `call_llm()`
+- Pydantic as a direct dependency — only enters via litellm's own transitive deps
+- `config/tasks.yaml` — CrewAI legacy artifact, never wired to production code
+
+**What is kept unchanged:**
+- All `render_*_context()` functions in `agents/*.py`
+- `build_referee_backstory()` and `render_referee_context()` in `referee.py`
+- All orchestrator logic, parsing helpers, state tools, YAML/scene loading
+- `config/agents.yaml` and `config/litellm.yaml`
+- Session and verbose log paths (created by `setup_instrumentation()`)
+
+See `docs/plans/programmer_todo.md` task 4.15 for implementation breakdown.
+
+---
+
 ### Resolution Pipeline: Five-Step File-Mediated Design (2026-05-13)
 
 **Context:** The Referee agent (alien 3B) crashes when given tools in CrewAI's ReAct loop.

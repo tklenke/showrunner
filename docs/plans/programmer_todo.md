@@ -10,7 +10,248 @@ Reference documents:
 
 ---
 
-## Current Priority: Phase 4 — MVP Scene
+## Current Priority: Phase 4 — Remove CrewAI
+
+### [ ] 4.15 — Replace CrewAI with Direct LiteLLM Calls
+
+**Rationale:** CrewAI's value is the ReAct tool loop. We have stripped tools from every
+agent. What remains is an expensive abstraction that has caused: ReAct loop crashes on small
+models, LiteLLM callback interception, Pydantic serialization warnings, Rich console leaks,
+empty crew validation errors, and batched output requiring `sys.__stdout__` hacks. The
+replacement is a thin `call_llm()` function over bare litellm + plain Python phase functions.
+
+**What we keep:** `config/agents.yaml`, `config/litellm.yaml`, all `render_*_context()`
+functions, all orchestrator logic, all state tools (`dice_roller`, `state_reader`,
+`state_writer`), all YAML/scene parsing.
+
+**What we remove:** `crewai`, Pydantic (no longer a direct dependency), `crew.py`,
+`agent_tools.py` (all tools are dead code — stripped from agents months ago).
+
+**What changes:** `config.py`, `instrumentation.py`, `agents/*.py`, `orchestrator.py`;
+new files `llm.py` and `runner.py`.
+
+---
+
+#### [ ] 4.15a — Update `config.py`: remove `crewai.LLM`; expose raw litellm call params
+
+`load_agent_configs()` currently returns `{"llm": crewai.LLM(...), ...}` per agent.
+Replace the `"llm"` key with `"litellm_params": {"model": str, "api_base": str | None,
+"api_key": str}` — plain strings that `call_llm()` can pass directly to `litellm.completion`.
+
+Add `apply_litellm_settings()` that reads `litellm_settings` from `litellm.yaml` and sets
+`litellm.drop_params`, `litellm.request_timeout`, `litellm.num_retries` globally. Called
+once at session start from `run_turn_loop()`.
+
+Keep the Gemini 2.5 thinking-mode guard — move it from `_build_llm_registry()` into
+`call_llm()` as an `extra_body` kwarg: `if "gemini-2.5" in model: kwargs["thinking"] = {"type": "disabled"}`.
+
+Tests:
+- `load_agent_configs()` returns `"litellm_params"` dict for each agent (not a crewai.LLM)
+- `litellm_params` contains `model`, and optionally `api_base` / `api_key`
+- `apply_litellm_settings()` sets litellm globals from config values
+
+---
+
+#### [ ] 4.15b — New `src/showrunner/llm.py`: `call_llm()` + prompt logging
+
+```python
+def call_llm(agent_name: str, system_prompt: str, user_message: str) -> str:
+    ...
+```
+
+- Loads litellm_params for the agent from `load_agent_configs()`
+- Assembles `messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_message}]`
+- Calls `litellm.completion(model=..., api_base=..., api_key=..., messages=messages)`
+- Returns `response.choices[0].message.content`
+- If a module-level prompt logger is set (via `setup_llm_logging()`), logs prompt + response
+
+```python
+def build_system_prompt(agent_name: str) -> str:
+    cfg = load_agent_configs()[agent_name]
+    return f"You are {cfg['role']}.\n\n{cfg['goal']}\n\n{cfg['backstory']}"
+```
+
+```python
+def setup_llm_logging(log_path: Path) -> None:
+    """Set module-level prompt logger. Called once from setup_instrumentation()."""
+    ...
+```
+
+The logger writes the same format as the current `_PromptLogger._write()` — timestamp, server
+label, separator, prompt block, response block.
+
+Tests (mock `litellm.completion`):
+- Messages list has system + user roles with correct content
+- Return value is `response.choices[0].message.content`
+- Prompt and response are written to log file after a call
+- Gemini 2.5 call includes `thinking: {type: disabled}` kwarg
+
+---
+
+#### [ ] 4.15c — New `src/showrunner/runner.py`, part 1: NPC/PC waves
+
+```python
+def run_npc_wave(
+    sr_context: str,
+    narrator_context: str,
+    npc_contexts: dict[str, str],
+) -> dict[str, str]:
+```
+
+- Calls `call_llm("show_runner", ...)` → `beat_plan`
+- Calls `call_llm("narrator", ..., user_message=f"{narrator_context}\n\n## Beat Plan:\n{beat_plan}")` → prints immediately
+- For each NPC in order: builds user message from `npc_context + beat_plan + all prior NPC outputs`; calls `call_llm("actors", ...)`; prints `[npc_id]` + output immediately
+- Returns `{"_narrator": narration, npc_id: output, ...}` (narrator keyed as `"_narrator"`)
+
+```python
+def run_pc_wave(
+    npc_wave_text: str,
+    ai_pc_contexts: dict[str, str],
+    player_action: str,
+) -> dict[str, str]:
+```
+
+- Returns `{}` for empty `ai_pc_contexts`
+- For each AI PC: user message contains `pc_context + npc_wave_text + player_action`; prints `[pc_id]` + output immediately
+- Returns `{pc_id: output, ...}`
+
+Tests (mock `call_llm`):
+- `run_npc_wave` calls `call_llm` once for show_runner, once for narrator, once per NPC
+- Second NPC's user message contains first NPC's output (context chaining)
+- Each NPC output is printed (mock `print` or capture stdout)
+- `run_pc_wave({}, "...")` returns `{}`
+- PC user message contains `npc_wave_text` and `player_action`
+
+---
+
+#### [ ] 4.15d — New `src/showrunner/runner.py`, part 2: five-step pipeline
+
+```python
+def run_summary_phase(action_map: dict[str, str]) -> dict[str, str]:
+def run_check_phase(summaries_text: str, stats_text: str) -> str:
+def run_ruling_phase(check_specs: list[dict]) -> dict[str, str]:   # {} for empty
+def run_narrative_phase(summaries: str, checks: str, results: str) -> str:
+def run_last_action_phase(actor_summaries: dict[str, str]) -> dict[str, str]:  # {} for empty
+def run_scribe_phase(scribe_context: str, full_turn_summary: str) -> str:
+```
+
+Agent assignments (same as current crew builders):
+- `run_summary_phase` → `"actors"` (one call per actor)
+- `run_check_phase` → `"show_runner"` (single call)
+- `run_ruling_phase` → `"show_runner"` (one call per check; user message for check N includes all prior ruling outputs as context)
+- `run_narrative_phase` → `"show_runner"` (single call)
+- `run_last_action_phase` → `"narrator"` (one call per actor; each user message contains only that actor's summary)
+- `run_scribe_phase` → `"scribe"` (single call)
+
+System prompts: all built by `build_system_prompt(agent_name)` from `llm.py`.
+
+Tests (mock `call_llm`):
+- `run_summary_phase` calls `call_llm` once per actor; each call's user message contains that actor's action text
+- `run_check_phase` calls `call_llm` once with summaries + stats in user message
+- `run_ruling_phase` with 2 specs calls `call_llm` twice; second call's user message contains first ruling
+- `run_ruling_phase([])` returns `{}`
+- `run_last_action_phase({"bargos": "...", "kae": "..."})` calls `call_llm` twice; bargos call does not contain kae's summary
+- `run_last_action_phase({})` returns `{}`
+
+---
+
+#### [ ] 4.15e — Update `agents/*.py`: remove `create_*()` functions
+
+Remove from each module:
+- `actors.py`: `create_actors()` and `from crewai import Agent`
+- `narrator.py`: `create_narrator()` and `from crewai import Agent`; also remove `from showrunner.tools.agent_tools import consult_show_runner`
+- `scribe.py`: `create_scribe()` and `from crewai import Agent`
+- `show_runner.py`: `create_show_runner()` and `from crewai import Agent`
+- `referee.py`: `create_referee()` and `from crewai import Agent`; keep `build_referee_backstory()` and `render_referee_context()` — the rules content is still used by 3c rulings
+
+Update tests that verified agent object properties (`test_narrator.py`,
+`test_scribe.py`, `test_show_runner.py`, `test_referee.py`) — replace assertions on
+Agent objects with assertions on the render functions' output where meaningful;
+delete tests that only verified `create_*()` boilerplate.
+
+---
+
+#### [ ] 4.15f — Delete `src/showrunner/tools/agent_tools.py` and `tests/test_agent_tools.py`
+
+All tools (`read_state`, `write_state`, `roll_dice`, `consult_show_runner`) are dead code.
+They were stripped from all agents. Their `BaseTool` + `_unwrap_schema_args` pattern is
+only needed for the CrewAI ReAct loop, which no longer exists.
+
+Delete both files. State I/O is handled directly by `state_reader.py` / `state_writer.py`.
+Dice rolls are handled directly by `dice_roller.py`. There is no `consult_show_runner`
+dispatch mechanism — the orchestrator calls the LLM directly via `call_llm()`.
+
+Phase 5 `rules_lookup()` will be a plain Python function in `src/showrunner/tools/` with
+no `BaseTool` wrapper needed.
+
+---
+
+#### [ ] 4.15g — Update `orchestrator.py`: call runner functions directly
+
+Replace all `build_*_crew()` + `crew.kickoff()` + output-extraction patterns with direct
+`run_*()` calls. The runner functions return plain dicts/strings — no `.output.raw`, no
+`_collect_wave_outputs`, no `_get_task_output`.
+
+Remove helpers that are no longer needed: `_collect_wave_outputs()`, `_get_task_output()`.
+Remove all `with verbose_to_file(verbose_path):` wrappers (no more CrewAI Rich console to
+redirect).
+
+Phase 1 (NPC wave):
+```python
+npc_wave = run_npc_wave(sr_ctx, narrator_ctx, npc_chars)
+npc_outputs = {k: v for k, v in npc_wave.items() if k != "_narrator"}
+```
+
+Phase 2 (PC wave):
+```python
+ai_pc_outputs = run_pc_wave(npc_wave_text, ai_pc_chars, player_action)
+```
+
+Phase 3a–3e: direct `run_*` calls replacing the current crew+kickoff blocks.
+The intermediate file writes (`_write_turn_file`) stay in the orchestrator unchanged.
+Printing the 3d narrative: `run_narrative_phase()` returns a string; orchestrator prints it.
+
+Update `tests/test_orchestrator.py` where it mocks crew builders — mock runner functions
+instead.
+
+---
+
+#### [ ] 4.15h — Update `instrumentation.py`: remove CrewAI hooks
+
+Remove:
+- `from crewai.events.event_bus import crewai_event_bus`
+- `from crewai.events.types.llm_events import LLMCallCompletedEvent`
+- `from crewai.events.event_listener import event_listener` (used in `verbose_to_file`)
+- `verbose_to_file()` context manager entirely
+- `_PromptLogger._on_completed()` event bus method
+
+Keep `_PromptLogger` class (its `_write()` method is still used by `llm.py`'s logging).
+
+`setup_instrumentation()` changes:
+- Still creates `verbose_path` and `prompts_path`; still returns both
+- Replaces `crewai_event_bus.on(...)` registration with `setup_llm_logging(prompts_path)` call
+- Remove the logger return value (it's now internal to `llm.py`)
+- Signature becomes: `setup_instrumentation(timestamp, ...) -> tuple[Path, Path]`
+
+Update `tests/test_instrumentation.py`: remove event-bus subscription tests; add test that
+`setup_instrumentation()` calls `setup_llm_logging()` with the correct path.
+
+---
+
+#### [ ] 4.15i — Remove `crew.py`; remove crewai from dependencies; final cleanup
+
+1. Delete `src/showrunner/crew.py`
+2. Delete `tests/test_crew.py` (replaced by `tests/test_runner.py` written in 4.15c/d)
+3. In `pyproject.toml`: remove `crewai` from dependencies; remove the two CrewAI/callback filterwarnings
+4. Run `pip install -e .` — verify crewai is no longer present in the environment
+5. Run full test suite — must be green
+
+Also delete or archive `config/tasks.yaml` — it is a CrewAI legacy artifact that was
+never wired to any production code path.
+
+---
+
+### [~] 4.8 — End-to-End Scene Playthrough
 
 ### [x] 4.8c — Fix LiteLLM Prompt/Response Logging
 
