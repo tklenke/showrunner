@@ -218,10 +218,10 @@ def run_turn_loop(scene: dict) -> None:
 
         # ── Phase 3: Resolution ───────────────────────────────────────────────
         full_turn_summary = (
-            npc_wave_text
-            + "\n\n"
-            + "\n\n".join(f"[{k}]: {v}" for k, v in ai_pc_outputs.items())
-            + f"\n\n[Z-4P0]: {player_action}"
+            f"Beat: {current_beat}\n"
+            f"NPCs active: {', '.join(npc_outputs.keys()) or 'none'}\n"
+            f"AI PCs active: {', '.join(ai_pc_outputs.keys()) or 'none'}\n"
+            f"Player action: {player_action}"
         )
 
         resolution_crew = build_resolution_crew(check_specs, scribe_ctx, full_turn_summary)
