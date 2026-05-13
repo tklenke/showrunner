@@ -8,15 +8,15 @@ from pathlib import Path
 from showrunner.agents.narrator import render_narrator_context
 from showrunner.agents.show_runner import render_show_runner_context
 from showrunner.crew import build_crew
+from showrunner.instrumentation import setup_instrumentation, verbose_to_file
 from showrunner.tools.state_reader import load_party_stats, load_scene_state
 from showrunner.tools.state_writer import advance_beat
 
 
-def _setup_session_log() -> logging.Logger:
-    """Set up a session log that writes to logs/session_TIMESTAMP.log and stdout."""
+def _setup_session_log(timestamp: str) -> logging.Logger:
+    """Set up a session log that writes to logs/session_TIMESTAMP.log."""
     logs_dir = Path("logs")
     logs_dir.mkdir(exist_ok=True)
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     log_path = logs_dir / f"session_{timestamp}.log"
 
     logger = logging.getLogger("showrunner.session")
@@ -84,7 +84,11 @@ def run_turn_loop(scene: dict) -> None:
     Each iteration builds context from current state, kicks off a CrewAI
     hierarchical run, then continues until the player quits or the scene exits.
     """
-    log = _setup_session_log()
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    log = _setup_session_log(timestamp)
+    verbose_path, prompts_path = setup_instrumentation(timestamp)
+    print(f"Verbose log: logs/verbose_{timestamp}.log  (tail -f to watch)")
+    print(f"Prompt log:  logs/prompts_{timestamp}.log")
 
     print(f"\n=== {scene['title']} ===")
     print(scene["location"]["read_aloud"])
@@ -102,7 +106,8 @@ def run_turn_loop(scene: dict) -> None:
 
         print(f"\n--- Beat: {current_beat} ---")
         crew = build_crew(show_runner_ctx, narrator_ctx)
-        result = crew.kickoff()
+        with verbose_to_file(verbose_path):
+            result = crew.kickoff()
         result_str = str(result)
         print(f"\n{result_str}")
         log.info(f"Beat result: {result_str[:200]}")

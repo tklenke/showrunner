@@ -22,7 +22,7 @@ Reference documents:
 
 ---
 
-### [ ] 4.8a — Session Instrumentation
+### [x] 4.8a — Session Instrumentation
 
 New file: `src/showrunner/instrumentation.py`
 
