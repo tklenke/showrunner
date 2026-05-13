@@ -12,6 +12,26 @@ Reference documents:
 
 ## Current Priority: Phase 4 — MVP Scene
 
+### [ ] 4.8c — Fix LiteLLM Prompt/Response Logging
+
+The `prompts_TIMESTAMP.log` file is never created during real sessions. The `_PromptLogger`
+CustomLogger is registered via `litellm.callbacks` in `setup_instrumentation()`, but the
+callbacks (`log_pre_api_call`, `log_success_event`) are never invoked in practice.
+
+Diagnose why:
+- Confirm whether CrewAI intercepts LiteLLM calls before callbacks fire
+- Check whether `litellm.callbacks` is the correct registration API for this LiteLLM version
+  (some versions use `litellm.success_callback`, `litellm.input_callback` lists instead)
+- Check whether the callback is overwritten after `setup_instrumentation()` returns
+
+Fix the integration so `prompts_TIMESTAMP.log` is produced after every session.
+
+Add an integration test that wires the full chain: mock a LiteLLM call → verify the
+prompts file is written. Do not just test `_write()` directly — test that the callback
+actually fires when LiteLLM processes a call.
+
+---
+
 ### [~] 4.8 — End-to-End Scene Playthrough
 
 No tests for this task — this is exploratory play. Run `src/showrunner/main.py` and
