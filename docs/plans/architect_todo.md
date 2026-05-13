@@ -30,6 +30,41 @@ to reflect that prompt logging uses CrewAI's event bus, not LiteLLM callbacks.
 
 ---
 
+**NOTE FROM PROGRAMMER (2026-05-13): Small models (3B/8B) cannot reliably use tools in CrewAI's ReAct loop**
+
+Observed during Phase 4 playthrough: any agent running on alien (3B) or sardinia (8B) that
+is given tools will crash with `ValueError: Invalid response from LLM call - None or empty`
+or will emit JSON Schema syntax as its "final answer" instead of calling the tool.
+
+Root cause: CrewAI's ReAct loop injects tool schemas and thought/action/observation scaffolding
+into the prompt. Small models either overflow their context window under this added load, or
+generate output that doesn't conform to the expected format, causing CrewAI to reject the
+response entirely after retries.
+
+**Fix applied so far:** removed all tools from NPC Voice Actor (`tools=[]`). Same fix
+needed for the Referee (`roll_dice`, `read_state`, `consult_show_runner` — all three).
+
+**Architectural decision needed: Dice rolling without a tool-capable Referee**
+
+The Referee is the rules engine; real dice randomness is part of that. Three options:
+
+- **Option A — Strip tools; Referee narrates a fictional result.** Simple. Zero randomness.
+  Good enough for early playtesting but undermines the rules engine role.
+
+- **Option B — Roll in the orchestrator; Referee interprets.** Orchestrator calls `roll_pool()`
+  directly using the check spec, passes the result string to the Referee task description.
+  Referee narrates the outcome without needing to call tools. Real randomness; no ReAct loop.
+  Requires the Show Runner review output to include characteristic *values* (e.g. "Agility 3"),
+  not just names, so the orchestrator can build the correct dice pool.
+
+- **Option C — Move Referee to a larger/cloud model.** Gemini or a model with reliable tool
+  use handles the ReAct loop. Adds latency and cost per combat roll. Avoids prompt surgery.
+
+**Current status:** Referee still has tools (`referee.py:create_referee`); game crashes on
+first check. Option B is the recommended path — real mechanics, no model capability dependency.
+
+---
+
 ## Resolved Decisions
 
 ### Turn Loop: Two-Phase Kickoff + Per-Check Referee Isolation (2026-05-13)
