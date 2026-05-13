@@ -1,6 +1,7 @@
 # VERIFY: Gamorrean Guard stats sourced from EotE adventure module — confirm against source PDF.
 
 scene_id: "bargos_audience"
+scene_num: 0
 title: "Act 1 — Audience with Bargos the Hutt"
 
 location:

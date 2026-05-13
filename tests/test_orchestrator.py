@@ -165,16 +165,22 @@ def test_build_stats_text_includes_skill_names():
 
 def test_write_turn_file_creates_file(tmp_path):
     from showrunner.orchestrator import _write_turn_file
-    result = _write_turn_file(tmp_path, "20260513_120000", "summons", "summaries", "Bargos spoke.")
-    assert (tmp_path / "turn_20260513_120000_summons_summaries.txt").exists()
+    result = _write_turn_file(tmp_path, 0, 0, "summons", 1, "summaries", "Bargos spoke.")
+    assert (tmp_path / "00_00_summons_0001_summaries.txt").exists()
     assert result == "Bargos spoke."
 
 
 def test_write_turn_file_returns_content(tmp_path):
     from showrunner.orchestrator import _write_turn_file
     content = "Check: Z-4P0 | Negotiation"
-    result = _write_turn_file(tmp_path, "ts", "beat", "checks", content)
+    result = _write_turn_file(tmp_path, 0, 1, "beat", 5, "checks", content)
     assert result == content
+
+
+def test_write_turn_file_scene_beat_turn_naming(tmp_path):
+    from showrunner.orchestrator import _write_turn_file
+    _write_turn_file(tmp_path, 0, 2, "gamorrean_rumble", 3, "summaries", "content")
+    assert (tmp_path / "00_02_gamorrean_rumble_0003_summaries.txt").exists()
 
 
 # ---------------------------------------------------------------------------

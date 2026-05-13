@@ -169,7 +169,7 @@ orchestrator reads this on beat transition (step 2 above).
 
 ---
 
-### [ ] 4.21 — Log file naming: implement scene-beat-turn sort format
+### [x] 4.21 — Log file naming: implement scene-beat-turn sort format
 
 All turn log files must use the zero-padded naming scheme from `game_loop.md`:
 `{scene:02d}_{beat:02d}_{beat_id}_{turn:04d}_{type}.txt`

@@ -244,10 +244,18 @@ def _run_beat_initialization(
     return sr_ctx, narrator_ctx
 
 
-def _write_turn_file(logs_dir: Path, turn_ts: str, beat_id: str, type: str, content: str) -> str:
+def _write_turn_file(
+    logs_dir: Path,
+    scene_num: int,
+    beat_num: int,
+    beat_id: str,
+    turn_num: int,
+    type: str,
+    content: str,
+) -> str:
     """Write turn intermediate file; return content for chaining."""
     logs_dir.mkdir(parents=True, exist_ok=True)
-    path = logs_dir / f"turn_{turn_ts}_{beat_id}_{type}.txt"
+    path = logs_dir / f"{scene_num:02d}_{beat_num:02d}_{beat_id}_{turn_num:04d}_{type}.txt"
     path.write_text(content)
     return content
 
@@ -285,6 +293,9 @@ def run_turn_loop(scene: dict, verbose: bool = False) -> None:
 
     initialize_scene_state(scene)
     scene_yamls = load_scene_yamls(scene)
+    scene_num: int = scene.get("scene_num", 0)
+    beat_list = scene.get("beats", [])
+    beat_ids = [b["id"] for b in beat_list]
 
     print(f"\n=== {scene['title']} ===")
     print(scene["location"]["read_aloud"])
@@ -292,9 +303,9 @@ def run_turn_loop(scene: dict, verbose: bool = False) -> None:
 
     _last_beat: str = ""
     _turn_num: int = 1
+    _beat_num: int = 0
 
     while True:
-        turn_ts = datetime.now().strftime("%Y%m%d_%H%M%S")
         scene_state = load_scene_state()
         party_stats = load_party_stats()
         current_beat = scene_state.get("current_beat", "")
@@ -305,8 +316,8 @@ def run_turn_loop(scene: dict, verbose: bool = False) -> None:
 
         # ── Step 0: Beat initialization (first turn of each beat only) ───────
         if current_beat != _last_beat:
-            beat_list = scene.get("beats", [])
             beat = next((b for b in beat_list if b["id"] == current_beat), {})
+            _beat_num = beat_ids.index(current_beat) if current_beat in beat_ids else 0
             last_log_entry = _read_last_session_log_entry()
             sr_ctx, narrator_ctx = _run_beat_initialization(beat, sr_ctx, narrator_ctx, last_log_entry, verbose, log)
             _last_beat = current_beat
@@ -345,12 +356,12 @@ def run_turn_loop(scene: dict, verbose: bool = False) -> None:
         # 3a — action summaries
         actor_summaries = run_summaries(action_map)
         summaries_text = "\n".join(f"{k}: {v}" for k, v in actor_summaries.items())
-        _write_turn_file(logs_dir, turn_ts, current_beat, "summaries", summaries_text)
+        _write_turn_file(logs_dir, scene_num, _beat_num, current_beat, _turn_num, "summaries", summaries_text)
 
         # 3b — check identification
         stats_text = _build_stats_text(scene_yamls)
         check_output = run_checks(summaries_text, stats_text)
-        checks_text = _write_turn_file(logs_dir, turn_ts, current_beat, "checks", check_output)
+        checks_text = _write_turn_file(logs_dir, scene_num, _beat_num, current_beat, _turn_num, "checks", check_output)
         ruling_specs = _parse_ruling_specs(checks_text)
         log.info(f"Phase 3b complete: {len(ruling_specs)} checks identified")
 
@@ -358,7 +369,7 @@ def run_turn_loop(scene: dict, verbose: bool = False) -> None:
         _roll_specs(ruling_specs)
         rulings = run_rulings(ruling_specs)
         results_text = "\n".join(f"{k}: {v}" for k, v in rulings.items()) if rulings else "No checks this turn."
-        _write_turn_file(logs_dir, turn_ts, current_beat, "results", results_text)
+        _write_turn_file(logs_dir, scene_num, _beat_num, current_beat, _turn_num, "results", results_text)
         log.info(f"Phase 3c complete: {len(ruling_specs)} checks resolved")
 
         # 3d — resolution narrative (printed to player)
