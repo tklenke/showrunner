@@ -61,11 +61,105 @@ The Referee is the rules engine; real dice randomness is part of that. Three opt
   use handles the ReAct loop. Adds latency and cost per combat roll. Avoids prompt surgery.
 
 **Current status:** Referee still has tools (`referee.py:create_referee`); game crashes on
-first check. Option B is the recommended path — real mechanics, no model capability dependency.
+first check. See "Resolved Decisions: Resolution Pipeline" below for the chosen design.
 
 ---
 
 ## Resolved Decisions
+
+### Resolution Pipeline: Five-Step File-Mediated Design (2026-05-13)
+
+**Context:** The Referee agent (alien 3B) crashes when given tools in CrewAI's ReAct loop.
+The root problem is not just the Referee — the pattern of handing a small model a large
+undifferentiated context and expecting structured output is fragile. The solution is a
+decomposed pipeline where each small model gets one focused job and the orchestrator manages
+data flow between steps via intermediate files.
+
+Additionally, the Show Runner review at the end of Phase 2 was doing two jobs at once:
+summarising what happened and identifying required checks. Separating these makes both jobs
+smaller and more reliable.
+
+**Decision: Remove Show Runner review from Phase 2. Replace Phase 3 with a five-step pipeline.**
+
+---
+
+#### Pipeline steps
+
+**3a — Action summaries** (alien 3B, one task per character that acted)
+- Input: one character's action text (from NPC/AI PC outputs + player action)
+- Output: 1–2 sentence plain-language summary of what that character did
+- No tools. No stats. No rules reasoning.
+- Orchestrator collects all outputs and writes `logs/turn_{turn_ts}_{beat}_summaries.txt`
+
+**3b — Check identification** (sardinia 8B / Show Runner, single task)
+- Input: all summaries from 3a + character stats from YAML for each character that acted
+  (characteristic values and skill ranks, passed as structured text by the orchestrator)
+- Output: formatted check list, one line per required check:
+  ```
+  1. Z-4P0 | Negotiation | Presence 2 | Skill 1 | Opposed vs Bargos Cool 3 | notes
+  ```
+  Or `NO_CHECKS`. Characteristic and skill rank values must be in the output so the
+  orchestrator can build a real dice pool without further lookups.
+- Orchestrator writes `logs/turn_{turn_ts}_{beat}_checks.txt`
+- **This replaces the Show Runner review that previously ended Phase 2.**
+
+**3c — Dice rolling + rulings** (orchestrator Python + sardinia 8B, one task per check)
+- Orchestrator reads `turn_checks.txt`, parses each line, builds dice pool from the
+  embedded stat values, calls `roll_pool()` directly in Python.
+- Each check + its pre-computed roll result is passed to a sardinia task:
+  ```
+  Check: Z-4P0 | Negotiation | vs Bargos Cool | ...
+  Roll result: Roll passed: net +2 successes, +1 advantage
+  ```
+- Task output: ruling and mechanical consequence (wounds dealt, check passed/failed, etc.)
+- No tools required on the sardinia task — dice are already rolled.
+- Orchestrator collects all rulings and writes `logs/turn_{turn_ts}_{beat}_results.txt`
+
+**3d — Resolution narrative** (sardinia 8B now / Gemini eventually, single task)
+- Input: all three files (summaries, checks, results) read by the orchestrator and
+  passed as task description context.
+- Output: player-facing narrative prose describing what just happened.
+- Printed directly to terminal. Not written to a log.
+- This is a Show Runner task using the show_runner agent config.
+
+**3e — Last action extraction** (sardinia 8B, one task per active character)
+- Input: same three files + character name
+- Output: a single sentence capturing that character's last action for the next turn's
+  context (replaces the raw `last_actions` dict currently assembled from output.raw strings)
+- Orchestrator writes extracted values to `scene_state.yaml` under `last_actions`.
+
+---
+
+#### File naming
+
+Turn files are named: `logs/turn_{turn_timestamp}_{beat_id}_{type}.txt`
+where `turn_timestamp` is a `datetime.now()` taken at the top of each turn iteration
+(distinct from the session timestamp). `type` is `summaries`, `checks`, or `results`.
+
+Files persist — one set per turn, never overwritten. Useful for debugging and as a
+natural audit trail.
+
+---
+
+#### Character stats access for 3b
+
+`load_scene_characters()` currently returns `{id: rendered_prompt_str}`. Step 3b needs
+raw stat values (characteristic scores, skill ranks) that are buried in that string.
+Add a companion function `load_scene_yamls(scene, characters_dir) -> dict[str, dict]`
+that returns `{id: raw_yaml_dict}` for the same character set. The orchestrator calls
+this alongside `load_scene_characters()` and builds the stats block for the 3b task
+description from the raw YAML.
+
+---
+
+#### What this removes
+
+- `build_resolution_crew()` in `crew.py` — replaced by the new pipeline.
+- Show Runner review task from `build_pc_crew()` — moved to 3b.
+- `_parse_check_specs()` in `orchestrator.py` — replaced by file-based parsing.
+- Tools from `create_referee()` — Referee agent is retired; sardinia handles 3c rulings.
+
+---
 
 ### Turn Loop: Two-Phase Kickoff + Per-Check Referee Isolation (2026-05-13)
 

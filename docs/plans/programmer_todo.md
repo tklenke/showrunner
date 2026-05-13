@@ -369,6 +369,228 @@ Remove `build_crew()`. Replace with:
 
 ---
 
+### [ ] 4.14 — Five-Step Resolution Pipeline
+
+Replace Phase 3 (the current `build_resolution_crew` + Show Runner review) with the
+decomposed five-step pipeline. See `docs/plans/architect_todo.md` — "Resolved Decisions:
+Resolution Pipeline" for full rationale and data flow.
+
+---
+
+#### 4.14a — Remove Show Runner review from Phase 2
+
+In `crew.py`: remove `task_sr_review` from `build_pc_crew()`. The crew now contains only
+AI PC tasks. Update the return to exclude the Show Runner agent from `all_agents`.
+
+In `orchestrator.py`: remove the `review_output` and `check_specs` variables that depended
+on it. The Show Runner review role is now handled by step 3b.
+
+Tests: update `test_pc_crew_show_runner_review_in_last_task` — it should now assert there
+is no Show Runner task in the PC crew.
+
+---
+
+#### 4.14b — `load_scene_yamls()` helper
+
+Add `load_scene_yamls(scene: dict, characters_dir: str = "characters") -> dict[str, dict]`
+to `src/showrunner/agents/actors.py`.
+
+Returns `{character_id: raw_yaml_dict}` for every character in `scene["npcs_present"]`
+that is not `player: "human"`. Does not include inline NPCs (they have no YAML file).
+
+Tests:
+- Returns raw YAML dicts keyed by character id
+- Excludes human player characters
+- Does not crash on inline NPCs (they're silently skipped)
+
+---
+
+#### 4.14c — Step 3a: action summary tasks
+
+Add `build_summary_crew(action_map: dict[str, str]) -> Crew` to `crew.py`.
+
+`action_map` is `{actor_id: action_text}` covering all NPC outputs, AI PC outputs,
+and the player action collected this turn.
+
+Each actor gets one alien 3B task (use `create_actors()` with `tools=[]`, already correct).
+Task description: "Summarise in 1–2 sentences what {actor_id} did: {action_text}".
+Task `name` = actor_id so orchestrator can collect outputs by name.
+
+Orchestrator after kickoff:
+- Collects `{actor_id: summary_text}` from task outputs
+- Writes `logs/turn_{turn_ts}_{beat_id}_summaries.txt` (one line per actor: `{id}: {summary}`)
+
+Tests:
+- Crew has one task per actor
+- Each task assigned to alien 3B agent (role "NPC Voice Actor")
+- Task names match actor_id keys
+
+---
+
+#### 4.14d — Step 3b: check identification task
+
+Add `build_check_crew(summaries_text: str, stats_text: str) -> Crew` to `crew.py`.
+
+Single sardinia 8B task (Show Runner agent). Task description:
+```
+## Action Summaries
+{summaries_text}
+
+## Character Stats
+{stats_text}
+
+Review every action. List every skill check, opposed roll, or combat attack triggered.
+Output format — one line per check:
+{n}. {actor} | {skill} | {characteristic} {value} | {skill_rank} | {difficulty} | {notes}
+
+If no checks are needed, output exactly: NO_CHECKS
+```
+
+Orchestrator before calling:
+- Reads `turn_summaries.txt` → `summaries_text`
+- Calls `load_scene_yamls()`, builds `stats_text` (one block per character: name,
+  characteristics, skill names + ranks)
+
+After kickoff:
+- Writes `logs/turn_{turn_ts}_{beat_id}_checks.txt`
+- Parses output into `check_specs: list[dict]` with keys:
+  `actor, skill, characteristic, char_value, skill_rank, difficulty, notes`
+  (new parser replaces `_parse_check_specs`; characteristic value and skill rank are now
+  required fields)
+
+Tests:
+- Single Show Runner task in crew
+- `NO_CHECKS` → empty list
+- Valid check line parses all seven fields correctly
+
+---
+
+#### 4.14e — Step 3c: dice rolling + ruling tasks
+
+Add `build_ruling_crew(check_specs: list[dict]) -> Crew` to `crew.py`.
+
+For each spec, roll the dice in Python (`roll_pool()` from `dice.py`), then create one
+sardinia 8B task (Show Runner agent). Task description:
+```
+Resolve this check:
+Actor: {actor} | Skill: {skill} | Difficulty: {difficulty}
+Notes: {notes}
+
+Dice roll result: {roll_result_string}
+
+State the outcome: passed or failed, wounds dealt (if attack), and any triumph/despair effects.
+One short paragraph.
+```
+
+Task `name` = actor (for output collection). Tasks chain so each sees prior rulings.
+
+After kickoff:
+- Collects `{actor: ruling_text}` from task outputs
+- Writes `logs/turn_{turn_ts}_{beat_id}_results.txt`
+
+If `check_specs` is empty, skip this crew entirely (no file written; 3d and 3e receive
+empty results context).
+
+Tests:
+- One task per check spec
+- Tasks chained (2nd task has 1st in context)
+- Dice are rolled in Python before task creation (mock `roll_pool`, assert called once per spec)
+- Empty specs → empty crew (or skip)
+
+---
+
+#### 4.14f — Step 3d: resolution narrative
+
+Add `build_narrative_crew(summaries: str, checks: str, results: str) -> Crew` to `crew.py`.
+
+Single sardinia 8B task (Show Runner agent). Task description contains all three file
+contents. Output: player-facing narrative prose. Expected output: 2–4 sentences describing
+what just happened.
+
+Orchestrator: print output directly to terminal. Do not write to log file.
+
+Tests:
+- Single Show Runner task
+- Task description contains all three input strings
+
+---
+
+#### 4.14g — Step 3e: last action extraction
+
+Add `build_last_action_crew(actor_ids: list[str], summaries: str, checks: str, results: str) -> Crew`
+to `crew.py`.
+
+One sardinia 8B task per actor (Show Runner agent). Task description:
+```
+Given these events:
+{summaries}
+{checks}
+{results}
+
+What was {actor_id}'s last action this turn? One sentence.
+```
+
+Task `name` = actor_id.
+
+Orchestrator after kickoff:
+- Collects `{actor_id: last_action_sentence}`
+- Calls `update_scene_state({"last_actions": collected})` to replace raw action text
+  with the extracted sentences
+
+Tests:
+- One task per actor_id
+- Task names match actor_ids
+- Orchestrator calls `update_scene_state` with correct structure
+
+---
+
+#### 4.14h — Wire everything in orchestrator
+
+Replace the current Phase 3 block in `run_turn_loop()` with the five-step pipeline:
+
+```python
+# 3a — summaries
+action_map = {**npc_outputs, **ai_pc_outputs, player_id: player_action}
+summary_crew = build_summary_crew(action_map)
+with verbose_to_file(verbose_path):
+    summary_crew.kickoff()
+summaries_text = _write_turn_file(turn_ts, current_beat, "summaries", ...)
+
+# 3b — check identification
+stats_text = _build_stats_text(load_scene_yamls(scene))
+check_crew = build_check_crew(summaries_text, stats_text)
+with verbose_to_file(verbose_path):
+    check_crew.kickoff()
+check_specs = _parse_check_output(...)  # new parser
+_write_turn_file(turn_ts, current_beat, "checks", ...)
+
+# 3c — dice rolling + rulings
+ruling_crew = build_ruling_crew(check_specs)  # rolls dice internally
+with verbose_to_file(verbose_path):
+    ruling_crew.kickoff()
+results_text = _write_turn_file(turn_ts, current_beat, "results", ...)
+
+# 3d — resolution narrative (print to player)
+narrative_crew = build_narrative_crew(summaries_text, checks_text, results_text)
+with verbose_to_file(verbose_path):
+    narrative_crew.kickoff()
+print(_get_task_output(narrative_crew, "Show Runner"))
+
+# 3e — last action extraction
+last_action_crew = build_last_action_crew(list(action_map.keys()), ...)
+with verbose_to_file(verbose_path):
+    last_action_crew.kickoff()
+# collect + write to scene_state
+```
+
+Add `_write_turn_file(turn_ts, beat_id, type, content) -> str` helper: writes the file,
+returns the content string for reuse.
+
+Add `_build_stats_text(yamls: dict[str, dict]) -> str` helper: formats character stats
+for the 3b prompt (characteristic values + skill names and ranks).
+
+---
+
 ### [~] 4.8 — End-to-End Scene Playthrough
 
 No tests for this task — this is exploratory play. Run `src/showrunner/main.py` and
