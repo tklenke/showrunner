@@ -96,6 +96,159 @@ resolve the server label from the model string LiteLLM passes to the callback.
 
 ---
 
+### [ ] 4.8b — Worker Agent Context Enrichment
+
+**Problem**: Worker agents (Narrator, Referee, Scribe) have thin backstories. When the
+Show Runner delegates a task and the worker lacks context to complete it, CrewAI's
+hierarchical loop escalates back to the Show Runner — a Gemini call. More confused
+rounds = more Gemini cost. Giving workers complete deterministic context upfront
+eliminates those rounds.
+
+**Note on `consult_show_runner`**: that tool is a stub — it never calls Gemini. It
+returns a "proceed with your judgment" message. Do not remove it; it is a useful
+fallback for small models. Gemini calls come from CrewAI's orchestration loop, not
+from this tool.
+
+---
+
+#### 1. Enrich `render_narrator_context()`
+
+File: `src/showrunner/agents/narrator.py`
+
+Current signature:
+```python
+render_narrator_context(scene: dict, beat_id: str) -> str
+```
+
+New signature:
+```python
+render_narrator_context(scene: dict, beat_id: str, last_action: str, party_stats: dict) -> str
+```
+
+Add two new sections at the bottom of the rendered string (dynamic content, after the
+static beat notes):
+
+```
+## Last Player Action
+<last_action text, or "None yet." if empty>
+
+## Party Status
+<name>: wounds <n>, strain <n>
+<name>: wounds <n>, strain <n>
+```
+
+Update the call in `orchestrator.py` to pass `last_action` and `party_stats`.
+
+Tests to add to `tests/test_narrator.py`:
+- `test_narrator_context_includes_last_action`
+- `test_narrator_context_no_action_shows_placeholder`
+- `test_narrator_context_includes_party_status`
+- `test_narrator_context_empty_party_stats_renders_cleanly`
+
+---
+
+#### 2. Add `render_referee_context()`
+
+File: `src/showrunner/agents/referee.py`
+
+New function:
+```python
+render_referee_context(scene: dict, beat_id: str) -> str
+```
+
+Renders scene-specific context for the current beat. Append this to the existing
+`build_referee_backstory()` output — do not replace it. The general rules stay in
+the backstory; the scene-specific data goes in the appended context.
+
+Include:
+
+**Current beat checks** (if any):
+```
+## Checks This Beat
+- Skill: Negotiation | Characteristic: Presence | Difficulty: 2 | Opposed: Cool
+  Notes: PCs may attempt to negotiate better terms. Opposed by Bargos's Cool
+  (ranks 2, Presence 3). ...
+```
+
+**Minion groups** (always include if present in scene):
+```
+## Minion Groups
+Renegade Gamorrean Guards (count: 6, soak: 4, wound threshold: 5 per minion)
+  Brawn 3, Agility 2, Melee 1, Brawl 1
+  Vibro-Axe: damage 5, crit 3, Engaged, Vicious 2
+```
+
+Wire into `create_referee()`: accept a `context: str = ""` param; if provided, append
+to backstory (same pattern as `create_narrator(context=...)`).
+
+Wire into `build_crew()`: add `referee_context: str = ""` param; pass to
+`create_referee()`.
+
+Wire into `orchestrator.py`: call `render_referee_context(scene, current_beat)` and
+pass to `build_crew()`.
+
+Tests to add to `tests/test_referee.py`:
+- `test_referee_context_includes_beat_checks`
+- `test_referee_context_includes_check_notes`
+- `test_referee_context_empty_checks_renders_cleanly` — beat with `checks: []`
+- `test_referee_context_includes_minion_group_stats`
+- `test_referee_context_includes_minion_weapons`
+- `test_referee_context_no_minion_groups_renders_cleanly`
+
+Use fixture scene data in tests — do not read from `state/` or `characters/`.
+
+---
+
+#### 3. Add `render_scribe_context()`
+
+File: `src/showrunner/agents/scribe.py`
+
+New function:
+```python
+render_scribe_context(scene_state: dict, party_stats: dict) -> str
+```
+
+Renders current state values so the Scribe knows the starting point for updates
+and what it is and is not allowed to touch.
+
+Include:
+
+```
+## Current State (read before writing)
+
+### party_stats.yaml — update wounds and strain after each resolved action
+<character name>: wounds <n>, strain <n>
+<character name>: wounds <n>, strain <n>
+
+### scene_state.yaml — update character_plans and ticking_clocks only
+Current beat: <beat_id>  ← DO NOT CHANGE THIS. Beat progression is Show Runner only.
+Ticking clocks: <clock data or "none">
+Character plans: <plans or "none">
+
+### session_log.md — append a one-sentence narrative summary of what happened
+Format: "YYYY-MM-DD HH:MM — <what happened>"
+```
+
+Wire into `create_scribe()`: accept `context: str = ""`, append to backstory.
+
+Wire into `build_crew()`: add `scribe_context: str = ""` param; pass to
+`create_scribe()`.
+
+Wire into `orchestrator.py`: call `render_scribe_context(scene_state, party_stats)`
+and pass to `build_crew()`.
+
+Tests in `tests/test_scribe.py` (create if it doesn't exist):
+- `test_scribe_context_includes_character_wounds`
+- `test_scribe_context_includes_current_beat`
+- `test_scribe_context_warns_against_changing_beat`
+- `test_scribe_context_includes_ticking_clocks_when_present`
+- `test_scribe_context_no_clocks_renders_cleanly`
+- `test_scribe_context_includes_log_format`
+
+Use fixture YAML data in tests — do not read from `state/`.
+
+---
+
 ### [~] 4.8 — End-to-End Scene Playthrough
 
 No tests for this task — this is exploratory play. Run `src/showrunner/main.py` and
