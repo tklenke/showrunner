@@ -242,58 +242,6 @@ Tests:
 
 ---
 
-### [ ] 4.11 — Two-Phase Turn Loop (NPC Wave + PC Wave)
-
-**Design:** Each turn runs two sequential kickoffs with player input in between.
-
-**Phase 1 — NPC wave** (`build_npc_crew`):
-- Show Runner → Narrator → NPCs in scene order (status hierarchy: `npcs_present` order,
-  then `inline_npcs`)
-- Each NPC task chains context from all prior NPC tasks so each character sees what came
-  before them: `context=[task_plan] + prior_npc_tasks`
-- Print Narrator + NPC outputs to player
-
-**Between phases:**
-- Prompt player for their action (free-form; can include direction to Kaelen:
-  `"I yell to Kae, 'cover the door' then I approach Bargos"`)
-
-**Phase 2 — PC wave** (`build_pc_crew`):
-- Kaelen (AI party member, `player: "ai"`) — task description includes:
-  - Her rendered character prompt
-  - All NPC outputs from Phase 1 as text (injected since they come from a different Crew)
-  - The player's action text (she reads any direction embedded in it)
-- Referee — resolves checks
-- Scribe — writes session log entry
-
-**Character filtering:**
-- `load_scene_characters()` gets a `player_filter` param:
-  - `None` → all (current behaviour, backwards compatible)
-  - `"npc"` → only chars with no `player` field (pure NPCs, inline NPCs)
-  - `"ai"` → only chars with `player: "ai"` (AI party members)
-- Orchestrator calls it twice: once for NPC wave, once for PC wave
-
-**`crew.py` changes:**
-- Rename `build_crew()` → `build_npc_crew(sr_context, narrator_context, npc_contexts)`
-- Add `build_pc_crew(npc_wave_summary, ai_pc_contexts, player_action, referee_context, scribe_context)`
-- `npc_wave_summary`: plain text of NPC outputs joined with separators, injected into
-  each AI PC's task description
-
-**`orchestrator.py` changes:**
-- Two kickoffs per turn with `prompt_player_action()` between them
-- Collect NPC outputs after Phase 1 kickoff; build `npc_wave_summary` text
-- Pass player action + npc_wave_summary into `build_pc_crew()`
-- After Phase 2: write last_actions (NPC outputs + Kaelen output + player action),
-  append session log
-
-Tests:
-- `test_npc_crew_chains_npc_contexts` — second NPC task has first NPC task in context
-- `test_pc_crew_kaelen_sees_npc_summary` — Kaelen task description contains npc summary text
-- `test_pc_crew_kaelen_sees_player_action` — Kaelen task description contains player action
-- `test_load_scene_characters_npc_filter` — filter="npc" excludes ai PCs
-- `test_load_scene_characters_ai_filter` — filter="ai" returns only ai PCs
-
----
-
 ### [x] 4.12 — Fix Rich Console Leak in Verbose Output
 
 CrewAI uses a Rich Console that holds a reference to the original terminal fd. The
