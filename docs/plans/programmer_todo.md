@@ -119,15 +119,13 @@ Subsequent turns within the same beat skip beat initialization entirely.
 
 **Beat initialization (turn 1 of beat only):**
 1. Look up the current beat dict from `scene["beats"]` by `id == current_beat`
-2. Append `show_runner_notes` and `narrator_notes` from the beat to the
-   `sr_ctx` and `narrator_ctx` strings passed into `run_npc_wave()` —
-   prefix them with a clear header so the agents treat them as authoritative context:
-   ```
-   ## Beat Director Notes:\n{beat["show_runner_notes"]}
-   ```
-3. Call `run_beat_opener(beat, last_log_entry)` — see below
-4. If `verbose` flag is set: print `\n=== {beat["title"]} ===` to terminal
-5. Log the beat transition: `log.info(f"Beat transition: {current_beat}")`
+2. Load `character_plans` from `beat["character_plans"]` and write to
+   `scene_state.yaml` → `character_plans` (initial plans for all characters in this beat)
+3. Append `show_runner_notes` and `narrator_notes` from the beat to the
+   `sr_ctx` and `narrator_ctx` strings — prefixed with `## Beat Director Notes:`
+4. Call `run_beat_opener(beat, last_log_entry)` — see below
+5. If `verbose` flag is set: print `\n=== {beat["title"]} ===` to terminal
+6. Log the beat transition: `log.info(f"Beat transition: {current_beat}")`
 
 **`run_beat_opener(beat, last_log_entry)` — new function in `runner.py`:**
 - Agent: Narrator
@@ -146,6 +144,37 @@ Pass it through from `main.py`. Wire a `--verbose` / `-v` CLI flag in `main.py`.
 - `run_beat_opener` receives empty string when session_log.md does not exist
 - `verbose=True` → beat title printed; `verbose=False` → not printed
 - `_last_beat` updates after transition
+
+---
+
+### [ ] 4.20 — Step 9: plan update — SR sets overall plan then individual plans
+
+**Do 4.18 first** — this step runs after last-action extraction in the same turn loop.
+
+SR reviews the full turn and updates each character's plan for next turn.
+Same code path for NPCs and Companions.
+
+**`run_plan_update(characters, summaries, results, last_actions)` — new function in `runner.py`:**
+
+```
+1 call:  SR  →  summaries + results + last_actions  →  overall_plan (str)
+N calls: SR  →  overall_plan + character id + current situation  →  individual plan (str)
+```
+
+- `characters` = dict of all NPCs and Companions active in the current beat
+- Overall plan is logged to `logs/turn_{ts}_{beat}_sr_plan.txt` (debug artifact, not shared)
+- Individual plans written to `scene_state.yaml` → `character_plans` (keyed by character id)
+
+**Orchestrator wiring:**
+- Call `run_plan_update()` after `run_last_actions()` (Step 9 in game loop)
+- Pass the same `characters` dict used for summaries
+
+**Tests:**
+- Overall plan call fires once with full context
+- Individual plan call fires once per character (NPC and Companion, same path)
+- `character_plans` in scene_state updated with returned plans
+- SR plan logged to `logs/turn_{ts}_{beat}_sr_plan.txt`
+- Empty characters dict → no individual plan calls, no file written
 
 ---
 

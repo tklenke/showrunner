@@ -32,16 +32,18 @@ end of each turn. Multiple turns can execute within the same beat.
 **Beat initialization (first turn of each beat only):**
 1. Compare `current_beat` against `_last_beat`; if different, a transition is detected
 2. Look up the current beat dict from `scene["beats"]` by `id == current_beat`
-3. Append `show_runner_notes` and `narrator_notes` from the beat to the `sr_ctx` and
-   `narrator_ctx` strings passed into Step 3 — prefixed with `## Beat Director Notes:`
-4. If `verbose`: print `\n=== {beat["title"]} ===` to terminal
-5. Log the transition: `log.info(f"Beat transition: {current_beat}")`
-6. Set `_last_beat = current_beat`
+3. Load initial `character_plans` from the beat's `character_plans` field in the scene YAML
+   and write them to `scene_state.yaml`
+4. Append `show_runner_notes` and `narrator_notes` from the beat to the `sr_ctx` and
+   `narrator_ctx` strings — prefixed with `## Beat Director Notes:`
+5. If `verbose`: print `\n=== {beat["title"]} ===` to terminal
+6. Log the transition: `log.info(f"Beat transition: {current_beat}")`
+7. Set `_last_beat = current_beat`
 
 `_beat_notes_pending = True` is set before the turn loop starts so the first beat always
 initializes correctly.
 
-**Beat opener (first turn of each beat only):**
+**Beat opener — `run_beat_opener()` (first turn of each beat only):**
 
 | | |
 |---|---|
@@ -50,8 +52,7 @@ initializes correctly.
 | Output | 2–3 sentences of player-facing prose describing the current situation |
 | Prints | Directly to terminal, before Step 1 prompt |
 
-On subsequent turns within the same beat, the resolution narrative from the previous turn
-(Step 7) provides orientation — no opener call is made.
+On subsequent turns the resolution narrative from Step 7 provides orientation.
 
 ---
 
@@ -68,13 +69,13 @@ Free-form text. Direction to Companions is embedded naturally — no special syn
 ## Step 2 — Companion Wave (`run_companion_wave()`)
 
 ```
-Kae (Companion)  →  dialogue + actions
+Kae (Companion)  →  plan + beat context + user action  →  dialogue + actions
 ...
 ```
 
 - One `call_llm()` per Companion (`player: "companion"` in character YAML).
-- Each call receives beat context (from Step 0 director notes), the user's action, and
-  last turn context. Companions act before NPCs and do not see this turn's NPC outputs.
+- Each Companion receives their current plan from `character_plans`, beat context, and the
+  user action. Companions act before NPCs and do not see this turn's NPC outputs.
 - Companion outputs printed to terminal as they arrive.
 
 ---
@@ -82,18 +83,15 @@ Kae (Companion)  →  dialogue + actions
 ## Step 3 — NPC Wave (`run_npc_wave()`)
 
 ```
-Show Runner  →  scene state + user action + companion outputs  →  beat plan
-Narrator     →  narration of NPC reactions (receives beat plan)
-NPC_1        →  dialogue + actions (receives beat plan + user action)
-NPC_2        →  dialogue + actions (receives beat plan + NPC_1 output)
+NPC_1  →  plan + beat context + user action + companion outputs  →  dialogue + actions
+NPC_2  →  plan + beat context + user action + companion outputs + NPC_1 output  →  dialogue + actions
 ...
 ```
 
-- Show Runner receives the full context (scene state, user action, Companion outputs) and
-  produces a beat plan directing NPC behaviour in response.
-- One `call_llm()` per NPC; each receives the beat plan and all prior NPC outputs.
-- Narrator text and NPC outputs printed to terminal as they arrive.
-- Returns `{"_narrator": narration, npc_id: output, ...}` for use in Steps 4–7.
+- One `call_llm()` per NPC; each receives their current plan from `character_plans`, the
+  user action, all Companion outputs, and all prior NPC outputs.
+- NPC outputs printed to terminal as they arrive.
+- Returns `{npc_id: output, ...}` for use in Steps 4–7.
 
 ---
 
@@ -165,7 +163,25 @@ Orchestrator writes the collected dict to `scene_state.yaml` → `last_actions`.
 
 ---
 
-## Step 9 — Session Log (`run_scribe()`)
+## Step 9 — Plan Update (`run_plan_update()`)
+
+SR reviews the full turn and updates each character's plan for next turn.
+
+**Call sequence:**
+
+```
+1 call:  SR  →  full context (summaries, results, last actions)  →  overall plan
+N calls: SR  →  overall plan + that character's situation         →  individual plan
+```
+
+- The overall plan is SR's private coordination notes — logged for debugging but never
+  shared with characters.
+- One individual plan call per NPC and Companion (same code path for both).
+- Orchestrator writes updated plans to `scene_state.yaml` → `character_plans`.
+
+---
+
+## Step 10 — Session Log (`run_scribe()`)
 
 | | |
 |---|---|
@@ -177,7 +193,7 @@ Orchestrator appends output to `state/session_log.md`.
 
 ---
 
-## Step 10 — Beat Advancement
+## Step 11 — Beat Advancement
 
 ```
 CLI: [Enter] stay  |  [a] advance  |  [beat ID] jump  |  [q] quit
@@ -192,10 +208,10 @@ the scene ends.
 
 | Agent | Model | Steps |
 |---|---|---|
-| Show Runner | sardinia 8B | 3 (beat plan), 5 (check id), 6 (rulings), 7 (narrative) |
-| Narrator | sardinia 8B | 0 (beat opener), 3 (narration), 8 (last-action extraction) |
+| Show Runner | sardinia 8B | 5 (check id), 6 (rulings), 7 (narrative), 9 (plan update) |
+| Narrator | sardinia 8B | 0 (beat opener), 8 (last-action extraction) |
 | Actors | sardinia 8B | 2 (Companion voicing), 3 (NPC voicing), 4 (summaries) |
-| Scribe | alien 3B | 9 (session log) |
+| Scribe | alien 3B | 10 (session log) |
 
 The `referee` agent is configured in `config/agents.yaml` but not called by the current pipeline.
 
@@ -205,10 +221,12 @@ The `referee` agent is configured in `config/agents.yaml` but not called by the 
 
 | File | Changed by | Step |
 |---|---|---|
+| `state/scene_state.yaml` `character_plans` | Orchestrator | 0 (beat init), 9 |
 | `state/scene_state.yaml` `last_actions` | Orchestrator | 8 |
 | `state/scene_state.yaml` `current_beat` | `advance_beat()` | Beat advancement |
-| `state/session_log.md` | Orchestrator (Scribe output) | 9 |
+| `state/session_log.md` | Orchestrator (Scribe output) | 10 |
 | `state/party_stats.yaml` | Orchestrator *(not yet implemented)* | 6 |
 | `logs/turn_{ts}_{beat}_summaries.txt` | Orchestrator | 4 |
 | `logs/turn_{ts}_{beat}_checks.txt` | Orchestrator | 5 |
 | `logs/turn_{ts}_{beat}_results.txt` | Orchestrator | 6 |
+| `logs/turn_{ts}_{beat}_sr_plan.txt` | Orchestrator | 9 |
