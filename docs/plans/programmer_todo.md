@@ -12,6 +12,49 @@ Reference documents:
 
 ## Current Priority: Phase 4 — End-to-End Scene Playthrough
 
+### [~] 4.16 — Concise per-call instrumentation log
+
+Replace the verbose full-content prompt/response log with a single summary line per LLM call.
+
+**Log format** — one line per call:
+```
+HH:MM:SS  show_runner   sardinia  beat_plan     1247p →   342r
+HH:MM:SS  narrator      sardinia  narration      892p →   218r
+HH:MM:SS  actors        sardinia  npc_voice     1534p →   156r
+```
+
+**What changes:**
+
+`instrumentation.py`:
+- Replace `_PromptLogger._write(server, type, text)` + `_format_messages()` + `_server_for()` + `server_map`
+  with a single `log(agent, server, task, prompt_len, response_len)` method that writes one line
+- Remove `verbose_path` from `setup_instrumentation()` — return only `prompts_path` (single `Path`)
+
+`llm.py`:
+- Add `task: str` parameter to `call_llm()` (required, no default)
+- Compute `server` from `cfg["model_alias"].split("/")[0]` (e.g. `sardinia/llama-3.1-8b` → `sardinia`)
+- Replace the two `_prompt_logger._write()` calls with one `_prompt_logger.log(agent_name, server, task, prompt_len, response_len)`
+  where `prompt_len = len(system_prompt) + len(user_message)`
+
+`runner.py` — add `task=` to every `call_llm()` call:
+- `run_npc_wave`: show_runner→`"beat_plan"`, narrator→`"narration"`, actors→`"npc_voice"`
+- `run_pc_wave`: actors→`"pc_voice"`
+- `run_summary_phase`: actors→`"summary"`
+- `run_check_phase`: show_runner→`"check_id"`
+- `run_ruling_phase`: show_runner→`"ruling"`
+- `run_narrative_phase`: show_runner→`"narrative"`
+- `run_last_action_phase`: narrator→`"last_action"`
+- `run_scribe_phase`: scribe→`"session_log"`
+
+`orchestrator.py`:
+- Fix `verbose_path, prompts_path = setup_instrumentation(timestamp)` → `prompts_path = setup_instrumentation(timestamp)`
+
+**Partial start:** `tests/test_instrumentation.py` and `tests/test_llm.py` have already been updated
+to expect the new interface. Run `pytest tests/test_instrumentation.py tests/test_llm.py` — they
+should be RED. Implement to make them GREEN, then verify the full suite passes.
+
+---
+
 ### [~] 4.8 — End-to-End Scene Playthrough
 
 No tests for this task — this is exploratory play. Run `src/showrunner/main.py` and
