@@ -79,20 +79,22 @@ def run_summaries(party_actions: dict[str, str], summaries_log_path) -> None:
             f.write(f"{actor_id}: {summary}\n")
 
 
-def run_checks(summaries_text: str, stats_text: str) -> str:
-    """Step 3b: Identify skill checks from summaries and stats.
-
-    Returns raw Show Runner output (list of checks or "NO_CHECKS").
-    """
-    msg = (
-        f"## Action Summaries\n{summaries_text}\n\n"
-        f"## Character Stats\n{stats_text}\n\n"
-        "Review every action. List every skill check, opposed roll, or combat attack triggered.\n"
-        "Output format — one line per check:\n"
-        "{n}. {actor} | {skill} | {characteristic} {value} | {skill_rank} | {difficulty} | {notes}\n\n"
-        "If no checks are needed, output exactly: NO_CHECKS"
-    )
-    return call_llm("show_runner", build_system_prompt("show_runner"), msg)
+def run_checks(char_summaries: dict[str, str], char_stats: dict[str, str]) -> str:
+    """Step 5: Identify skill checks per character; return combined check lines or 'NO_CHECKS'."""
+    check_lines: list[str] = []
+    for char_id, summary in char_summaries.items():
+        stats = char_stats.get(char_id, "")
+        msg = (
+            f"## {char_id} summary\n{summary}\n\n"
+            f"## {char_id} stats\n{stats}\n\n"
+            "Does this character need a skill check, opposed roll, or attack this turn?\n"
+            "If yes, output one line: {actor} | {skill} | {characteristic} {value} | {skill_rank} | {difficulty} | {notes}\n"
+            "If no check needed, output exactly: NO_CHECKS"
+        )
+        output = call_llm("show_runner", build_system_prompt("show_runner"), msg)
+        if "NO_CHECKS" not in output:
+            check_lines.append(output.strip())
+    return "\n".join(check_lines) if check_lines else "NO_CHECKS"
 
 
 def run_rulings(check_specs: list[dict]) -> dict[str, str]:

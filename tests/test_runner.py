@@ -164,28 +164,40 @@ def test_run_summaries_empty_makes_no_calls_and_leaves_file_unchanged(tmp_path):
 # run_checks
 # ---------------------------------------------------------------------------
 
-def test_run_checks_calls_show_runner_once():
+def test_run_checks_calls_show_runner_once_per_character():
     from showrunner.runner import run_checks
-    with patch("showrunner.runner.call_llm", return_value="NO_CHECKS") as mock:
-        run_checks("summaries", "stats")
+    char_summaries = {"bargos": "Bargos spoke.", "kaelen": "Kaelen watched."}
+    char_stats = {"bargos": "Presence 4", "kaelen": "Agility 3"}
+    with patch("showrunner.runner.call_llm", side_effect=["NO_CHECKS", "NO_CHECKS"]) as mock:
+        run_checks(char_summaries, char_stats)
     sr_calls = [c for c in mock.call_args_list if c.args[0] == "show_runner"]
-    assert len(sr_calls) == 1
+    assert len(sr_calls) == 2
 
 
-def test_run_checks_user_message_contains_summaries_and_stats():
+def test_run_checks_each_call_contains_only_that_chars_summary():
     from showrunner.runner import run_checks
-    with patch("showrunner.runner.call_llm", return_value="NO_CHECKS") as mock:
-        run_checks("action summaries here", "stats here")
-    user_msg = mock.call_args_list[0].args[2]
-    assert "action summaries here" in user_msg
-    assert "stats here" in user_msg
+    with patch("showrunner.runner.call_llm", side_effect=["NO_CHECKS", "NO_CHECKS"]) as mock:
+        run_checks({"bargos": "Bargos spoke.", "kaelen": "Kaelen watched."}, {"bargos": "", "kaelen": ""})
+    bargos_msg = mock.call_args_list[0].args[2]
+    assert "Bargos spoke." in bargos_msg
+    assert "Kaelen watched." not in bargos_msg
 
 
-def test_run_checks_returns_llm_output():
+def test_run_checks_no_checks_returns_no_checks_sentinel():
     from showrunner.runner import run_checks
-    with patch("showrunner.runner.call_llm", return_value="1. Z-4P0 | Negotiation | ..."):
-        result = run_checks("summaries", "stats")
-    assert "Negotiation" in result
+    with patch("showrunner.runner.call_llm", side_effect=["NO_CHECKS", "NO_CHECKS"]):
+        result = run_checks({"bargos": "spoke", "kaelen": "watched"}, {"bargos": "", "kaelen": ""})
+    assert result == "NO_CHECKS"
+
+
+def test_run_checks_check_lines_combined_into_single_output():
+    from showrunner.runner import run_checks
+    line1 = "bargos | Negotiation | Presence 4 | 2 | Average | notes"
+    line2 = "kaelen | Athletics | Agility 3 | 1 | Easy | notes"
+    with patch("showrunner.runner.call_llm", side_effect=[line1, line2]):
+        result = run_checks({"bargos": "spoke", "kaelen": "ran"}, {"bargos": "", "kaelen": ""})
+    assert line1 in result
+    assert line2 in result
 
 
 # ---------------------------------------------------------------------------

@@ -116,47 +116,65 @@ def test_parse_ruling_specs_noninteger_values_default_to_zero():
 
 
 # ---------------------------------------------------------------------------
-# _build_stats_text
+# _build_char_stats
 # ---------------------------------------------------------------------------
 
-def test_build_stats_text_includes_character_name():
-    from showrunner.orchestrator import _build_stats_text
-    yamls = {
-        "bargos": {
-            "identity": {"name": "Bargos the Hutt"},
-            "characteristics": {"presence": 4, "cunning": 3},
-            "skills": [{"name": "Negotiation", "characteristic": "Presence"}],
-        }
-    }
-    text = _build_stats_text(yamls)
-    assert "Bargos the Hutt" in text
+_BARGOS_YAML = {
+    "identity": {"name": "Bargos the Hutt"},
+    "characteristics": {"presence": 4, "cunning": 3},
+    "skills": [{"name": "Negotiation", "characteristic": "Presence", "ranks": 2}],
+}
 
 
-def test_build_stats_text_includes_characteristic_values():
-    from showrunner.orchestrator import _build_stats_text
-    yamls = {
-        "bargos": {
-            "identity": {"name": "Bargos"},
-            "characteristics": {"presence": 4, "cunning": 3},
-            "skills": [],
-        }
-    }
-    text = _build_stats_text(yamls)
-    assert "4" in text
-    assert "3" in text
+def test_build_char_stats_keys_are_character_ids():
+    from showrunner.orchestrator import _build_char_stats
+    result = _build_char_stats({"bargos": _BARGOS_YAML})
+    assert "bargos" in result
 
 
-def test_build_stats_text_includes_skill_names():
-    from showrunner.orchestrator import _build_stats_text
-    yamls = {
-        "bargos": {
-            "identity": {"name": "Bargos"},
-            "characteristics": {},
-            "skills": [{"name": "Cool", "characteristic": "Presence", "ranks": 2}],
-        }
-    }
-    text = _build_stats_text(yamls)
-    assert "Cool" in text
+def test_build_char_stats_includes_character_name():
+    from showrunner.orchestrator import _build_char_stats
+    result = _build_char_stats({"bargos": _BARGOS_YAML})
+    assert "Bargos the Hutt" in result["bargos"]
+
+
+def test_build_char_stats_includes_characteristic_values():
+    from showrunner.orchestrator import _build_char_stats
+    result = _build_char_stats({"bargos": _BARGOS_YAML})
+    assert "4" in result["bargos"]
+    assert "3" in result["bargos"]
+
+
+def test_build_char_stats_includes_skill_names():
+    from showrunner.orchestrator import _build_char_stats
+    result = _build_char_stats({"bargos": _BARGOS_YAML})
+    assert "Negotiation" in result["bargos"]
+
+
+# ---------------------------------------------------------------------------
+# _parse_summaries_log
+# ---------------------------------------------------------------------------
+
+def test_parse_summaries_log_returns_dict_keyed_by_actor(tmp_path):
+    from showrunner.orchestrator import _parse_summaries_log
+    log = tmp_path / "s.txt"
+    log.write_text("bargos: Bargos threatened.\nkaelen: Kaelen watched.\n")
+    result = _parse_summaries_log(log)
+    assert set(result.keys()) == {"bargos", "kaelen"}
+
+
+def test_parse_summaries_log_returns_correct_summaries(tmp_path):
+    from showrunner.orchestrator import _parse_summaries_log
+    log = tmp_path / "s.txt"
+    log.write_text("bargos: Bargos threatened.\n")
+    result = _parse_summaries_log(log)
+    assert result["bargos"] == "Bargos threatened."
+
+
+def test_parse_summaries_log_missing_file_returns_empty(tmp_path):
+    from showrunner.orchestrator import _parse_summaries_log
+    result = _parse_summaries_log(tmp_path / "missing.txt")
+    assert result == {}
 
 
 # ---------------------------------------------------------------------------

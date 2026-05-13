@@ -173,9 +173,9 @@ def _parse_ruling_specs(text: str) -> list[dict]:
     return specs
 
 
-def _build_stats_text(yamls: dict[str, dict]) -> str:
-    """Format character stats from raw YAML dicts for the Phase 3b task description."""
-    lines = []
+def _build_char_stats(yamls: dict[str, dict]) -> dict[str, str]:
+    """Format character stats from raw YAML dicts into per-character strings."""
+    result: dict[str, str] = {}
     for char_id, yaml in yamls.items():
         name = yaml.get("identity", {}).get("name", char_id)
         chars = yaml.get("characteristics", {})
@@ -186,11 +186,24 @@ def _build_stats_text(yamls: dict[str, dict]) -> str:
         skill_str = ", ".join(
             f"{s['name']} rank {s.get('ranks', 1)}" for s in skills
         ) if skills else "none"
-        lines.append(f"### {name}")
+        lines = [f"### {name}"]
         if char_str:
             lines.append(f"Characteristics: {char_str}")
         lines.append(f"Skills: {skill_str}")
-    return "\n".join(lines)
+        result[char_id] = "\n".join(lines)
+    return result
+
+
+def _parse_summaries_log(path) -> dict[str, str]:
+    """Parse a summaries log file into {actor: summary} dict."""
+    if not Path(path).exists():
+        return {}
+    result: dict[str, str] = {}
+    for line in Path(path).read_text().splitlines():
+        if ": " in line:
+            actor, summary = line.split(": ", 1)
+            result[actor.strip()] = summary.strip()
+    return result
 
 
 def _apply_beat_notes(beat: dict, sr_ctx: str, narrator_ctx: str) -> tuple[str, str]:
@@ -352,9 +365,9 @@ def run_turn_loop(scene: dict, verbose: bool = False) -> None:
         run_summaries(party_actions, summaries_log_path)
 
         # ── Step 5: Check identification ─────────────────────────────────────
-        all_summaries = summaries_log_path.read_text() if summaries_log_path.exists() else ""
-        stats_text = _build_stats_text(scene_yamls)
-        check_output = run_checks(all_summaries, stats_text)
+        char_summaries = _parse_summaries_log(summaries_log_path)
+        char_stats = _build_char_stats(scene_yamls)
+        check_output = run_checks(char_summaries, char_stats)
         checks_text = _write_turn_file(logs_dir, scene_num, _beat_num, current_beat, _turn_num, "checks", check_output)
         ruling_specs = _parse_ruling_specs(checks_text)
         log.info(f"Step 5 complete: {len(ruling_specs)} checks identified")

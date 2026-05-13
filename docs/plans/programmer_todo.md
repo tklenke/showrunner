@@ -220,7 +220,7 @@ Total: 2N `call_llm()` calls for N NPCs.
 
 ---
 
-### [ ] 4.23 — Step 4: Party Action Summaries (User + Companions)
+### [x] 4.23 — Step 4: Party Action Summaries (User + Companions)
 
 Per `game_loop.md` Step 4: after the NPC wave, the Narrator produces a 1–2 sentence
 summary for each party member that acted (User + any Companions). Summaries are appended
@@ -238,7 +238,7 @@ to the same `_summaries.txt` log file that Step 3 wrote NPC summaries to.
 
 ---
 
-### [ ] 4.24 — Step 5: Check Identification — N calls, one per character
+### [~] 4.24 — Step 5: Check Identification — N calls, one per character
 
 Per `game_loop.md` Step 5: the Show Runner identifies required checks one character at a
 time. One `call_llm()` per character — focused on one actor at a time rather than the
