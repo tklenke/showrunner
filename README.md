@@ -57,6 +57,11 @@ python -m showrunner.main 1 -v     # scene 1, verbose
 
 **During a session:**
 
+The engine runs several AI steps after each player action. Output may include narrative
+prose, character dialogue, and check results — and the prose sometimes ends with a
+question or a dramatic beat. **Wait for the horizontal rule (`────...`) before typing.**
+That line always appears immediately before a prompt that expects your input.
+
 At the end of each turn you are prompted for beat advancement:
 
 ```
