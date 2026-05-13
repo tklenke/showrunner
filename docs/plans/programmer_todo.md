@@ -104,17 +104,20 @@ Revise those tests to match the `inspect`-based design:
 
 ---
 
-### [ ] 4.18 — Step 0: beat initialization on first turn of each beat
+### [ ] 4.18 — Step 0: beat initialization + Narrator opener on first turn of each beat
 
-On the first turn of a new beat the orchestrator injects beat-specific context into
-Step 1 (NPC wave). Subsequent turns within the same beat skip Step 0 entirely.
+**Do 4.17 and 4.19 first** — this task uses the renamed functions.
+
+On the first turn of a new beat Step 0 does two things: injects beat-specific context
+into the NPC wave (Step 3), and calls the Narrator to produce a player-facing opener.
+Subsequent turns within the same beat skip beat initialization entirely.
 
 **Beat transition detection** — in `run_turn_loop()`:
 - Track `_last_beat: str = ""` before the `while True:` loop
 - After loading `scene_state`, compare `current_beat != _last_beat`
-- If transition: run Step 0, then set `_last_beat = current_beat`
+- If transition: run beat initialization, then set `_last_beat = current_beat`
 
-**Step 0 (turn 1 of beat only):**
+**Beat initialization (turn 1 of beat only):**
 1. Look up the current beat dict from `scene["beats"]` by `id == current_beat`
 2. Append `show_runner_notes` and `narrator_notes` from the beat to the
    `sr_ctx` and `narrator_ctx` strings passed into `run_npc_wave()` —
@@ -122,8 +125,16 @@ Step 1 (NPC wave). Subsequent turns within the same beat skip Step 0 entirely.
    ```
    ## Beat Director Notes:\n{beat["show_runner_notes"]}
    ```
-3. If `verbose` flag is set: print `\n=== {beat["title"]} ===` to terminal
-4. Log the beat transition regardless of verbose: `log.info(f"Beat transition: {current_beat}")`
+3. Call `run_beat_opener(beat, last_log_entry)` — see below
+4. If `verbose` flag is set: print `\n=== {beat["title"]} ===` to terminal
+5. Log the beat transition: `log.info(f"Beat transition: {current_beat}")`
+
+**`run_beat_opener(beat, last_log_entry)` — new function in `runner.py`:**
+- Agent: Narrator
+- Input: beat notes (`show_runner_notes`, `narrator_notes`) + last entry from
+  `state/session_log.md` (pass empty string if file doesn't exist yet)
+- Output: 2–3 sentences of player-facing prose printed directly to terminal
+- No return value needed; printed output is the product
 
 **`verbose` flag** — add to `run_turn_loop(scene, verbose=False)` signature.
 Pass it through from `main.py`. Wire a `--verbose` / `-v` CLI flag in `main.py`.
@@ -131,6 +142,8 @@ Pass it through from `main.py`. Wire a `--verbose` / `-v` CLI flag in `main.py`.
 **Tests:**
 - Beat notes injected into sr_ctx on turn 1 (mock scene with beat that has notes)
 - Beat notes NOT injected on turn 2 of same beat
+- `run_beat_opener` called on turn 1, not called on turn 2
+- `run_beat_opener` receives empty string when session_log.md does not exist
 - `verbose=True` → beat title printed; `verbose=False` → not printed
 - `_last_beat` updates after transition
 

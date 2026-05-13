@@ -34,12 +34,33 @@ A beat spans one or more turns. A scene spans one or more beats.
 
 ## Agents
 
-| Term | Definition |
-|------|-----------|
-| **Show Runner** | The GM-brain agent. Plans beats, identifies checks, rules on outcomes. |
-| **Narrator** | The GM-voice agent. Delivers scene prose, beat openers, last-action extraction. |
-| **Actors** | The voicing agent. Plays both NPCs and Companions. |
-| **Scribe** | The record-keeping agent. Writes one-sentence session log entries. |
+| Agent | Config key | Server | Role |
+|-------|-----------|--------|------|
+| **Show Runner** | `show_runner` | Sardinia | GM brain: beat plans, check identification, dice rulings, resolution narrative |
+| **Narrator** | `narrator` | Sardinia | GM voice: beat openers, scene prose, last-action extraction |
+| **Actors** | `actors` | Sardinia | Voicing: plays NPCs and Companions |
+| **Scribe** | `scribe` | Alien | Record-keeping: one-sentence session log entry per turn |
+
+---
+
+## Inference Nodes
+
+Physical servers and cloud endpoints that run the models. Agents are routed to nodes
+via `config/litellm.yaml`.
+
+| Node | Model | Alias | Hosts |
+|------|-------|-------|-------|
+| **Sardinia** | Llama 3.1 8B Instruct (LM Studio) | `sardinia/llama-3.1-8b` | Show Runner, Narrator, Actors |
+| **Alien** | Llama 3.2 3B Instruct (llama.cpp) | `alien/llama-3.2-3b` | Scribe |
+| **Gemini** | Gemini 2.5 Flash (Google AI Studio API) | `gemini/gemini-2.5-flash` | *(configured, not yet assigned)* |
+
+**Sardinia** — i9-9900k, 64 GB RAM, RTX 2070 (8 GB VRAM), Windows, LM Studio Developer Mode.
+`http://192.168.1.45:1234/v1`
+
+**Alien** — i7-6700, 16 GB RAM, GTX 960 (2 GB VRAM), Debian 12, llama.cpp server.
+`http://192.168.1.144:8080/v1`
+
+**Gemini** — Cloud API. Requires `GEMINI_API_KEY` env var.
 
 ---
 
