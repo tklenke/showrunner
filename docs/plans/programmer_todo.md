@@ -294,7 +294,7 @@ Tests:
 
 ---
 
-### [ ] 4.12 — Fix Rich Console Leak in Verbose Output
+### [x] 4.12 — Fix Rich Console Leak in Verbose Output
 
 CrewAI uses a Rich Console that holds a reference to the original terminal fd. The
 `verbose_to_file()` context manager only redirects `sys.stdout`, so Rich output (task
@@ -311,6 +311,113 @@ Acceptable outcomes in priority order:
 1. Rich output goes to verbose log file, not terminal
 2. Rich output suppressed entirely (set `verbose=False` on Crew — loses log detail but
    stops the leak)
+
+---
+
+### [ ] 4.13 — Three-Phase Turn Loop with Per-Check Referee Isolation
+
+See `docs/plans/architect_todo.md` — "Resolved Decisions: Turn Loop" for the full
+design rationale and Option A vs B discussion. Option B was chosen.
+
+**Overview:** Each turn runs three sequential kickoffs:
+
+---
+
+#### Phase 1 — NPC wave
+
+`build_npc_crew(sr_context, narrator_context, npc_contexts: dict[str, str]) -> Crew`
+
+Tasks: Show Runner → Narrator → NPCs in order, each chaining prior NPC task context.
+
+```python
+# Each NPC task:
+context=[task_plan] + prior_npc_tasks  # sees beat plan + all earlier NPC outputs
+```
+
+After kickoff: print Narrator + NPC outputs to player. Collect `npc_wave_text`
+(joined NPC task `output.raw` strings, labelled by npc_id).
+
+---
+
+#### Between Phase 1 and 2 — Player input
+
+Single free-form prompt: `"What do {pc_name} and {ai_pc_name} do? >"`.
+No separate nudge prompt — direction to Kaelen is embedded in the player's text.
+
+---
+
+#### Phase 2 — PC wave + check identification
+
+`build_pc_crew(npc_wave_text, ai_pc_contexts, player_action, sr_review_context) -> Crew`
+
+Tasks:
+1. **Kaelen** (AI PC) — task description contains: character prompt + npc_wave_text +
+   player action. No tools. Outputs Kaelen's dialogue and actions.
+2. **Show Runner review** — task description contains: beat plan summary + npc_wave_text
+   + player action + Kaelen output (via `context=[kaelen_task]`). Outputs structured
+   check list:
+   ```
+   CHECKS:
+   1. Z-4P0 | Negotiation | Presence | Opposed vs Bargos Cool | +1 Boost (diplomatic)
+   CHECKS_END
+   ```
+   Or `NO_CHECKS` if nothing to resolve.
+
+After kickoff: print Kaelen output. Parse Show Runner review output into check specs
+(list of dicts with keys: actor, skill, characteristic, difficulty, notes).
+
+---
+
+#### Phase 3 — Resolution (dynamic, one Referee task per check + Scribe)
+
+`build_resolution_crew(check_specs, scribe_context, full_turn_summary) -> Crew`
+
+Tasks:
+- One Referee task per entry in `check_specs`. Each task description contains only
+  that check's spec (actor, skill, pool construction, difficulty, notes). Tasks chain
+  so each Referee sees prior Referee results (relevant for multi-attack rounds).
+- Scribe task at the end: sees all Referee outputs, outputs one-sentence session log.
+
+If `check_specs` is empty (NO_CHECKS), skip Phase 3 entirely — run a single-task
+Scribe crew or write the log entry from the orchestrator directly.
+
+After kickoff: print Referee outputs (skip "No check required"). Write last_actions
+(all NPC outputs + Kaelen + player action). Append Scribe session log entry.
+
+---
+
+**`load_scene_characters()` changes:**
+
+Add `player_filter: str | None = None` parameter:
+- `None` → all characters (backwards compatible)
+- `"npc"` → only characters with no `player` field and inline NPCs
+- `"ai"` → only characters with `player: "ai"`
+
+Human characters (`player: "human"`) are always excluded from scene_chars (they act
+via prompt, never as agent tasks).
+
+---
+
+**`crew.py` changes:**
+
+Remove `build_crew()`. Replace with:
+- `build_npc_crew(sr_context, narrator_context, npc_contexts)`
+- `build_pc_crew(npc_wave_text, ai_pc_contexts, player_action, sr_review_context)`
+- `build_resolution_crew(check_specs, scribe_context, full_turn_summary)`
+
+---
+
+**Tests:**
+- `test_npc_crew_chains_npc_contexts` — 2nd NPC task has 1st in context
+- `test_npc_crew_task_order` — SR, Narrator, NPC... in order
+- `test_pc_crew_kaelen_sees_npc_wave` — Kaelen task description contains npc_wave_text
+- `test_pc_crew_kaelen_sees_player_action` — Kaelen task description contains player action
+- `test_pc_crew_show_runner_review_in_last_task` — final task assigned to Show Runner
+- `test_resolution_crew_one_task_per_check` — 2 specs → 2 Referee tasks + 1 Scribe
+- `test_resolution_crew_referee_tasks_chained` — 2nd Referee task has 1st in context
+- `test_resolution_crew_empty_specs_has_only_scribe` — 0 checks → 1 Scribe task
+- `test_load_scene_characters_npc_filter` — excludes ai PCs and human PCs
+- `test_load_scene_characters_ai_filter` — returns only ai PCs
 
 ---
 

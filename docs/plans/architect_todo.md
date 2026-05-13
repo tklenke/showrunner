@@ -30,6 +30,64 @@ to reflect that prompt logging uses CrewAI's event bus, not LiteLLM callbacks.
 
 ---
 
+## Resolved Decisions
+
+### Turn Loop: Two-Phase Kickoff + Per-Check Referee Isolation (2026-05-13)
+
+**Context:** After implementing the sequential crew, we observed that the Referee was
+guessing what checks were needed from the beat plan alone. Post-action state — what the
+NPCs actually did, what the player did, what Kaelen did — was not visible to the
+Referee in a structured way. The beat plan is intent; the action outputs are reality.
+
+**Options considered:**
+
+**Option A — Show Runner review → single Referee task.**
+Show Runner reads all NPC/PC outputs, produces a structured check list, hands the whole
+list to one Referee task that resolves all checks in a single response. Simple, no
+dynamic task creation. Weakness: less per-check isolation; harder for a small model to
+juggle multiple checks cleanly.
+
+**Option B — Three kickoffs per turn with dynamic Referee tasks. (CHOSEN)**
+1. **NPC wave kickoff:** Show Runner (beat plan) → Narrator → NPCs chained by context.
+2. **PC wave kickoff:** Player input → Kaelen (sees NPC outputs + player action) →
+   Show Runner review (sees all outputs, emits structured check list). Orchestrator
+   parses the check list.
+3. **Resolution kickoff:** N Referee tasks built dynamically (one per check, each
+   receives only its check), then Scribe.
+
+**Why Option B:** Per-check isolation gives the Referee (a small model) one clear job
+per invocation. It also matches how the game actually works — each roll is a discrete
+event, not a batch. The third kickoff is small and the overhead is acceptable. Option A
+is faster to implement but bets on the Referee handling multiple checks cleanly, which
+the 3B model is unlikely to do reliably as combat grows in complexity.
+
+**Show Runner review output format:**
+```
+CHECKS:
+1. {actor} | {skill} | {characteristic} | {difficulty} | {notes}
+CHECKS_END
+```
+If no checks needed: a single line `NO_CHECKS`. The orchestrator splits on `|`, builds
+one Referee task per line. The Referee receives its check spec in the task description
+and outputs: dice pool, roll result (auto-rolled or prompted), and outcome ruling.
+
+**Ordering within the turn:**
+- NPCs act in scene YAML order (status hierarchy: `npcs_present` first, `inline_npcs`
+  second). Each NPC sees all prior NPC outputs via chained task context.
+- Player inputs a single free-form action. Can include direction to Kaelen embedded
+  in natural language ("I yell to Kae, 'cover the door' then I approach Bargos").
+- Kaelen (AI party member, `player: "ai"`) sees all NPC outputs + player action text.
+- Show Runner review sees everything (NPC outputs + Kaelen + player action).
+- Referee handles each check in isolation.
+- Scribe records outcomes.
+
+**Characters filtered by `player` field:**
+- No `player` field (or `player: null`) → pure NPC → NPC wave
+- `player: "ai"` → AI party member → PC wave (Kaelen)
+- `player: "human"` → human player → prompted directly (Z-4P0)
+
+---
+
 ## Open Decisions
 
 Items that have not yet been fully resolved. These need an answer before the relevant
