@@ -9,7 +9,7 @@ assess_scene:
   expected_output: >
     A structured beat decision: next actor (player/npc name), action type
     (narration/dialogue/check/clock), and any parameters the downstream agents need.
-  agent: narrator
+  agent: show_runner
 
 narrate_scene:
   description: >
@@ -17,7 +17,7 @@ narrate_scene:
     Make it atmospheric and specific. Do not decide outcomes.
   expected_output: >
     2-4 sentences of vivid narration, ending on the player's decision point.
-  agent: world_runner
+  agent: narrator
 
 voice_npc:
   description: >

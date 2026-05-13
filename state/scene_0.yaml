@@ -71,7 +71,7 @@ beats:
   - id: "summons"
     title: "The Summons"
     trigger: "Scene entry; always the first beat."
-    narrator_notes: |
+    show_runner_notes: |
       C3-P9 meets the PCs at the entrance and escorts them in. Bargos watches them
       enter but says nothing until they are standing before his dais — making them
       wait is a deliberate power move. Let the silence sit for a moment before
@@ -80,7 +80,7 @@ beats:
       Genko whispers something to Bargos just before he addresses the PCs. This
       whisper is about the Gavos situation — Genko is worried Bargos will reveal
       too much anxiety. Bargos waves him off.
-    world_runner_notes: |
+    narrator_notes: |
       Emphasize the scale of the chamber and Bargos's deliberate theatricality.
       The wait before he speaks should feel slightly uncomfortable. Describe the
       sounds of the room — rustling, a low hum of repulsors, the clink of
@@ -90,7 +90,7 @@ beats:
   - id: "audience"
     title: "The Job"
     trigger: "After the PCs have been acknowledged by Bargos."
-    narrator_notes: |
+    show_runner_notes: |
       Bargos explains the situation in broad strokes: he recently acquired an
       oridium mine on Gavos and sent a foreman with a work crew. He expected his
       first payment weeks ago. Instead: silence. He wants the PCs to go to Gavos,
@@ -107,7 +107,7 @@ beats:
       If PCs push for better terms (Negotiation check), Bargos is willing to
       negotiate a slightly higher fee or a bonus for speed, but not the base
       100,000. That number is non-negotiable to him.
-    world_runner_notes: |
+    narrator_notes: |
       Bargos speaks slowly, deliberately, like every word is expensive. He uses
       Huttese phrases when displeased. Genko flutters nervously throughout.
       C3-P9 translates Bargos's occasional Huttese asides with cheerful literalness.
@@ -129,7 +129,7 @@ beats:
     trigger: >
       After Bargos has finished explaining the job and the PCs are about to
       respond or depart. Deliver this beat before any farewells are exchanged.
-    narrator_notes: |
+    show_runner_notes: |
       Genko suddenly stops mid-flutter, staring at the chamber doors. A guard
       at the entrance starts to say something — then goes silent as the doors
       crash open.
@@ -145,7 +145,7 @@ beats:
       Bargos and Genko are non-combatants. C3-P9 immediately moves to shield
       Bargos (ineffectually). If the PCs do not protect Bargos and he takes
       wounds, he will be less generous in the mission brief that follows.
-    world_runner_notes: |
+    narrator_notes: |
       The doors do not explode dramatically — they are shoved open with a
       Gamorrean grunt. The sound is wrong before the sight: heavy footfalls
       on stone, the scrape of metal. The chamber staff scatter. The air
@@ -162,7 +162,7 @@ beats:
   - id: "gamorrean_rumble"
     title: "The Gamorrean Rumble"
     trigger: "Immediately after the warning beat; combat begins."
-    narrator_notes: |
+    show_runner_notes: |
       Six renegade Gamorrean Guards (minion_group: gamorrean_guards) attack.
       Their objective is Bargos, not the PCs — they will advance toward the
       dais, engaging PCs only if intercepted.
@@ -178,7 +178,7 @@ beats:
       and slightly indebted.
       If Bargos takes any wounds: he is angered and blames the PCs for letting
       it happen, despite it being their fault.
-    world_runner_notes: |
+    narrator_notes: |
       Gamorrean combat is visceral and loud — grunts, crashing furniture, the
       hum of vibro-weapons. The room that looked like a throne room suddenly
       feels like a pit fight. Describe environmental details as they get
@@ -189,7 +189,7 @@ beats:
   - id: "mission_brief"
     title: "The Mission Brief"
     trigger: "After all six Gamorrean guards are incapacitated or driven off."
-    narrator_notes: |
+    show_runner_notes: |
       Bargos regains his composure quickly — he is a survivor and not unused
       to violence. He waves away C3-P9's fussing and addresses the PCs directly.
 
@@ -203,7 +203,7 @@ beats:
       If Bargos took no wounds: He is warmer — still businesslike, but he
       acknowledges the PCs competence. He may add a minor additional perk
       (a contact name at the mine, a navigation update).
-    world_runner_notes: |
+    narrator_notes: |
       The aftermath of the fight is quiet in a fragile way. Servants are
       emerging from hiding. C3-P9 is cataloguing damages in a pained tone.
       Genko has produced a datapad with the Gavos coordinates. The smell

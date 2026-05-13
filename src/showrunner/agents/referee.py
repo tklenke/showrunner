@@ -4,7 +4,7 @@
 from crewai import Agent
 
 from showrunner.config import load_agent_configs
-from showrunner.tools.agent_tools import consult_narrator, read_state, roll_dice
+from showrunner.tools.agent_tools import consult_show_runner, read_state, roll_dice
 
 
 def build_referee_backstory() -> str:
@@ -50,7 +50,7 @@ def create_referee() -> Agent:
         goal=cfg["goal"],
         backstory=build_referee_backstory(),
         llm=cfg["llm"],
-        tools=[roll_dice, read_state, consult_narrator],
+        tools=[roll_dice, read_state, consult_show_runner],
         allow_delegation=cfg["allow_delegation"],
         verbose=cfg["verbose"],
     )

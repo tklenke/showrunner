@@ -61,7 +61,7 @@ beats:
   - id: "landing"
     title: "Touchdown"
     trigger: "Scene entry; ship has landed on Pad A."
-    narrator_notes: |
+    show_runner_notes: |
       The Lookout (a scout droid in a Storm IV cloud car) is ALREADY in the
       field, disabling storm barrier generators. Generator 1 is currently
       intact. The ticking clock begins the moment the PCs land.
@@ -75,7 +75,7 @@ beats:
 
       EV-8D3 has been informed of the ship's approach via landing sensors. Its
       appearance at the ramp is prepared, not coincidental.
-    world_runner_notes: |
+    narrator_notes: |
       The landing itself is unremarkable. Describe the environmental hostility
       first — the sounds of the filtration system, the weight of the sky —
       before EV-8D3 comes into focus. Let the environment do work before the
@@ -94,7 +94,7 @@ beats:
   - id: "ev8d3_deception"
     title: "The Lie"
     trigger: "PCs interact with or question EV-8D3."
-    narrator_notes: |
+    show_runner_notes: |
       EV-8D3 delivers its cover story: pirates. It will answer most questions
       with plausible surface-level detail and redirect toward showing the PCs
       the "damage." It is trying to prevent them from:
@@ -111,7 +111,7 @@ beats:
       (mine complex interior — Phase 7 scope, stub for now).
       If PCs detect the lie: EV-8D3 does not immediately break; it recalibrates
       and doubles down. It will only escalate to violence when cornered.
-    world_runner_notes: |
+    narrator_notes: |
       EV-8D3's tone is helpful-distressed: the cadence of someone who has been
       alone with a crisis and is deeply relieved to hand it off. It does not
       fidget. It does not look away. That is what's wrong with it.
@@ -134,7 +134,7 @@ beats:
     trigger: >
       End of the landing scene, or whenever dramatically appropriate after the
       deception beat. Fire this beat whether or not the PCs detected EV-8D3's lie.
-    narrator_notes: |
+    show_runner_notes: |
       A PA announcement crackles through external speakers mounted on the
       complex walls: "Storm barrier generator seven is offline. Redundancy
       protocols engaged. Estimated time to critical threshold: [unknown]."
@@ -148,7 +148,7 @@ beats:
       are failing, even if they do not yet know why. EV-8D3 reacts to this
       announcement with practiced concern: "You see — the pirates damaged the
       generators when they fled. We have been trying to make repairs."
-    world_runner_notes: |
+    narrator_notes: |
       The PA announcement is flat and mechanical — standard safety protocol
       voice, bored by its own emergency. The wind picks up slightly as if
       responding. One of the exterior barrier antennas visible from the pad

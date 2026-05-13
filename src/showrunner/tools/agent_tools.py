@@ -60,7 +60,7 @@ def ask_player(question: str) -> str:
     return input(f"\n[Player] {question}\n> ")
 
 
-class _ConsultNarratorInput(BaseModel):
+class _ConsultShowRunnerInput(BaseModel):
     question: str
 
     @model_validator(mode="before")
@@ -81,23 +81,23 @@ class _ConsultNarratorInput(BaseModel):
         return v
 
 
-class _ConsultNarratorTool(BaseTool):
-    name: str = "consult_narrator"
+class _ConsultShowRunnerTool(BaseTool):
+    name: str = "consult_show_runner"
     description: str = (
-        "Escalate an ambiguous decision to the Narrator (Gemini). "
+        "Escalate an ambiguous decision to the Show Runner (Gemini). "
         "Use sparingly — only for genuine plot or rules ambiguity that the local model "
         "cannot resolve confidently. Each call incurs a Gemini API request."
     )
-    args_schema: type[BaseModel] = _ConsultNarratorInput
+    args_schema: type[BaseModel] = _ConsultShowRunnerInput
 
     def _run(self, question: str) -> str:
         return (
-            "The Narrator is not available for direct consultation at this time. "
+            "The Show Runner is not available for direct consultation at this time. "
             "Proceed with your best judgment based on the scene context provided."
         )
 
 
-consult_narrator = _ConsultNarratorTool()
+consult_show_runner = _ConsultShowRunnerTool()
 
 
 class _ReadStateInput(BaseModel):
@@ -154,7 +154,9 @@ def write_state(file: str, updates: dict) -> str:
     if "party_stats" in file:
         update_party_stats(updates, path=path)
     elif "scene_state" in file:
-        update_scene_state(updates, path=path)
+        safe_updates = {k: v for k, v in updates.items() if k != "current_beat"}
+        if safe_updates:
+            update_scene_state(safe_updates, path=path)
     elif "session_log" in file:
         entry = updates.get("entry", "")
         append_session_log(entry, path=path)

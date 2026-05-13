@@ -17,8 +17,8 @@ beats:
   - id: "opening"
     title: "Opening Beat"
     trigger: "Scene entry."
-    narrator_notes: "Run the opening."
-    world_runner_notes: "Describe the room."
+    show_runner_notes: "Run the opening."
+    narrator_notes: "Describe the room."
     checks: []
 
 exit:

@@ -1,4 +1,4 @@
-# ABOUTME: Tests for agent tool stubs — roll_dice, ask_player, consult_narrator, read/write state.
+# ABOUTME: Tests for agent tool stubs — roll_dice, ask_player, consult_show_runner, read/write state.
 # ABOUTME: Verifies tool wiring is correct before agents are fully integrated.
 
 import json
@@ -34,9 +34,9 @@ def test_ask_player_returns_input(monkeypatch):
     assert result == "I attack the guard"
 
 
-def test_consult_narrator_returns_fallback():
-    from showrunner.tools.agent_tools import consult_narrator
-    result = consult_narrator.run("Should the Gamorreans attack?")
+def test_consult_show_runner_returns_fallback():
+    from showrunner.tools.agent_tools import consult_show_runner
+    result = consult_show_runner.run("Should the Gamorreans attack?")
     assert isinstance(result, str) and len(result) > 0
 
 
@@ -53,17 +53,17 @@ def test_read_state_schema_wrapped_filename_extracted():
     assert m.filename == "scene_state.yaml"
 
 
-def test_consult_narrator_schema_wrapped_question_extracted():
-    from showrunner.tools.agent_tools import _ConsultNarratorInput
+def test_consult_show_runner_schema_wrapped_question_extracted():
+    from showrunner.tools.agent_tools import _ConsultShowRunnerInput
     # 3B model passes JSON Schema structure instead of the actual value
-    m = _ConsultNarratorInput(question={"properties": {"question": "Attack?"}})
+    m = _ConsultShowRunnerInput(question={"properties": {"question": "Attack?"}})
     assert m.question == "Attack?"
 
 
-def test_consult_narrator_top_level_schema_unwrapped():
-    from showrunner.tools.agent_tools import _ConsultNarratorInput
+def test_consult_show_runner_top_level_schema_unwrapped():
+    from showrunner.tools.agent_tools import _ConsultShowRunnerInput
     # 3B model wraps entire args dict as JSON Schema (question nested under properties)
-    m = _ConsultNarratorInput(**{"properties": {"question": "Is EV-8D3 escorting the PCs?"}, "additionalProperties": False})
+    m = _ConsultShowRunnerInput(**{"properties": {"question": "Is EV-8D3 escorting the PCs?"}, "additionalProperties": False})
     assert m.question == "Is EV-8D3 escorting the PCs?"
 
 
@@ -78,3 +78,20 @@ def test_write_state_unknown_file_raises():
     from showrunner.tools.agent_tools import write_state
     with pytest.raises(ValueError):
         write_state.run("unknown_file.yaml", {})
+
+
+def test_write_state_cannot_change_current_beat(tmp_path):
+    import yaml
+    from showrunner.tools.agent_tools import write_state
+    scene_state = tmp_path / "scene_state.yaml"
+    scene_state.write_text("current_beat: summons\n")
+
+    import showrunner.tools.agent_tools as at
+    original = at._STATE_DIR
+    at._STATE_DIR = tmp_path
+    try:
+        write_state.run("scene_state.yaml", {"current_beat": "audience"})
+        result = yaml.safe_load(scene_state.read_text())
+        assert result["current_beat"] == "summons"
+    finally:
+        at._STATE_DIR = original

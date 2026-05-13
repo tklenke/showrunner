@@ -13,7 +13,7 @@ def gemini_key(monkeypatch):
 def test_load_agent_configs_returns_all_agents():
     from showrunner.config import load_agent_configs
     configs = load_agent_configs()
-    assert set(configs.keys()) == {"narrator", "world_runner", "actors", "referee", "scribe"}
+    assert set(configs.keys()) == {"show_runner", "narrator", "actors", "referee", "scribe"}
 
 
 def test_each_agent_has_required_fields():
@@ -24,16 +24,22 @@ def test_each_agent_has_required_fields():
             assert field in cfg, f"{name} missing field: {field}"
 
 
-def test_narrator_uses_gemini():
+def test_show_runner_uses_gemini():
     from showrunner.config import load_agent_configs
     configs = load_agent_configs()
-    assert "gemini" in configs["narrator"]["llm"].model.lower()
+    assert "gemini" in configs["show_runner"]["llm"].model.lower()
 
 
-def test_narrator_allows_delegation():
+def test_show_runner_allows_delegation():
     from showrunner.config import load_agent_configs
     configs = load_agent_configs()
-    assert configs["narrator"]["allow_delegation"] is True
+    assert configs["show_runner"]["allow_delegation"] is True
+
+
+def test_narrator_uses_sardinia_endpoint():
+    from showrunner.config import load_agent_configs
+    configs = load_agent_configs()
+    assert "192.168.1.45" in (configs["narrator"]["llm"].base_url or "")
 
 
 def test_referee_uses_alien_endpoint():
@@ -46,12 +52,6 @@ def test_scribe_uses_alien_endpoint():
     from showrunner.config import load_agent_configs
     configs = load_agent_configs()
     assert "192.168.1.144" in (configs["scribe"]["llm"].base_url or "")
-
-
-def test_world_runner_uses_sardinia_endpoint():
-    from showrunner.config import load_agent_configs
-    configs = load_agent_configs()
-    assert "192.168.1.45" in (configs["world_runner"]["llm"].base_url or "")
 
 
 def test_actors_uses_sardinia_endpoint():

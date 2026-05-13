@@ -4,7 +4,7 @@
 from crewai import Agent
 
 from showrunner.config import load_agent_configs
-from showrunner.tools.agent_tools import consult_narrator, read_state
+from showrunner.tools.agent_tools import consult_show_runner, read_state
 
 
 def render_actor_prompt(character_yaml: dict, persona_md: str, scene_state: dict) -> str:
@@ -151,7 +151,7 @@ def create_actors() -> Agent:
         goal=cfg["goal"],
         backstory=cfg["backstory"],
         llm=cfg["llm"],
-        tools=[read_state, consult_narrator],
+        tools=[read_state, consult_show_runner],
         allow_delegation=cfg["allow_delegation"],
         verbose=cfg["verbose"],
     )

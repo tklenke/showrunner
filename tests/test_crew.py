@@ -33,17 +33,17 @@ def test_crew_worker_roles():
     from showrunner.crew import build_crew
     crew = build_crew("A test scene.")
     roles = {a.role for a in crew.agents}
-    assert "Game Master Voice" in roles
+    assert "Narrator" in roles
     assert "NPC Voice Actor" in roles
     assert "Rules Engine" in roles
     assert "State Keeper" in roles
 
 
-def test_crew_manager_is_narrator():
+def test_crew_manager_is_show_runner():
     from showrunner.crew import build_crew
     crew = build_crew("A test scene.")
     assert crew.manager_agent is not None
-    assert crew.manager_agent.role == "Game Master Brain"
+    assert crew.manager_agent.role == "Show Runner"
 
 
 def test_crew_has_tasks():
