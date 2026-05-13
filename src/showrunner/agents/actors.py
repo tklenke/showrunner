@@ -116,7 +116,7 @@ def render_actor_prompt(character_yaml: dict, persona_md: str, scene_state: dict
 def load_scene_characters(
     scene: dict,
     scene_state: dict,
-    characters_dir: str = "characters",
+    characters_dir: str = "skin/characters",
     player_filter: str | None = None,
 ) -> dict:
     """Return {id: rendered_prompt} for characters in the scene.
@@ -156,7 +156,7 @@ def load_scene_characters(
 
 def load_scene_yamls(
     scene: dict,
-    characters_dir: str = "characters",
+    characters_dir: str = "skin/characters",
 ) -> dict[str, dict]:
     """Return {id: raw_yaml_dict} for non-human characters in scene["npcs_present"].
 

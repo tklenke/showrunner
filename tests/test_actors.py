@@ -122,3 +122,38 @@ def test_load_scene_yamls_excludes_human_players():
         scene = {"npcs_present": ["human_pc"], "inline_npcs": []}
         result = load_scene_yamls(scene, characters_dir=tmpdir)
         assert "human_pc" not in result
+
+
+def test_load_scene_characters_default_reads_skin_characters(tmp_path, monkeypatch):
+    import yaml
+    from showrunner.agents.actors import load_scene_characters
+    monkeypatch.chdir(tmp_path)
+    chars_dir = tmp_path / "skin" / "characters"
+    chars_dir.mkdir(parents=True)
+    char = {
+        "identity": {"name": "Test NPC", "species": "Human", "career": "Soldier"},
+        "characteristics": {"brawn": 2, "agility": 2, "intellect": 2, "cunning": 2, "willpower": 2, "presence": 2},
+        "skills": [],
+        "talents": [],
+        "derived": {"wound_threshold": 12, "strain_threshold": 12, "soak": 2, "defense": {}},
+        "equipment": {},
+        "status": {"wounds": 0, "strain": 0, "critical_injuries": []},
+        "resources": {},
+    }
+    (chars_dir / "test_npc.yaml").write_text(yaml.dump(char))
+    scene = {"npcs_present": ["test_npc"], "inline_npcs": []}
+    result = load_scene_characters(scene, {})
+    assert "test_npc" in result
+
+
+def test_load_scene_yamls_default_reads_skin_characters(tmp_path, monkeypatch):
+    import yaml
+    from showrunner.agents.actors import load_scene_yamls
+    monkeypatch.chdir(tmp_path)
+    chars_dir = tmp_path / "skin" / "characters"
+    chars_dir.mkdir(parents=True)
+    char = {"identity": {"name": "Test NPC"}}
+    (chars_dir / "test_npc.yaml").write_text(yaml.dump(char))
+    scene = {"npcs_present": ["test_npc"], "inline_npcs": []}
+    result = load_scene_yamls(scene)
+    assert "test_npc" in result

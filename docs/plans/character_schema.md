@@ -1,6 +1,6 @@
 # Character Sheet Schema
 
-Character sheets are YAML files stored in `swskin/characters/[name].yaml`.
+Character sheets are YAML files stored in `skin/characters/[name].yaml`.
 The `player` field controls who drives the character: `"human"` = User-controlled via CLI, `"companion"` = Actors agent drives as a party Companion, omitted/null = NPC driven entirely by Show Runner/plot.
 
 ```yaml

@@ -57,3 +57,25 @@ def test_load_adventure_scene_missing_file_raises():
     from showrunner.tools.state_reader import load_adventure_scene
     with pytest.raises(FileNotFoundError):
         load_adventure_scene(99, state_dir=str(FIXTURES))
+
+
+def test_load_adventure_scene_default_reads_skin_scenes(tmp_path, monkeypatch):
+    import yaml
+    from showrunner.tools.state_reader import load_adventure_scene
+    monkeypatch.chdir(tmp_path)
+    scenes_dir = tmp_path / "skin" / "scenes"
+    scenes_dir.mkdir(parents=True)
+    (scenes_dir / "scene_0.yaml").write_text(yaml.dump({"scene_id": "test_scene"}))
+    result = load_adventure_scene(0)
+    assert result["scene_id"] == "test_scene"
+
+
+def test_load_character_default_reads_skin_characters(tmp_path, monkeypatch):
+    import yaml
+    from showrunner.tools.state_reader import load_character
+    monkeypatch.chdir(tmp_path)
+    chars_dir = tmp_path / "skin" / "characters"
+    chars_dir.mkdir(parents=True)
+    (chars_dir / "test_char.yaml").write_text(yaml.dump({"identity": {"name": "Test"}}))
+    result = load_character("test_char")
+    assert result["identity"]["name"] == "Test"

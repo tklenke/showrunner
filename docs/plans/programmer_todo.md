@@ -156,7 +156,7 @@ opener. Subsequent turns within the same beat skip beat initialization entirely.
 Pass it through from `main.py`. Wire a `--verbose` / `-v` CLI flag in `main.py`.
 
 **Beat YAML `character_plans` field** — add `character_plans` dict to each beat in
-`state/scene_0.yaml`. Key is character id; value is the initial plan string. The
+`skin/scenes/scene_0.yaml`. Key is character id; value is the initial plan string. The
 orchestrator reads this on beat transition (step 2 above).
 
 **Tests:**
@@ -360,7 +360,7 @@ N calls: SR  →  overall_plan + character id + current situation  →  individu
 
 ---
 
-### [~] 4.29 — Output labeling: character headers always; step labels in verbose mode
+### [x] 4.29 — Output labeling: character headers always; step labels in verbose mode
 
 **Why:** The current output mixes GM-internal blobs, character responses, and narrative
 with no visual separation. We can't tell which step produced bad output. This task adds
@@ -417,7 +417,7 @@ That existing behavior stays; this task adds step labels on top of it.
 
 ---
 
-### [ ] 4.30 — Directory restructure: skin/, config/prompts/, state/ cleanup
+### [x] 4.30 — Directory restructure: skin/, config/prompts/, state/ cleanup
 
 Implements the directory layout decided in `docs/plans/architect_todo.md`
 (Design Decision: Prompt Architecture and Directory Restructure).
@@ -590,7 +590,7 @@ returns `world.description[tier]`.
 ### [~] 4.33 — End-to-End Scene Playthrough
 
 No tests for this task — this is exploratory play. Run `src/showrunner/main.py` and
-play through `state/scene_0.yaml` (Bargos mansion) from entry to exit condition.
+play through `skin/scenes/scene_0.yaml` (Bargos mansion) from entry to exit condition.
 
 Checklist before calling Phase 4 done:
 - [ ] Scene entry read-aloud is delivered by the Narrator

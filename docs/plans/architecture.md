@@ -35,22 +35,20 @@ showrunner/          ← this repo: engine, config, runtime state, character fil
   config/
     agents.yaml      ← agent definitions (role, goal, backstory, model)
     litellm.yaml     ← model routing (Alien, Sardinia, Gemini)
-  characters/        ← PC and NPC character files (YAML + MD pairs)
+  skin/              ← adventure content: read-only during play
+    characters/      ← PC and NPC character files (YAML + MD pairs)
+    scenes/          ← startup scene YAML files (scene_N.yaml)
+    world.yaml       ← world context at three model-tier sizes
   state/             ← runtime state files, tracked in git
+  config/
+    agents.yaml
+    litellm.yaml
+    prompts/         ← task and agent prompt files (populated in 4.31)
   tests/
   docs/
     plans/           ← architecture, todo docs (this file lives here)
     references/      ← READ ONLY (rulebooks, source PDFs)
-
-swskin/              ← separate repo: raw world assets, copyrighted source material
-  characters/        ← OggDude exports, raw XML/MD (source only, not runtime)
-  data/              ← converted weapon/skill/talent/career data
-  rules/             ← parsed Genesys rulebook sections
-  adventure/         ← Debts to Pay in structured format
 ```
-
-Runtime state files and character sheets live in `showrunner/`, not `swskin/`.
-`swskin/` is the raw asset library; scripts in `showrunner/` consume and transform it.
 
 ---
 
@@ -128,7 +126,7 @@ The engine organises play into four nested levels:
 | Level | Definition | Example |
 |-------|-----------|---------|
 | **Session** | One continuous play session from startup to quit | An evening playing *Debts to Pay* |
-| **Scene** | A self-contained event at a location, loaded from `state/scene_N.yaml` | The Bargos mansion visit |
+| **Scene** | A self-contained event at a location, loaded from `skin/scenes/scene_N.yaml` | The Bargos mansion visit |
 | **Beat** | A dramatic sub-unit within a scene with a specific purpose and trigger | The Gamorrean guards burst in |
 | **Turn** | One `crew.kickoff()` — Narrator assesses, agents act, Referee resolves, Scribe records | One round of combat |
 
@@ -232,7 +230,7 @@ modifiers. Some talents upgrade Ability → Proficiency.
 
 ## Character System
 
-Each character has two files in `characters/`:
+Each character has two files in `skin/characters/`:
 
 | File | Purpose | Volatility |
 |------|---------|-----------|

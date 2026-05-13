@@ -1,0 +1,9 @@
+world:
+  name: "Star Wars: Edge of the Empire"
+  description:
+    large: |
+      [TODO: full world description for large-context models]
+    medium: |
+      [TODO: condensed world description for 8B models]
+    small: |
+      [TODO: minimal world description for 3B models]

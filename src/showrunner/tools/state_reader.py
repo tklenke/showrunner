@@ -6,7 +6,7 @@ from pathlib import Path
 import yaml
 
 
-def load_character(name: str, characters_dir: str = "characters") -> dict:
+def load_character(name: str, characters_dir: str = "skin/characters") -> dict:
     """Load a character YAML file by name (without .yaml extension)."""
     path = Path(characters_dir) / f"{name}.yaml"
     with open(path) as f:
@@ -25,7 +25,7 @@ def load_party_stats(path: str = "state/party_stats.yaml") -> dict:
         return yaml.safe_load(f)
 
 
-def load_adventure_scene(n: int, state_dir: str = "state") -> dict:
+def load_adventure_scene(n: int, state_dir: str = "skin/scenes") -> dict:
     """Load a static adventure scene file by scene number."""
     path = Path(state_dir) / f"scene_{n}.yaml"
     with open(path) as f:
