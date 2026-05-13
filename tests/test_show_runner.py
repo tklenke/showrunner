@@ -78,7 +78,7 @@ PARTY_STATS = {
 
 def test_static_content_precedes_dynamic():
     from showrunner.agents.show_runner import render_show_runner_context
-    output = render_show_runner_context(SCENE, SCENE_STATE, PARTY_STATS, "Zee examines the room.")
+    output = render_show_runner_context(SCENE, SCENE_STATE, PARTY_STATS, {"Z-4P0": "examines the room."})
     location_pos = output.index("Bargos's Estate")
     wounds_pos = output.index("wounds")
     assert location_pos < wounds_pos
@@ -86,15 +86,17 @@ def test_static_content_precedes_dynamic():
 
 def test_current_beat_included():
     from showrunner.agents.show_runner import render_show_runner_context
-    output = render_show_runner_context(SCENE, SCENE_STATE, PARTY_STATS, "Zee examines the room.")
+    output = render_show_runner_context(SCENE, SCENE_STATE, PARTY_STATS, {"Z-4P0": "examines the room."})
     assert "audience" in output
 
 
-def test_last_action_at_end():
+def test_last_actions_included():
     from showrunner.agents.show_runner import render_show_runner_context
-    last_action = "Zee carefully inspects the exits."
-    output = render_show_runner_context(SCENE, SCENE_STATE, PARTY_STATS, last_action)
-    assert output.endswith(last_action) or output.rindex(last_action) > len(output) // 2
+    last_actions = {"Z-4P0": "carefully inspects the exits.", "Bargos": "watches silently."}
+    output = render_show_runner_context(SCENE, SCENE_STATE, PARTY_STATS, last_actions)
+    assert "Z-4P0" in output
+    assert "carefully inspects the exits." in output
+    assert "Bargos" in output
 
 
 def test_ticking_clock_included_when_present():

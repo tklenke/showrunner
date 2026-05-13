@@ -15,7 +15,7 @@ from showrunner.agents.show_runner import render_show_runner_context
 from showrunner.crew import build_crew
 from showrunner.instrumentation import setup_instrumentation, verbose_to_file
 from showrunner.tools.state_reader import load_party_stats, load_scene_state
-from showrunner.tools.state_writer import advance_beat, initialize_scene_state
+from showrunner.tools.state_writer import advance_beat, initialize_scene_state, update_scene_state
 
 
 def _setup_session_log(timestamp: str) -> logging.Logger:
@@ -107,19 +107,19 @@ def run_turn_loop(scene: dict) -> None:
     print(scene["location"]["read_aloud"])
     log.info(f"Scene started: {scene['scene_id']}")
 
-    last_action = ""
     while True:
         scene_state = load_scene_state()
         party_stats = load_party_stats()
         current_beat = scene_state.get("current_beat", "")
+        last_actions = scene_state.get("last_actions", {})
 
-        show_runner_ctx = render_show_runner_context(scene, scene_state, party_stats, last_action)
-        narrator_ctx = render_narrator_context(scene, current_beat, last_action, party_stats)
+        show_runner_ctx = render_show_runner_context(scene, scene_state, party_stats, last_actions)
+        narrator_ctx = render_narrator_context(scene, current_beat, last_actions, party_stats)
         referee_ctx = render_referee_context(scene, current_beat)
         scribe_ctx = render_scribe_context(scene_state, party_stats)
         scene_chars = load_scene_characters(scene, scene_state)
         actors_ctx = "\n\n---\n\n".join(scene_chars.values()) if scene_chars else ""
-        log.debug(f"Beat: {current_beat}  last_action: {last_action!r}")
+        log.debug(f"Beat: {current_beat}  last_actions: {last_actions!r}")
 
         print(f"\n--- Beat: {current_beat} ---")
         crew = build_crew(
@@ -135,10 +135,10 @@ def run_turn_loop(scene: dict) -> None:
         print(f"\n{result_str}")
         log.info(f"Beat result: {result_str[:200]}")
 
-        last_action = prompt_player_action("Z-4P0")
-        log.info(f"Z-4P0: {last_action!r}")
+        player_action = prompt_player_action("Z-4P0")
+        log.info(f"Z-4P0: {player_action!r}")
 
-        if last_action.strip().lower() in ("quit", "exit", "q"):
+        if player_action.strip().lower() in ("quit", "exit", "q"):
             print("Session ended.")
             log.info("Session ended by player.")
             break
@@ -148,7 +148,10 @@ def run_turn_loop(scene: dict) -> None:
             print("Session ended.")
             log.info("Session ended by player.")
             break
-        elif choice == "stay":
+
+        update_scene_state({"last_actions": {"Z-4P0": player_action}})
+
+        if choice == "stay":
             log.info(f"Staying on beat: {current_beat}")
         elif choice == "advance":
             next_id = _next_beat_id(scene, current_beat)

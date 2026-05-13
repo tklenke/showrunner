@@ -159,7 +159,7 @@ Tests: update existing tests that pass context strings to agent constructors.
 
 ---
 
-#### 4.9d — last_actions Tracking
+#### [x] 4.9d — last_actions Tracking
 
 Add `last_actions` to the scene state schema: a dict of `{actor_name: action_summary}`.
 

@@ -10,7 +10,7 @@ def render_show_runner_context(
     scene: dict,
     scene_state: dict,
     party_stats: dict,
-    last_action: str,
+    last_actions: dict | None = None,
 ) -> str:
     """Build the Show Runner's task context string.
 
@@ -98,8 +98,12 @@ def render_show_runner_context(
             )
         lines.append("")
 
-    lines.append("## Last Player Action")
-    lines.append(last_action)
+    lines.append("## Last Actions")
+    if last_actions:
+        for actor, action in last_actions.items():
+            lines.append(f"{actor}: {action}")
+    else:
+        lines.append("None yet.")
 
     return "\n".join(lines)
 

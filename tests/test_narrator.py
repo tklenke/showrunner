@@ -44,15 +44,16 @@ def test_narrator_backstory_is_static(monkeypatch):
     assert agent1.backstory == agent2.backstory
 
 
-def test_narrator_context_includes_last_action():
+def test_narrator_context_includes_last_actions():
     from showrunner.agents.narrator import render_narrator_context
-    output = render_narrator_context(SCENE, "summons", "Z-4P0 scans the exits.", {})
-    assert "Z-4P0 scans the exits." in output
+    output = render_narrator_context(SCENE, "summons", {"Z-4P0": "scans the exits."}, {})
+    assert "Z-4P0" in output
+    assert "scans the exits." in output
 
 
-def test_narrator_context_no_action_shows_placeholder():
+def test_narrator_context_empty_last_actions_shows_placeholder():
     from showrunner.agents.narrator import render_narrator_context
-    output = render_narrator_context(SCENE, "summons", "", {})
+    output = render_narrator_context(SCENE, "summons", {}, {})
     assert "None yet." in output
 
 

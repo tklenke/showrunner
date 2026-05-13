@@ -10,15 +10,10 @@ from showrunner.tools.agent_tools import consult_show_runner
 def render_narrator_context(
     scene: dict,
     beat_id: str,
-    last_action: str = "",
+    last_actions: dict | None = None,
     party_stats: dict | None = None,
 ) -> str:
-    """Build the Narrator's task context for the given beat.
-
-    Always includes the opening read_aloud (Narrator delivers this verbatim at
-    scene entry). Adds beat-specific narrator_notes, the last player action, and
-    current party status so the Narrator has full runtime context.
-    """
+    """Build the Narrator's task context for the given beat."""
     loc = scene["location"]
     lines = [
         f"## Scene: {loc['name']}",
@@ -34,8 +29,12 @@ def render_narrator_context(
         lines.append(beat["narrator_notes"].strip())
 
     lines.append("")
-    lines.append("## Last Player Action")
-    lines.append(last_action if last_action else "None yet.")
+    lines.append("## Last Actions")
+    if last_actions:
+        for actor, action in last_actions.items():
+            lines.append(f"{actor}: {action}")
+    else:
+        lines.append("None yet.")
 
     lines.append("")
     lines.append("## Party Status")
