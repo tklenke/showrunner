@@ -158,6 +158,30 @@ def load_scene_characters(
     return result
 
 
+def load_scene_yamls(
+    scene: dict,
+    characters_dir: str = "characters",
+) -> dict[str, dict]:
+    """Return {id: raw_yaml_dict} for non-human characters in scene["npcs_present"].
+
+    Inline NPCs are skipped — they have no YAML file. Human players are excluded.
+    Used to supply character stats (characteristic values, skill ranks) for check
+    identification in Phase 3b.
+    """
+    import yaml as pyyaml
+    from pathlib import Path
+
+    result = {}
+    for name in scene.get("npcs_present", []):
+        yaml_path = Path(characters_dir) / f"{name}.yaml"
+        with open(yaml_path) as f:
+            char_yaml = pyyaml.safe_load(f)
+        if char_yaml.get("identity", {}).get("player") == "human":
+            continue
+        result[name] = char_yaml
+    return result
+
+
 def create_actors() -> Agent:
     """Return the Actors agent (Sardinia)."""
     cfg = load_agent_configs()["actors"]
