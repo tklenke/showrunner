@@ -16,43 +16,6 @@ Reference documents:
 
 ---
 
-### [x] 4.36 — Remove all dead fields from agents.yaml and config.py
-
-Three categories of dead fields identified. Remove all in one pass.
-
-**Dead for `show_runner`, `narrator`, `actors` (have `prompt_file`):**
-
-`role`, `goal`, `backstory` — `build_system_prompt()` reads from `prompt_file` and
-never touches these fields for these three agents. Content lives in `config/prompts/agent_*.md`.
-
-Do NOT remove from `referee` and `scribe` — they have no `prompt_file` and still use the
-fallback path `f"You are {cfg['role']}.\n\n{cfg['goal']}\n\n{cfg['backstory']}"`.
-
-**Fully dead for all agents (CrewAI remnants):**
-
-`verbose` and `allow_delegation` — loaded by `load_agent_configs()` into the config dict
-but never read by any code. Were CrewAI agent constructor parameters; nothing in the
-current engine uses them.
-
-Remove from all five agents in `config/agents.yaml` and from `load_agent_configs()` in
-`config.py`.
-
-**Changes:**
-- `config/agents.yaml`: remove `role`, `goal`, `backstory` from `show_runner`, `narrator`,
-  `actors`; remove `verbose` and `allow_delegation` from all five agents
-- `config.py` `load_agent_configs()`: remove `"verbose"` and `"allow_delegation"` from
-  the returned dict; make `"role"`, `"goal"`, `"backstory"` optional (use `.get()`) so
-  the fallback path still works for `referee`/`scribe` without crashing on missing keys
-  for the others
-
-**Tests:**
-- `build_system_prompt("narrator")` still returns non-empty string with world context
-- `build_system_prompt("referee")` still works via fallback path (no `prompt_file`)
-- `load_agent_configs()` does not raise for entries missing `role`/`goal`/`backstory`
-- No test references `cfg["verbose"]` or `cfg["allow_delegation"]` (remove those assertions)
-
----
-
 ### [~] 4.33 — End-to-End Scene Playthrough
 
 No tests for this task — this is exploratory play. Run `src/showrunner/main.py` and
