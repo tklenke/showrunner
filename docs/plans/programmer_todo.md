@@ -12,7 +12,7 @@ Reference documents:
 
 ## Current Priority: Phase 4 — Remove CrewAI
 
-### [~] 4.15 — Replace CrewAI with Direct LiteLLM Calls
+### [x] 4.15 — Replace CrewAI with Direct LiteLLM Calls
 
 **Rationale:** CrewAI's value is the ReAct tool loop. We have stripped tools from every
 agent. What remains is an expensive abstraction that has caused: ReAct loop crashes on small
@@ -171,7 +171,7 @@ delete tests that only verified `create_*()` boilerplate.
 
 ---
 
-#### [ ] 4.15f — Delete `src/showrunner/tools/agent_tools.py` and `tests/test_agent_tools.py` *(deferred — requires file deletion)*
+#### [x] 4.15f — Delete `src/showrunner/tools/agent_tools.py` and `tests/test_agent_tools.py` *(deferred — requires file deletion)*
 
 All tools (`read_state`, `write_state`, `roll_dice`, `consult_show_runner`) are dead code.
 They were stripped from all agents. Their `BaseTool` + `_unwrap_schema_args` pattern is
@@ -238,7 +238,7 @@ Update `tests/test_instrumentation.py`: remove event-bus subscription tests; add
 
 ---
 
-#### [~] 4.15i — Remove `crew.py`; remove crewai from dependencies; final cleanup
+#### [x] 4.15i — Remove `crew.py`; remove crewai from dependencies; final cleanup
 
 1. Delete `src/showrunner/crew.py`
 2. Delete `tests/test_crew.py` (replaced by `tests/test_runner.py` written in 4.15c/d)
