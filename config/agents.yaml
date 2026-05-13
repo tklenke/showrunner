@@ -13,7 +13,7 @@ show_runner:
     to play, and the Referee what to check. Beat progression is your decision alone.
   model: sardinia/llama-3.1-8b
   verbose: true
-  allow_delegation: true
+  allow_delegation: false
 
 narrator:
   role: "Narrator"

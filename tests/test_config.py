@@ -30,10 +30,10 @@ def test_show_runner_uses_sardinia():
     assert "llama-3.1-8b" in configs["show_runner"]["llm"].model.lower()
 
 
-def test_show_runner_allows_delegation():
+def test_show_runner_disables_delegation():
     from showrunner.config import load_agent_configs
     configs = load_agent_configs()
-    assert configs["show_runner"]["allow_delegation"] is True
+    assert configs["show_runner"]["allow_delegation"] is False
 
 
 def test_narrator_uses_sardinia_endpoint():
