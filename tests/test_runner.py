@@ -364,3 +364,67 @@ def test_run_beat_opener_empty_last_log_does_not_crash():
     from showrunner.runner import run_beat_opener
     with patch("showrunner.runner.call_llm", return_value="ok"):
         run_beat_opener(BEAT, "")  # must not raise
+
+
+# ---------------------------------------------------------------------------
+# run_plan_update
+# ---------------------------------------------------------------------------
+
+_CHARS = {"bargos": "Bargos context", "kaelen": "Kaelen context"}
+
+
+def test_run_plan_update_fires_overall_plan_call_once():
+    from showrunner.runner import run_plan_update
+    with patch("showrunner.runner.call_llm", side_effect=["overall plan", "plan_b", "plan_k"]) as mock:
+        run_plan_update(_CHARS, "summaries", "results", {"bargos": "last act"})
+    sr_calls = [c for c in mock.call_args_list if c.args[0] == "show_runner"]
+    assert len(sr_calls) == 3  # 1 overall + 2 individual
+
+
+def test_run_plan_update_fires_one_individual_call_per_character():
+    from showrunner.runner import run_plan_update
+    with patch("showrunner.runner.call_llm", side_effect=["overall", "plan1", "plan2"]) as mock:
+        run_plan_update(_CHARS, "summaries", "results", {})
+    assert mock.call_count == 3
+
+
+def test_run_plan_update_returns_dict_keyed_by_character():
+    from showrunner.runner import run_plan_update
+    with patch("showrunner.runner.call_llm", side_effect=["overall", "bargos_plan", "kaelen_plan"]):
+        result = run_plan_update(_CHARS, "summaries", "results", {})
+    assert set(result.keys()) == {"bargos", "kaelen"}
+    assert result["bargos"] == "bargos_plan"
+
+
+def test_run_plan_update_individual_call_contains_overall_plan():
+    from showrunner.runner import run_plan_update
+    with patch("showrunner.runner.call_llm", side_effect=["OVERALL_PLAN_TEXT", "p1", "p2"]) as mock:
+        run_plan_update(_CHARS, "summaries", "results", {})
+    individual_call = mock.call_args_list[1]
+    user_msg = individual_call.args[2]
+    assert "OVERALL_PLAN_TEXT" in user_msg
+
+
+def test_run_plan_update_empty_characters_returns_empty_no_calls():
+    from showrunner.runner import run_plan_update
+    with patch("showrunner.runner.call_llm") as mock:
+        result = run_plan_update({}, "summaries", "results", {})
+    assert result == {}
+    mock.assert_not_called()
+
+
+def test_run_plan_update_writes_overall_plan_to_log_path(tmp_path):
+    from showrunner.runner import run_plan_update
+    log_path = tmp_path / "sr_plan.txt"
+    with patch("showrunner.runner.call_llm", side_effect=["THE_OVERALL_PLAN", "p1", "p2"]):
+        run_plan_update(_CHARS, "summaries", "results", {}, plan_log_path=log_path)
+    assert log_path.exists()
+    assert "THE_OVERALL_PLAN" in log_path.read_text()
+
+
+def test_run_plan_update_empty_characters_no_file_written(tmp_path):
+    from showrunner.runner import run_plan_update
+    log_path = tmp_path / "sr_plan.txt"
+    with patch("showrunner.runner.call_llm"):
+        run_plan_update({}, "summaries", "results", {}, plan_log_path=log_path)
+    assert not log_path.exists()

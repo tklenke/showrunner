@@ -17,6 +17,7 @@ from showrunner.runner import (
     run_npc_wave,
     run_narrative,
     run_companion_wave,
+    run_plan_update,
     run_rulings,
     run_summaries,
     run_checks,
@@ -478,10 +479,23 @@ def run_turn_loop(scene: dict, verbose: bool = False) -> None:
         last_actions_extracted = run_last_actions(all_actors)
         if not last_actions_extracted:
             last_actions_extracted = all_actors
+
+        # ── Step 9: Plan update ───────────────────────────────────────────────
+        active_chars = {**npc_chars, **companion_chars}
+        sr_plan_path = logs_dir / f"{scene_num:02d}_{_beat_num:02d}_{current_beat}_{_turn_num:04d}_sr_plan.txt"
+        new_plans = run_plan_update(
+            active_chars,
+            all_summaries,
+            results_text,
+            last_actions_extracted,
+            plan_log_path=sr_plan_path,
+        )
         log.info("Turn complete")
 
         # ── State writes ──────────────────────────────────────────────────────
         update_scene_state({"last_actions": last_actions_extracted})
+        if new_plans:
+            update_scene_state({"character_plans": new_plans})
 
         if narrative:
             session_log_path = Path("state/session_log.md")

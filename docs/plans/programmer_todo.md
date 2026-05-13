@@ -294,7 +294,7 @@ Every recovery and escalation is appended to `state/session_log.md`.
 
 ---
 
-### [~] 4.26 — Step 6: party_stats.yaml tracking after each ruling
+### [x] 4.26 — Step 6: party_stats.yaml tracking after each ruling
 
 Per `game_loop.md` Step 6: the orchestrator updates `party_stats.yaml` after parsing each
 ruling. Each `call_llm()` for Step 6 receives current `party_stats` (not prior ruling text)
@@ -328,7 +328,7 @@ characters:
 
 ---
 
-### [ ] 4.27 — Step 9: plan update — SR sets overall plan then individual plans
+### [~] 4.27 — Step 9: plan update — SR sets overall plan then individual plans
 
 **Do 4.20 first** — this step runs after last-action extraction in the same turn loop.
 

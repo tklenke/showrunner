@@ -148,6 +148,46 @@ def run_last_actions(actor_summaries: dict[str, str]) -> dict[str, str]:
     return last_actions
 
 
+def run_plan_update(
+    characters: dict[str, str],
+    summaries: str,
+    results: str,
+    last_actions: dict[str, str],
+    *,
+    plan_log_path=None,
+) -> dict[str, str]:
+    """Step 9: SR sets overall plan then individual plans for each character.
+
+    Returns {character_id: individual_plan}. No calls if characters is empty.
+    """
+    if not characters:
+        return {}
+
+    last_actions_text = "\n".join(f"{k}: {v}" for k, v in last_actions.items())
+    overall_msg = (
+        f"## Action Summaries\n{summaries}\n\n"
+        f"## Results\n{results}\n\n"
+        f"## Last Actions\n{last_actions_text}\n\n"
+        "Based on this turn, what is the overall tactical situation and plan for next turn?"
+    )
+    overall_plan = call_llm("show_runner", build_system_prompt("show_runner"), overall_msg)
+
+    if plan_log_path is not None:
+        with open(plan_log_path, "w") as f:
+            f.write(overall_plan)
+
+    individual_plans: dict[str, str] = {}
+    for char_id, char_context in characters.items():
+        msg = (
+            f"## Overall plan\n{overall_plan}\n\n"
+            f"## Character: {char_id}\n{char_context}\n\n"
+            f"What is {char_id}'s specific plan for the next turn? One concise paragraph."
+        )
+        individual_plans[char_id] = call_llm("show_runner", build_system_prompt("show_runner"), msg)
+
+    return individual_plans
+
+
 def run_beat_opener(beat: dict, last_log_entry: str) -> None:
     """Print a 2-3 sentence player-facing opener for the start of a new beat."""
     msg = (
