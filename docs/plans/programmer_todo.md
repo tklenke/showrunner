@@ -32,6 +32,53 @@ actually fires when LiteLLM processes a call.
 
 ---
 
+### [ ] 4.8d — Pass NPC Character Data to Actors Agent
+
+`create_actors()` is called with no arguments. The Actors agent's backstory is the
+generic config text — no NPC data. `load_scene_characters()` and `render_actor_prompt()`
+exist in `actors.py` but are never called in the turn loop. The Show Runner cannot
+effectively delegate to Actors because the agent has no character context to act from.
+
+Fix:
+- Add `context: str = ""` parameter to `create_actors()`, mirroring `create_narrator()`
+- In `crew.py`, call `load_scene_characters(scene, scene_state)` to render NPC prompts,
+  then pass the result to `create_actors(context=...)`
+- The context string should contain each NPC's rendered prompt (from `render_actor_prompt()`)
+  so the Actors agent knows who is present and how to voice them
+
+The `load_scene_characters()` and `render_actor_prompt()` implementations are already
+correct — this is purely a wiring gap in `crew.py` / `create_actors()`.
+
+Add a test: build a minimal scene + scene_state, call `load_scene_characters()`, assert
+the rendered context contains NPC identity and persona data.
+
+---
+
+### [ ] 4.8e — Fix write_state Tool for 3B Model Reliability + Deep Merge
+
+Two bugs in `write_state` (`src/showrunner/tools/agent_tools.py`):
+
+**Bug 1 — No schema unwrapping.** `write_state` uses the `@tool` decorator with no
+input validation. The Scribe runs on Alien (Llama 3.2 3B), which emits JSON Schema
+objects instead of actual arg values. Every other tool (`read_state`,
+`consult_show_runner`) uses `BaseTool` with `_unwrap_schema_args` for exactly this
+reason. Convert `write_state` to a `BaseTool` subclass with the same protection.
+
+**Bug 2 — Shallow merge loses nested data.** `update_party_stats` and
+`update_scene_state` call `current.update(updates)`, which overwrites entire nested
+dicts. If the Scribe passes `{"characters": {"Z-4P0": {"wounds": 3}}}`, the full
+`characters` dict is replaced, dropping all other characters. Change to a deep merge
+so only the specified keys within nested dicts are updated.
+
+Add tests:
+- `test_write_state_unwraps_schema` — verify the tool handles a JSON Schema wrapper
+  the same way `read_state` and `consult_show_runner` do
+- `test_update_party_stats_deep_merge` — write stats for two characters; update one;
+  assert the other is unchanged
+- `test_update_scene_state_deep_merge` — same pattern for scene_state fields
+
+---
+
 ### [~] 4.8 — End-to-End Scene Playthrough
 
 No tests for this task — this is exploratory play. Run `src/showrunner/main.py` and
