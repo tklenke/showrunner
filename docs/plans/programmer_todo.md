@@ -417,6 +417,176 @@ That existing behavior stays; this task adds step labels on top of it.
 
 ---
 
+### [ ] 4.30 — Directory restructure: skin/, config/prompts/, state/ cleanup
+
+Implements the directory layout decided in `docs/plans/architect_todo.md`
+(Design Decision: Prompt Architecture and Directory Restructure).
+Do this before 4.31 and 4.32 — those tasks depend on the new paths.
+
+**Step 1 — Create `skin/` and move content:**
+
+```bash
+mkdir -p skin/characters skin/scenes
+git mv characters/* skin/characters/
+git mv state/scene_0.yaml skin/scenes/scene_0.yaml
+git mv state/scene_1.yaml skin/scenes/scene_1.yaml
+```
+
+**Step 2 — Create `config/prompts/` (empty for now; populated in 4.31):**
+
+```bash
+mkdir config/prompts
+```
+
+**Step 3 — Update all path references in Python code:**
+
+Files that load characters or scenes must be updated to read from new paths.
+
+| Old path | New path |
+|---|---|
+| `characters/{name}.yaml` | `skin/characters/{name}.yaml` |
+| `state/scene_N.yaml` | `skin/scenes/scene_N.yaml` |
+
+Files to update:
+- `src/showrunner/tools/state_reader.py` — `load_character()` and `load_adventure_scene()`
+- `src/showrunner/agents/actors.py` — any hardcoded character paths
+- Any test fixtures that reference `characters/` or `state/scene_*.yaml`
+
+**Step 4 — Update all `skin` references in docs:**
+
+- `docs/plans/architecture.md`
+- `docs/plans/character_schema.md`
+- `docs/plans/programmer_todo.md` (Phase 5, 6 entries below)
+- `README.md` if any references exist
+
+**Step 5 — Create `skin/world.yaml` with placeholder text:**
+
+```yaml
+world:
+  name: "Star Wars: Edge of the Empire"
+  description:
+    large: |
+      [TODO: full world description for large-context models]
+    medium: |
+      [TODO: condensed world description for 8B models]
+    small: |
+      [TODO: minimal world description for 3B models]
+```
+
+Actual content is authored in 4.32. This task just creates the file and schema.
+
+**Tests:**
+- `load_adventure_scene(0)` successfully loads from `skin/scenes/scene_0.yaml`
+- `load_character("bargos_the_hutt")` successfully loads from `skin/characters/`
+- Full test suite passes after path updates
+
+---
+
+### [ ] 4.31 — Prompt files: extract task prompts from runner.py into config/prompts/
+
+Each runner function that calls `call_llm()` has a task description baked as an
+inline f-string. Move the static frame of each task description into a `.md` file
+under `config/prompts/`. Python continues to interpolate dynamic values (actor names,
+roll results, stat values) into the loaded template.
+
+**Files to create** (one per step that has a static frame):
+
+| File | Runner function |
+|---|---|
+| `config/prompts/task_run_checks.md` | `run_checks()` |
+| `config/prompts/task_run_rulings.md` | `run_rulings()` |
+| `config/prompts/task_run_narrative.md` | `run_narrative()` |
+| `config/prompts/task_run_summaries.md` | `run_summaries()` |
+| `config/prompts/task_run_last_actions.md` | `run_last_actions()` |
+| `config/prompts/task_run_plan_update.md` | `run_plan_update()` |
+| `config/prompts/task_run_beat_opener.md` | `run_beat_opener()` |
+
+**Loading pattern** — add a helper to `llm.py`:
+
+```python
+def load_task_prompt(name: str) -> str:
+    """Load a task prompt template from config/prompts/task_{name}.md."""
+    path = Path("config/prompts") / f"task_{name}.md"
+    return path.read_text()
+```
+
+Dynamic values are interpolated by the calling function after loading:
+```python
+template = load_task_prompt("run_checks")
+msg = template.format(char_id=char_id, summary=summary, stats=stats)
+```
+
+Use `{placeholder}` syntax in the `.md` files for values Python fills in.
+Use `{{literal_braces}}` for any braces that should appear verbatim.
+
+**Agent prompt files** — also extract agent role definitions:
+
+| File | Replaces in agents.yaml |
+|---|---|
+| `config/prompts/agent_show_runner.md` | `role` + `goal` + `backstory` for show_runner |
+| `config/prompts/agent_narrator.md` | same for narrator |
+| `config/prompts/agent_actors.md` | same for actors |
+
+Add `prompt_file: prompts/agent_show_runner.md` to each agent entry in `agents.yaml`.
+`build_system_prompt()` in `llm.py` reads this file instead of assembling from fields.
+
+**Tests:**
+- `load_task_prompt("run_checks")` returns a non-empty string
+- Each runner function produces the same user message content before and after extraction
+  (verify via existing tests — they check message content)
+
+---
+
+### [ ] 4.32 — Node chunk: world.yaml world context injected into every system prompt
+
+Implements the node layer of the prompt architecture. Every agent call gets a
+world-context prefix sized appropriately for the model.
+
+**`skin/world.yaml`** — fill in real content (created as placeholder in 4.30):
+
+Write three versions of the Star Wars: Edge of the Empire world context:
+- `large`: rich setting description, faction overview, tone, genre — 400–600 words
+- `medium`: condensed — key factions, tone, genre — 100–150 words
+- `small`: minimal — 2–3 tight sentences that orient any model
+
+**Tier mapping in `config/agents.yaml`** — add `context_tier` to each agent:
+
+```yaml
+show_runner:
+  context_tier: medium   # sardinia 8B
+  ...
+narrator:
+  context_tier: medium
+  ...
+actors:
+  context_tier: medium
+  ...
+```
+
+Gemini-backed agents would use `large`. 3B agents use `small`.
+
+**`build_system_prompt(agent_name)` in `llm.py`** — prepend world context:
+
+```python
+def build_system_prompt(agent_name: str) -> str:
+    cfg = load_agent_configs()[agent_name]
+    tier = cfg.get("context_tier", "medium")
+    world = _load_world_description(tier)   # reads skin/world.yaml
+    agent = _load_agent_prompt(agent_name)  # reads config/prompts/agent_*.md
+    return f"{world}\n\n{agent}"
+```
+
+Add `_load_world_description(tier: str) -> str` helper — reads `skin/world.yaml`,
+returns `world.description[tier]`.
+
+**Tests:**
+- `build_system_prompt("narrator")` return value contains text from `world.yaml`
+  `medium` section
+- Changing `context_tier` to `large` in config changes which section is prepended
+- Missing tier falls back to `medium` (don't crash)
+
+---
+
 ### [~] 4.28 — End-to-End Scene Playthrough
 
 No tests for this task — this is exploratory play. Run `src/showrunner/main.py` and
@@ -457,9 +627,9 @@ This phase delivers the data that `rules_lookup()` queries. It unblocks Phase 7.
 
 - [ ] Write a PDF extraction script: `tools/parse_rulebook.py`
   - Input: `docs/references/Genesys_Core_Rulebook.pdf`
-  - Output: section files in `swskin/rules/` (dice.md, combat.md, skills.md, talents.md)
+  - Output: section files in `skin/rules/` (dice.md, combat.md, skills.md, talents.md)
   - Use `pymupdf` (already installed)
-- [ ] Write `swskin/rules/index.md` — section list with page references
+- [ ] Write `skin/rules/index.md` — section list with page references
 - [ ] Implement `rules_lookup(keyword: str) -> str` in `src/showrunner/tools/rules_lookup.py`
   - Keyword search against indexed sections; returns most relevant section text
 - [ ] Wire `rules_lookup()` into the Show Runner agent
@@ -474,5 +644,5 @@ Do not begin Phase 6 until Phase 5 is complete.
 This phase replaces inline NPC stats with a proper data source for Phase 7.
 
 - [ ] Write `tools/xml_to_md.py` — convert OggDude XML exports to structured Markdown
-- [ ] Output to `swskin/data/`: `weapons.md`, `skills.md`, `talents.md`, `careers.md`
+- [ ] Output to `skin/data/`: `weapons.md`, `skills.md`, `talents.md`, `careers.md`
 - [ ] Smoke test: Show Runner can look up Gamorrean vibro-ax damage, crit, range, special from `weapons.md`
