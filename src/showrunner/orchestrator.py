@@ -12,6 +12,7 @@ from showrunner.agents.show_runner import render_show_runner_context
 from showrunner.config import load_agent_configs
 from showrunner.crew import (
     build_check_crew,
+    build_last_action_crew,
     build_narrative_crew,
     build_npc_crew,
     build_pc_crew,
@@ -353,11 +354,18 @@ def run_turn_loop(scene: dict) -> None:
         if narrative:
             print(f"\n{narrative}")
 
-        # 3e — last action: use 3a summaries directly (one sentence per actor already)
-        last_actions_extracted = {
+        # 3e — last-action extraction: one Narrator task per actor, each gets only its own summary
+        actor_summaries = {
             t.name: (t.output.raw.strip() if t.output else action_map.get(t.name, ""))
             for t in summary_crew.tasks
         }
+        last_action_crew = build_last_action_crew(actor_summaries)
+        if last_action_crew is not None:
+            with verbose_to_file(verbose_path):
+                last_action_crew.kickoff()
+            last_actions_extracted = _collect_wave_outputs(last_action_crew, "Narrator")
+        else:
+            last_actions_extracted = actor_summaries
 
         log.info("Phase 3 complete")
 

@@ -327,31 +327,23 @@ def build_narrative_crew(summaries: str, checks: str, results: str) -> Crew:
     )
 
 
-def build_last_action_crew(
-    actor_ids: list[str],
-    summaries: str,
-    checks: str,
-    results: str,
-) -> Crew | None:
+def build_last_action_crew(actor_summaries: dict[str, str]) -> Crew | None:
     """Phase 3e: Narrator extracts one last-action sentence per actor.
 
-    Used to populate scene_state last_actions for next turn context.
-    Returns None when actor_ids is empty.
+    Each task receives only that actor's individual summary — no bulk files.
+    Returns None when actor_summaries is empty.
     """
-    if not actor_ids:
+    if not actor_summaries:
         return None
 
     tasks = []
-    for actor_id in actor_ids:
+    for actor_id, summary in actor_summaries.items():
         narrator = create_narrator()
         task = Task(
             name=actor_id,
             description=(
-                "Given these events:\n\n"
-                f"## Summaries\n{summaries}\n\n"
-                f"## Checks\n{checks}\n\n"
-                f"## Results\n{results}\n\n"
-                f"What was {actor_id}'s last action this turn? One sentence only."
+                f"What was {actor_id}'s last action this turn? "
+                f"One sentence only, based on this summary:\n\n{summary}"
             ),
             expected_output=f"One sentence describing {actor_id}'s last action.",
             agent=narrator,
