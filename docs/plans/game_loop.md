@@ -24,8 +24,8 @@ The orchestrator reads current state and renders context strings passed into eac
 
 | Data | Source file | Used in |
 |---|---|---|
-| Current beat, ticking clocks, character plans, last_actions | `state/scene_state.yaml` | Steps 1, 2 |
-| Wounds, strain per character | `state/party_stats.yaml` | Steps 1, 3–5 |
+| Current beat, ticking clocks, character plans, last_actions | `state/scene_state.yaml` | Steps 1, 3 |
+| Wounds, strain per character | `state/party_stats.yaml` | Steps 1, 4–6 |
 | Beat descriptions, NPC defs, location text | scene YAML (read-only) | all steps |
 | Player's action from previous turn | `last_actions` in scene_state | Step 1 Show Runner context |
 
@@ -55,11 +55,11 @@ NPC_2        →  dialogue + actions (receives beat plan + NPC_1 output)
 
 - One `call_llm()` per NPC; each receives the beat plan and all prior NPC outputs.
 - Narrator text and NPC outputs printed to terminal as they arrive.
-- Returns `{"_narrator": narration, npc_id: output, ...}` for use in Steps 2–5.
+- Returns `{"_narrator": narration, npc_id: output, ...}` for use in Steps 3–6.
 
 ---
 
-## Player Input
+## Step 2 — Player Input
 
 ```
 "What do you and your companions do? > "
@@ -69,7 +69,7 @@ Free-form text. Direction to AI party members is embedded naturally — no speci
 
 ---
 
-## Step 2 — AI PC Wave (`run_pc_wave()`)
+## Step 3 — AI PC Wave (`run_pc_wave()`)
 
 ```
 Kae (AI PC)  →  dialogue + actions (receives NPC wave text + player action)
@@ -82,7 +82,7 @@ Kae (AI PC)  →  dialogue + actions (receives NPC wave text + player action)
 
 ---
 
-## Step 3 — Action Summaries (`run_summary_phase()`)
+## Step 4 — Action Summaries (`run_summaries()`)
 
 | | |
 |---|---|
@@ -95,7 +95,7 @@ One focused call per actor; no rules reasoning required.
 
 ---
 
-## Step 4 — Check Identification (`run_check_phase()`)
+## Step 5 — Check Identification (`run_checks()`)
 
 | | |
 |---|---|
@@ -113,7 +113,7 @@ dice pool without further lookups.
 
 ---
 
-## Step 5 — Dice + Rulings (`run_ruling_phase()`)
+## Step 6 — Dice + Rulings (`run_rulings()`)
 
 | | |
 |---|---|
@@ -122,12 +122,12 @@ dice pool without further lookups.
 | Output | Outcome ruling: passed/failed, wounds, triumph/despair effects |
 | Writes | `logs/turn_{ts}_{beat}_results.txt` |
 
-The **orchestrator** rolls the dice in Python (`roll_pool()`) before calling `run_ruling_phase()`.
+The **orchestrator** rolls the dice in Python (`roll_pool()`) before calling `run_rulings()`.
 Each ruling call receives all prior rulings as context. Skipped entirely if `NO_CHECKS`.
 
 ---
 
-## Step 6 — Resolution Narrative (`run_narrative_phase()`)
+## Step 7 — Resolution Narrative (`run_narrative()`)
 
 | | |
 |---|---|
@@ -138,7 +138,7 @@ Each ruling call receives all prior rulings as context. Skipped entirely if `NO_
 
 ---
 
-## Step 7 — Last Action Extraction (`run_last_action_phase()`)
+## Step 8 — Last Action Extraction (`run_last_actions()`)
 
 | | |
 |---|---|
@@ -150,7 +150,7 @@ Orchestrator writes the collected dict to `scene_state.yaml` → `last_actions`.
 
 ---
 
-## Step 8 — Session Log (`run_scribe_phase()`)
+## Step 9 — Session Log (`run_scribe()`)
 
 | | |
 |---|---|
@@ -162,7 +162,7 @@ Orchestrator appends output to `state/session_log.md`.
 
 ---
 
-## Step 9 — Beat Advancement
+## Step 10 — Beat Advancement
 
 ```
 CLI: [Enter] stay  |  [a] advance  |  [beat ID] jump  |  [q] quit
@@ -177,10 +177,10 @@ the scene ends.
 
 | Agent | Model | Steps |
 |---|---|---|
-| Show Runner | sardinia 8B | 1 (beat plan), 4 (check id), 5 (rulings), 6 (narrative) |
-| Narrator | sardinia 8B | 1 (narration), 7 (last-action extraction) |
-| Actors | sardinia 8B | 1 (NPC voicing), 2 (AI PC voicing), 3 (summaries) |
-| Scribe | alien 3B | 8 (session log) |
+| Show Runner | sardinia 8B | 1 (beat plan), 5 (check id), 6 (rulings), 7 (narrative) |
+| Narrator | sardinia 8B | 1 (narration), 8 (last-action extraction) |
+| Actors | sardinia 8B | 1 (NPC voicing), 3 (AI PC voicing), 4 (summaries) |
+| Scribe | alien 3B | 9 (session log) |
 
 The `referee` agent is configured in `config/agents.yaml` but not called by the current pipeline.
 
@@ -190,10 +190,10 @@ The `referee` agent is configured in `config/agents.yaml` but not called by the 
 
 | File | Changed by | Step |
 |---|---|---|
-| `state/scene_state.yaml` `last_actions` | Orchestrator | 7 |
+| `state/scene_state.yaml` `last_actions` | Orchestrator | 8 |
 | `state/scene_state.yaml` `current_beat` | `advance_beat()` | Beat advancement |
-| `state/session_log.md` | Orchestrator (Scribe output) | 8 |
-| `state/party_stats.yaml` | Orchestrator *(not yet implemented)* | 5 |
-| `logs/turn_{ts}_{beat}_summaries.txt` | Orchestrator | 3 |
-| `logs/turn_{ts}_{beat}_checks.txt` | Orchestrator | 4 |
-| `logs/turn_{ts}_{beat}_results.txt` | Orchestrator | 5 |
+| `state/session_log.md` | Orchestrator (Scribe output) | 9 |
+| `state/party_stats.yaml` | Orchestrator *(not yet implemented)* | 6 |
+| `logs/turn_{ts}_{beat}_summaries.txt` | Orchestrator | 4 |
+| `logs/turn_{ts}_{beat}_checks.txt` | Orchestrator | 5 |
+| `logs/turn_{ts}_{beat}_results.txt` | Orchestrator | 6 |
