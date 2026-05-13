@@ -27,7 +27,7 @@ end of each turn. Multiple turns can execute within the same beat.
 | Current beat, ticking clocks, character plans, last_actions | `state/scene_state.yaml` | Steps 1–3 |
 | Wounds, strain per character | `state/party_stats.yaml` | Steps 3, 5–7 |
 | Beat descriptions, NPC defs, location text | scene YAML (read-only) | all steps |
-| Last session log entry | `state/session_log.md` | Step 0 beat opener |
+| Last session log entry (Step 7 narrative from prior turn) | `state/session_log.md` | Step 0 beat opener |
 
 **Beat initialization (first turn of each beat only):**
 1. Compare `current_beat` against `_last_beat`; if different, a transition is detected
@@ -167,6 +167,7 @@ dice pool without further lookups.
 | Prints | Directly to terminal |
 
 - One `call_llm()`.
+- Orchestrator appends output to `state/session_log.md` (deterministic write, no extra call).
 
 ---
 
@@ -203,20 +204,7 @@ N calls: SR  →  overall plan + that character's situation         →  individ
 
 ---
 
-## Step 10 — Session Log (`run_scribe()`)
-
-| | |
-|---|---|
-| Agent | Scribe (alien 3B), single call |
-| Input | Scene state + full turn summary |
-| Output | One-sentence narrative record of the turn |
-
-- One `call_llm()`.
-- Orchestrator appends output to `state/session_log.md`.
-
----
-
-## Step 11 — Beat Advancement
+## Step 10 — Beat Advancement
 
 ```
 CLI: [Enter] stay  |  [a] advance  |  [beat ID] jump  |  [q] quit
@@ -234,7 +222,6 @@ the scene ends.
 | Show Runner | sardinia 8B | 5 (check id), 6 (rulings), 7 (narrative), 9 (plan update) |
 | Narrator | sardinia 8B | 0 (beat opener), 3 (NPC summaries), 4 (User/Companion summaries), 8 (last-action extraction) |
 | Actors | sardinia 8B | 2 (Companion voicing), 3 (NPC voicing) |
-| Scribe | alien 3B | 10 (session log) |
 
 The `referee` agent is configured in `config/agents.yaml` but not called by the current pipeline.
 
@@ -247,7 +234,7 @@ The `referee` agent is configured in `config/agents.yaml` but not called by the 
 | `state/scene_state.yaml` `character_plans` | Orchestrator | 0 (beat init), 9 |
 | `state/scene_state.yaml` `last_actions` | Orchestrator | 8 |
 | `state/scene_state.yaml` `current_beat` | `advance_beat()` | Beat advancement |
-| `state/session_log.md` | Orchestrator (Scribe output) | 10 |
+| `state/session_log.md` | Orchestrator (Step 7 narrative output) | 7 |
 | `state/party_stats.yaml` | Orchestrator *(not yet implemented)* | 6 |
 | `logs/turn_{ts}_{beat}_summaries.txt` | Orchestrator | 4 |
 | `logs/turn_{ts}_{beat}_checks.txt` | Orchestrator | 5 |

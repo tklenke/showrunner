@@ -53,7 +53,6 @@ The two-action vocabulary of the game loop:
 | **Show Runner** | `show_runner` | Sardinia | GM brain: beat plans, check identification, dice rulings, resolution narrative |
 | **Narrator** | `narrator` | Sardinia | GM voice: beat openers, scene prose, last-action extraction |
 | **Actors** | `actors` | Sardinia | Voicing: plays NPCs and Companions |
-| **Scribe** | `scribe` | Alien | Record-keeping: one-sentence session log entry per turn |
 
 ---
 
@@ -65,7 +64,7 @@ via `config/litellm.yaml`.
 | Node | Model | Alias | Hosts |
 |------|-------|-------|-------|
 | **Sardinia** | Llama 3.1 8B Instruct (LM Studio) | `sardinia/llama-3.1-8b` | Show Runner, Narrator, Actors |
-| **Alien** | Llama 3.2 3B Instruct (llama.cpp) | `alien/llama-3.2-3b` | Scribe |
+| **Alien** | Llama 3.2 3B Instruct (llama.cpp) | `alien/llama-3.2-3b` | *(configured, not currently assigned)* |
 | **Gemini** | Gemini 2.5 Flash (Google AI Studio API) | `gemini/gemini-2.5-flash` | *(configured, not yet assigned)* |
 
 **Sardinia** — i9-9900k, 64 GB RAM, RTX 2070 (8 GB VRAM), Windows, LM Studio Developer Mode.

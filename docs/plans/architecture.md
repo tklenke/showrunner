@@ -61,11 +61,8 @@ Runtime state files and character sheets live in `showrunner/`, not `swskin/`.
 | **Show Runner** | `show_runner` | Llama 3.1 8B | Sardinia | GM brain: beat decisions, check identification, dice rulings, resolution narrative |
 | **Narrator** | `narrator` | Llama 3.1 8B | Sardinia | GM voice: prose narration, last-action extraction |
 | **Actors** | `actors` | Llama 3.1 8B | Sardinia | NPC and Companion dialogue, physical actions, action summaries |
-| **Scribe** | `scribe` | Llama 3.2 3B | Alien | State keeper: one-sentence session log entry per turn |
-
 Gemini (gemini-2.5-flash) is configured in `config/litellm.yaml` but not currently assigned to an agent.
-The `referee` config exists in `config/agents.yaml` but is not called by the current pipeline —
-check identification and rulings are handled by Show Runner via `run_check_phase()` and `run_ruling_phase()`.
+The `referee` and `scribe` configs exist in `config/agents.yaml` but are not called by the current pipeline.
 
 ---
 
@@ -74,7 +71,7 @@ check identification and rulings are handled by Show Runner via `run_check_phase
 ### Alien (Rules Hub)
 - i7-6700, 16 GB RAM, GTX 960 (2 GB VRAM), Debian 12
 - llama.cpp server, Llama 3.2 3B Instruct (10 GPU layers, 4096 ctx)
-- Hosts: Referee, Scribe
+- *(configured, not currently assigned to any agent)*
 
 ### Sardinia (Creative Hub)
 - i9-9900k, 64 GB RAM, RTX 2070 (8 GB VRAM), Windows
@@ -272,8 +269,8 @@ mechanical summary into the full system prompt for the Actors agent.
 ## State Files
 
 All state files live in `showrunner/state/`, tracked in git.
-The orchestrator handles all state writes directly. The Scribe produces a one-sentence log
-entry as a string; the orchestrator appends it to `state/session_log.md`.
+The orchestrator handles all state writes directly, including appending the Step 7
+resolution narrative to `state/session_log.md` each turn.
 
 | File | Format | Description |
 |------|--------|-------------|

@@ -147,6 +147,20 @@ Pass it through from `main.py`. Wire a `--verbose` / `-v` CLI flag in `main.py`.
 
 ---
 
+### [ ] 4.21 — Remove Scribe; orchestrator appends Step 7 output to session_log.md
+
+Session log is now written by the orchestrator directly — no LLM call needed.
+
+- Delete `run_scribe()` from `runner.py`
+- Remove `run_scribe()` call from `orchestrator.py`
+- After `run_narrative()` returns, orchestrator appends its output to `state/session_log.md`
+- Remove `scribe` agent from any test fixtures that reference it
+- Update `tests/test_runner.py` and `tests/test_orchestrator.py` to remove Scribe tests
+
+Run full test suite after.
+
+---
+
 ### [ ] 4.20 — Step 9: plan update — SR sets overall plan then individual plans
 
 **Do 4.18 first** — this step runs after last-action extraction in the same turn loop.
