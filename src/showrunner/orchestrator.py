@@ -26,7 +26,7 @@ from showrunner.runner import (
 )
 from showrunner.tools.dice_roller import roll_pool
 from showrunner.tools.state_reader import load_party_stats, load_scene_state
-from showrunner.tools.state_writer import advance_beat, initialize_scene_state, update_party_stats, update_scene_state
+from showrunner.tools.state_writer import advance_beat, initialize_npc_stats, initialize_scene_state, update_party_stats, update_scene_state
 
 # Difficulty name → number of difficulty dice
 _DIFFICULTY_MAP = {
@@ -406,6 +406,7 @@ def run_turn_loop(scene: dict, verbose: bool = False, dump_prompts: bool = False
     print(f"Prompt log:  {prompts_path}")
 
     initialize_scene_state(scene)
+    initialize_npc_stats(scene)
     scene_yamls = load_scene_yamls(scene)
     human_pc_name = _find_human_pc_name(scene)
     scene_num: int = scene.get("scene_num", 0)

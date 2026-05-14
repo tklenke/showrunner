@@ -16,6 +16,12 @@ For resolved decisions, see git log.
   add a `stats` field to inline NPC definitions in the scene YAML, or give inline NPCs
   their own YAML files and fold them into `load_scene_yamls`.
 
+- [ ] **Ruling actor ID doesn't reliably match party_stats keys** — `_make_ruling_callback`
+  looks up `spec["actor"]` in `party_stats["characters"]`, but LLM output often uses display
+  names ("Bargos") instead of file-stem IDs ("bargos_the_hutt"). Wounds applied by rulings
+  silently miss the right entry. Needs either normalisation of actor IDs before lookup, or
+  a name→key mapping table.
+
 ---
 
 ## Open Decisions

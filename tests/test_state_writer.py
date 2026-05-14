@@ -123,6 +123,82 @@ def test_update_scene_state_deep_merge_preserves_other_clocks(tmp_path):
     assert "Kae" in data["character_plans"], "Kae's plan was wiped by shallow merge"
 
 
+_NPC_YAML = {
+    "identity": {"name": "Bargos the Hutt", "player": None},
+    "derived": {"wound_threshold": 18, "strain_threshold": 14},
+    "status": {"wounds": 0, "strain": 0, "critical_injuries": []},
+}
+
+_HUMAN_YAML = {
+    "identity": {"name": "Z-4P0", "player": "human"},
+    "derived": {"wound_threshold": 12, "strain_threshold": 13},
+    "status": {"wounds": 0, "strain": 0, "critical_injuries": []},
+}
+
+
+def _write_char_yaml(chars_dir, name, data):
+    import yaml
+    (chars_dir / f"{name}.yaml").write_text(yaml.dump(data))
+
+
+def test_initialize_npc_stats_adds_npc_with_thresholds(tmp_path):
+    import yaml
+    from showrunner.tools.state_writer import initialize_npc_stats
+    chars_dir = tmp_path / "chars"
+    chars_dir.mkdir()
+    _write_char_yaml(chars_dir, "bargos_the_hutt", _NPC_YAML)
+    scene = {"npcs_present": ["bargos_the_hutt"]}
+    stats_path = str(tmp_path / "party_stats.yaml")
+    initialize_npc_stats(scene, path=stats_path, characters_dir=str(chars_dir))
+    with open(stats_path) as f:
+        data = yaml.safe_load(f)
+    char = data["characters"]["bargos_the_hutt"]
+    assert char["wounds_current"] == 0
+    assert char["wounds_threshold"] == 18
+    assert char["strain_current"] == 0
+    assert char["strain_threshold"] == 14
+
+
+def test_initialize_npc_stats_skips_human_pc(tmp_path):
+    import yaml
+    from pathlib import Path
+    from showrunner.tools.state_writer import initialize_npc_stats
+    chars_dir = tmp_path / "chars"
+    chars_dir.mkdir()
+    _write_char_yaml(chars_dir, "Z-4P0", _HUMAN_YAML)
+    scene = {"npcs_present": ["Z-4P0"]}
+    stats_path = str(tmp_path / "party_stats.yaml")
+    initialize_npc_stats(scene, path=stats_path, characters_dir=str(chars_dir))
+    if Path(stats_path).exists():
+        with open(stats_path) as f:
+            data = yaml.safe_load(f)
+        assert "Z-4P0" not in data.get("characters", {})
+
+
+def test_initialize_npc_stats_preserves_existing_wounds(tmp_path):
+    import yaml
+    from showrunner.tools.state_writer import initialize_npc_stats, update_party_stats
+    chars_dir = tmp_path / "chars"
+    chars_dir.mkdir()
+    _write_char_yaml(chars_dir, "bargos_the_hutt", _NPC_YAML)
+    stats_path = str(tmp_path / "party_stats.yaml")
+    update_party_stats({"characters": {"bargos_the_hutt": {"wounds_current": 5, "wounds_threshold": 18}}}, path=stats_path)
+    scene = {"npcs_present": ["bargos_the_hutt"]}
+    initialize_npc_stats(scene, path=stats_path, characters_dir=str(chars_dir))
+    with open(stats_path) as f:
+        data = yaml.safe_load(f)
+    assert data["characters"]["bargos_the_hutt"]["wounds_current"] == 5
+
+
+def test_initialize_npc_stats_skips_missing_yaml(tmp_path):
+    from showrunner.tools.state_writer import initialize_npc_stats
+    chars_dir = tmp_path / "chars"
+    chars_dir.mkdir()
+    scene = {"npcs_present": ["inline_npc_no_file"]}
+    stats_path = str(tmp_path / "party_stats.yaml")
+    initialize_npc_stats(scene, path=stats_path, characters_dir=str(chars_dir))  # must not raise
+
+
 def test_advance_beat_preserves_other_fields(tmp_path):
     from showrunner.tools.state_writer import initialize_scene_state, advance_beat, update_scene_state
     initialize_scene_state(_SCENE, state_dir=str(tmp_path))

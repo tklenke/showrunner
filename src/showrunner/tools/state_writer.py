@@ -69,6 +69,50 @@ def initialize_scene_state(scene: dict, state_dir: str = "state") -> None:
         yaml.dump(state, f, allow_unicode=True, sort_keys=False)
 
 
+def initialize_npc_stats(
+    scene: dict,
+    path: str = "state/party_stats.yaml",
+    characters_dir: str = "skin/characters",
+) -> None:
+    """Add wound/strain tracking for scene NPCs not yet in party_stats.
+
+    Reads wound/strain thresholds from each NPC's YAML. Skips human PCs
+    (managed manually in party_stats.yaml), characters already tracked, and
+    inline NPCs with no YAML file.
+    """
+    import yaml as pyyaml
+
+    p = Path(path)
+    current: dict = {}
+    if p.exists():
+        with open(p) as f:
+            current = pyyaml.safe_load(f) or {}
+    existing = current.get("characters", {})
+
+    additions: dict = {}
+    for name in scene.get("npcs_present", []):
+        if name in existing:
+            continue
+        yaml_path = Path(characters_dir) / f"{name}.yaml"
+        try:
+            with open(yaml_path) as f:
+                char_yaml = pyyaml.safe_load(f)
+        except FileNotFoundError:
+            continue
+        if char_yaml.get("identity", {}).get("player") == "human":
+            continue
+        derived = char_yaml.get("derived", {})
+        additions[name] = {
+            "wounds_current": 0,
+            "wounds_threshold": derived.get("wound_threshold", 0),
+            "strain_current": 0,
+            "strain_threshold": derived.get("strain_threshold", 0),
+        }
+
+    if additions:
+        update_party_stats({"characters": additions}, path)
+
+
 def advance_beat(beat_id: str, state_dir: str = "state") -> None:
     """Update current_beat in scene_state.yaml, preserving all other fields."""
     update_scene_state({"current_beat": beat_id}, path=str(Path(state_dir) / "scene_state.yaml"))
