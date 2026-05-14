@@ -229,10 +229,10 @@ the scene ends.
 | 3 NPC voicing | `run_npc_wave` | 1 per NPC | Actors | Screenplay | — |
 | 3 NPC summary | `run_npc_wave` | 1 per NPC | Scribe | 1–2 sentence summary | Pipeline-internal; fed to next NPC |
 | 4 party summaries | `run_summaries` | 1 per party member | Scribe | 1–2 sentence summary | PC + Companions only; NPCs done in Step 3 |
-| 5 check identification | `run_checks` | 1 per character | Show Runner | Structured pipe-delimited | Parsed by `_parse_ruling_specs`; repair chain applied |
+| 5 check identification | `run_checks` | 1 per character | Referee | Structured pipe-delimited | Parsed by `_parse_ruling_specs`; repair chain applied |
 | 6 dice + rulings | `run_rulings` | 1 per check | Show Runner | Prose ruling + embedded numbers | `_extract_stat_changes` parses wounds/strain |
-| 7 resolution narrative | `run_narrative` | 1 | Show Runner | Player-facing prose | ⚠ SR system prompt says "do not narrate" — consider switching to Narrator |
-| 8 last-action extraction | `run_last_actions` | 1 per active character | Narrator | 1 sentence | Written to `scene_state.yaml` → `last_actions` |
+| 7 resolution narrative | `run_narrative` | 1 | Narrator | Player-facing prose | — |
+| 8 last-action extraction | `run_last_actions` | 1 per active character | Scribe | 1 sentence | Written to `scene_state.yaml` → `last_actions` |
 | 9 overall plan | `run_plan_update` | 1 | Show Runner | Prose (internal) | SR coordination notes; not shared with characters |
 | 9 individual plans | `run_plan_update` | 1 per NPC + Companion | Scribe | Prose plan | Written to `scene_state.yaml` → `character_plans` |
 
