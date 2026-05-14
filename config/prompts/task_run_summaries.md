@@ -1,3 +1,4 @@
 {action_text}
 
+NEVER USE PRONOUNS
 SUMMARIZE IN 1-2 SENTENCES WHAT {actor_id} JUST DID

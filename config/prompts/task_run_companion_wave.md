@@ -8,7 +8,7 @@
 {pc_name}: {player_action}
 
 IMPORTANT: IGNORE ACTIONS THAT YOU REASONABLY ARE UNAWARE OF
-e.g. one player whispers or uses secure data link to talk to another and you are not close enough.  Or someone is invisible or hidden and you are not aware of them.
+e.g. one player whispers and you are not close enough or uses secure data link.  Or someone is invisible or hidden and you are not aware of them.
 
 - USE BRACKETED ACTION: Describe your physical movements in brackets 
 - SPEECH: Precede all dialogue with your character name in caps
