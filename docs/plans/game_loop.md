@@ -51,7 +51,7 @@ Zero-padded numbers ensure correct sort order by scene → beat → turn.
 
 | | |
 |---|---|
-| Agent | Narrator (sardinia 8B), single call |
+| Agent | Narrator, single call |
 | Input | Beat notes (`show_runner_notes`, `narrator_notes`) + last session log entry (if any) |
 | Output | 2–3 sentences of player-facing prose describing the current situation |
 | Prints | Directly to terminal, before Step 1 prompt |
@@ -110,7 +110,7 @@ Narrator →  NPC_2 full output  →  compact summary  →  written to summaries
 
 | | |
 |---|---|
-| Agent | Narrator (sardinia 8B), one call per party member that acted |
+| Agent | Narrator, one call per party member that acted |
 | Input | One character's action text (User action or Companion output) |
 | Output | 1–2 sentence plain-language summary of what they did |
 | Writes | `logs/{scene:02d}_{beat:02d}_{beat_id}_{turn:04d}_summaries.txt` (appended; NPC summaries already written in Step 3) |
@@ -125,13 +125,13 @@ Narrator →  NPC_2 full output  →  compact summary  →  written to summaries
 
 | | |
 |---|---|
-| Agent | Show Runner (sardinia 8B), one call per character that acted |
+| Agent | Show Runner, one call per character that acted |
 | Input | That character's summary + their stats (characteristic values, skill ranks) |
 | Output | Check spec(s) for that character, or `NO_CHECKS` |
 | Writes | `logs/{scene:02d}_{beat:02d}_{beat_id}_{turn:04d}_checks.txt` |
 
 - One `call_llm()` per character — focused on one actor at a time rather than the full
-  batch, keeping the task within 8B capability.
+  batch, keeping the context window manageable.
 - Orchestrator collects all outputs and writes them to the checks log.
 
 Output format (one line per check):
@@ -147,7 +147,7 @@ dice pool without further lookups.
 
 | | |
 |---|---|
-| Agent | Show Runner (sardinia 8B), one call per check |
+| Agent | Show Runner, one call per check |
 | Input | Check spec + pre-computed roll result string |
 | Output | Outcome ruling: passed/failed, wounds, triumph/despair effects |
 | Writes | `logs/{scene:02d}_{beat:02d}_{beat_id}_{turn:04d}_results.txt` |
@@ -165,7 +165,7 @@ dice pool without further lookups.
 
 | | |
 |---|---|
-| Agent | Show Runner (sardinia 8B), single call |
+| Agent | Show Runner, single call |
 | Input | All three log files: summaries, checks, results |
 | Output | 2–4 sentences of player-facing narrative prose |
 | Prints | Directly to terminal |
@@ -179,7 +179,7 @@ dice pool without further lookups.
 
 | | |
 |---|---|
-| Agent | Narrator (sardinia 8B), one call per active character |
+| Agent | Narrator, one call per active character |
 | Input | That character's summary |
 | Output | One sentence capturing that character's last action |
 
@@ -219,15 +219,25 @@ the scene ends.
 
 ---
 
-## Ref A — Agent Summary
+## Ref A — Agent Assignment Per Step
 
-| Agent | Model | Steps |
-|---|---|---|
-| Show Runner | sardinia 8B | 5 (check id), 6 (rulings), 7 (narrative), 9 (plan update) |
-| Narrator | sardinia 8B | 0 (beat opener), 3 (NPC summaries), 4 (User/Companion summaries), 8 (last-action extraction) |
-| Actors | sardinia 8B | 2 (Companion voicing), 3 (NPC voicing) |
+| Step | Runner function | LLM calls | Agent | Output type | Notes |
+|---|---|---|---|---|---|
+| 0 beat opener | `run_beat_opener` | 1 | Narrator | Player-facing prose | First turn of each beat only |
+| 2 companion wave | `run_companion_wave` | 1 per Companion | Actors | Screenplay | — |
+| 2 companion summary | `run_companion_wave` | 1 per Companion | Narrator | 1–2 sentence summary | Pipeline-internal |
+| 3 NPC voicing | `run_npc_wave` | 1 per NPC | Actors | Screenplay | — |
+| 3 NPC summary | `run_npc_wave` | 1 per NPC | Narrator | 1–2 sentence summary | Pipeline-internal; fed to next NPC |
+| 4 party summaries | `run_summaries` | 1 per party member | Narrator | 1–2 sentence summary | PC + Companions only; NPCs done in Step 3 |
+| 5 check identification | `run_checks` | 1 per character | Show Runner | Structured pipe-delimited | Parsed by `_parse_ruling_specs`; repair chain applied |
+| 6 dice + rulings | `run_rulings` | 1 per check | Show Runner | Prose ruling + embedded numbers | `_extract_stat_changes` parses wounds/strain |
+| 7 resolution narrative | `run_narrative` | 1 | Show Runner | Player-facing prose | ⚠ SR system prompt says "do not narrate" — consider switching to Narrator |
+| 8 last-action extraction | `run_last_actions` | 1 per active character | Narrator | 1 sentence | Written to `scene_state.yaml` → `last_actions` |
+| 9 overall plan | `run_plan_update` | 1 | Show Runner | Prose (internal) | SR coordination notes; not shared with characters |
+| 9 individual plans | `run_plan_update` | 1 per NPC + Companion | Show Runner | Prose plan | Written to `scene_state.yaml` → `character_plans` |
 
-The `referee` agent is configured in `config/agents.yaml` but not called by the current pipeline.
+Agent models are configured in `config/agents.yaml`. The `referee` and `scribe` agents are
+defined there but not called by the current pipeline.
 
 ---
 
