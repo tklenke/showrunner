@@ -40,6 +40,24 @@ end of each turn. Multiple turns can execute within the same beat.
 6. Log the transition: `log.info(f"Beat transition: {current_beat}")`
 7. Set `_last_beat = current_beat`
 8. Reset `_turn_num = 1`
+9. Recompute the active NPC roster for the new beat (see **Beat NPC Roster** below)
+
+**Beat NPC Roster** — each beat controls which characters appear in the NPC wave:
+
+| Beat field | Type | Default | Meaning |
+|---|---|---|---|
+| `add_npcs` | list of IDs | `[]` | Minion groups to include this beat |
+| `remove_npcs` | list of IDs | `[]` | Inline NPCs or characters to suppress this beat |
+
+Default (no keys): all `characters_present` NPCs + all `inline_npcs` active; no minion
+groups active. The roster is recomputed at every beat transition and held for the duration
+of that beat. Example from scene_0:
+
+```yaml
+- id: "gamorrean_rumble"
+  add_npcs: ["gamorrean_guards"]    # voiced in NPC wave
+  remove_npcs: ["c3p9", "genko"]   # fled; not voiced; beat opener explains departure
+```
 
 `_beat_notes_pending = True` and `_turn_num = 1` are set before the turn loop starts.
 `_turn_num` increments at the end of each turn and resets on beat transition.

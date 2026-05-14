@@ -294,7 +294,87 @@ Add `{pronoun_map}` placeholder to `config/prompts/task_run_narrative.md` under 
 
 ---
 
-Follow TDD throughout. All four code changes need tests before implementation.
+#### F — `render_minion_group_prompt(group: dict) -> str` (new function in `actors.py`)
+
+Builds the NPC wave context string for a minion group. Output format:
+
+```
+# {name}
+Pronouns: {pronoun}
+Count: {count}
+{role or description if present}
+
+## Characteristics
+Brawn {n} | Agility {n} | ...
+
+## Skills
+- {Skill} rank {n}
+...
+
+## Weapons
+- {name}: {skill}, Damage {n}, Crit {n}, Range {range}{, Special: {special} if present}
+```
+
+`load_scene_characters` calls this for each minion group in the active set (see sub-task G).
+`minion_groups` are never included when `player_filter="companion"`.
+
+---
+
+#### G — Beat-level NPC roster control
+
+**Scene YAML schema** — beats may declare two optional lists:
+
+```yaml
+add_npcs: ["gamorrean_guards"]   # minion group IDs to include this beat (default: none)
+remove_npcs: ["c3p9", "genko"]  # inline NPC or character IDs to exclude this beat (default: none)
+```
+
+Default behaviour (no keys present): all `characters_present` NPCs + all `inline_npcs`
+active; no minion groups active.
+
+**New function `_active_npc_ids(scene, beat) -> set[str]`** in `orchestrator.py`:
+
+```python
+# Start with all inline NPCs and non-human characters_present
+ids = {npc["id"] for npc in scene.get("inline_npcs", [])}
+ids |= {name for name in scene.get("characters_present", [])}  # filtered later by load_scene_characters
+# Add declared minion groups
+ids |= set(beat.get("add_npcs", []))
+# Remove suppressed characters
+ids -= set(beat.get("remove_npcs", []))
+return ids
+```
+
+**`load_scene_characters`** gains an optional `active_ids: set | None = None` parameter.
+When provided, characters and inline NPCs not in the set are skipped. Minion groups
+are included only when their ID is in the set.
+
+**Orchestrator call site**: compute `active_ids = _active_npc_ids(scene, beat)` at beat
+initialization and each turn; pass to `load_scene_characters`.
+
+**scene_0.yaml beat updates:**
+
+```yaml
+  - id: "gamorrean_warning"
+    add_npcs: ["gamorrean_guards"]
+    # C3-P9 and Genko remain present (cowering)
+
+  - id: "gamorrean_rumble"
+    add_npcs: ["gamorrean_guards"]
+    remove_npcs: ["c3p9", "genko"]
+    # narrator_notes: open with C3-P9 and Genko fleeing; see below
+```
+
+Update `gamorrean_rumble` `narrator_notes` to open with the beat-transition moment:
+C3-P9 flattens himself against the wall and then bolts through a side door; Genko
+vanishes behind a pillar. The chamber is now PCs, Bargos, and six angry Gamorreans.
+
+`mission_brief` needs no changes — Gamorreans absent by default (not in `add_npcs`);
+C3-P9 and Genko re-emerge naturally (not in `remove_npcs`).
+
+---
+
+Follow TDD throughout. All code changes need tests before implementation.
 
 ---
 
