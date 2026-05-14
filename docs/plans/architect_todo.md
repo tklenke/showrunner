@@ -26,6 +26,21 @@ For resolved decisions, see git log.
 Items that have not yet been fully resolved. These need an answer before the relevant
 implementation phase begins.
 
+- [ ] **SR-driven beat advancement** — Replace (or supplement) the manual `[a / beat-id / Enter]`
+  prompt with a Show Runner call that decides whether to advance after each turn. Four design
+  questions to resolve before implementation:
+  1. **Trigger placement** — which step in the turn loop runs the SR advance check? After Step 9
+     (plan update) is the natural slot; confirm what context it receives (summaries log, results,
+     last_actions, or all three).
+  2. **What the SR judges against** — beats currently have a `trigger` field describing when the
+     beat *starts*, but no `exit_condition`. Options: (a) SR infers from narrative context alone,
+     (b) add an explicit `exit_condition` string to each beat YAML so the SR has a concrete target.
+     Option (b) is more reliable but requires a schema addition and scene file updates.
+  3. **Output format** — simple `ADVANCE` / `STAY`, or can the SR name a specific beat ID to
+     allow non-linear jumps (e.g. skip `gamorrean_warning` if the ambush was pre-empted)?
+  4. **Manual override** — keep the `[a / beat-id / Enter]` prompt as a debug escape hatch
+     (perhaps only in `--verbose` mode), or remove it entirely once SR advance is trusted?
+
 - [ ] **Context window pre-flight check** — Before each `call_llm()`, estimate token
   count of the assembled prompt (characters ÷ 4 is a reasonable approximation) and warn
   or abort if it would exceed the model's limit. Requires: (1) `max_context_tokens` field
