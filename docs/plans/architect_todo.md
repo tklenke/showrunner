@@ -34,12 +34,9 @@ implementation phase begins.
   directly in the scene YAML (e.g. C3-P9 bolts through a side door in `gamorrean_rumble`).
   Revisit when scenes have beats with dynamic or unanticipated character drops.
 
-- [ ] **Context window pre-flight check** — Before each `call_llm()`, estimate token
-  count of the assembled prompt (characters ÷ 4 is a reasonable approximation) and warn
-  or abort if it would exceed the model's limit. Requires: (1) `max_context_tokens` field
-  added to each agent entry in `agents.yaml`; (2) pre-flight check in `call_llm()` that
-  reads that field and compares against estimated prompt size. See programmer_todo for
-  the implementation task.
+- [x] **Context window pre-flight check** — Implemented. `max_context_tokens` field added
+  to all agents in `agents.yaml`; `call_llm()` estimates tokens as `(len(system)+len(user))//4`
+  and logs a warning via `showrunner.llm` logger if the limit would be exceeded.
 
 - [x] **Manual dice input format** — Ratified. Single-letter keys with counts; spaces
   tolerated. Letters: S=Success, A=Advantage, T=Triumph, F=Failure, H=Threat, D=Despair.

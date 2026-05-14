@@ -10,7 +10,7 @@ Reference documents:
 
 ## Phase 4 — End-to-End Scene Playthrough
 
-### [ ] 4.40 — SR-driven beat advancement
+### [x] 4.40 — SR-driven beat advancement
 
 Replace the manual `[a / beat-id / Enter]` prompt with a Show Runner call that decides
 whether to advance the beat after each turn.
