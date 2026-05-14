@@ -90,23 +90,32 @@ def test_run_npc_wave_uses_section_header_format(tmp_path, capsys):
 # run_companion_wave
 # ---------------------------------------------------------------------------
 
-def test_run_companion_wave_empty_returns_empty_dict():
+def test_run_companion_wave_empty_returns_empty_tuple():
     from showrunner.runner import run_companion_wave
-    result = run_companion_wave({}, "beat ctx", "player did something")
-    assert result == {}
+    outputs, summaries = run_companion_wave({}, "beat ctx", "player did something")
+    assert outputs == {}
+    assert summaries == {}
 
 
 def test_run_companion_wave_calls_actors_once_per_companion():
     from showrunner.runner import run_companion_wave
-    with patch("showrunner.runner.call_llm", side_effect=["kaelen out"]) as mock:
+    with patch("showrunner.runner.call_llm", side_effect=["kaelen out", "kaelen summary"]) as mock:
         run_companion_wave({"kaelen": "kaelen ctx"}, "beat ctx", "player action")
     actors_calls = [c for c in mock.call_args_list if c.args[0] == "actors"]
     assert len(actors_calls) == 1
 
 
+def test_run_companion_wave_makes_narrator_summary_call_per_companion():
+    from showrunner.runner import run_companion_wave
+    with patch("showrunner.runner.call_llm", side_effect=["kaelen out", "kaelen summary"]) as mock:
+        run_companion_wave({"kaelen": "kaelen ctx"}, "beat ctx", "player action")
+    narrator_calls = [c for c in mock.call_args_list if c.args[0] == "narrator"]
+    assert len(narrator_calls) == 1
+
+
 def test_run_companion_wave_user_message_contains_beat_ctx():
     from showrunner.runner import run_companion_wave
-    with patch("showrunner.runner.call_llm", side_effect=["kaelen out"]) as mock:
+    with patch("showrunner.runner.call_llm", side_effect=["kaelen out", "sum"]) as mock:
         run_companion_wave({"kaelen": "kaelen ctx"}, "BEAT_CONTEXT_HERE", "player action")
     user_msg = mock.call_args_list[0].args[2]
     assert "BEAT_CONTEXT_HERE" in user_msg
@@ -114,7 +123,7 @@ def test_run_companion_wave_user_message_contains_beat_ctx():
 
 def test_run_companion_wave_user_message_contains_player_action():
     from showrunner.runner import run_companion_wave
-    with patch("showrunner.runner.call_llm", side_effect=["kaelen out"]) as mock:
+    with patch("showrunner.runner.call_llm", side_effect=["kaelen out", "sum"]) as mock:
         run_companion_wave({"kaelen": "kaelen ctx"}, "beat ctx", "player does X")
     user_msg = mock.call_args_list[0].args[2]
     assert "player does X" in user_msg
@@ -122,18 +131,19 @@ def test_run_companion_wave_user_message_contains_player_action():
 
 def test_run_companion_wave_uses_section_header_format(capsys):
     from showrunner.runner import run_companion_wave
-    with patch("showrunner.runner.call_llm", side_effect=["kaelen out"]):
+    with patch("showrunner.runner.call_llm", side_effect=["kaelen out", "sum"]):
         run_companion_wave({"kaelen": "kaelen ctx"}, "beat ctx", "action")
     captured = capsys.readouterr()
     assert "=== kaelen ===" in captured.out
     assert "[kaelen]" not in captured.out
 
 
-def test_run_companion_wave_returns_companion_outputs():
+def test_run_companion_wave_returns_outputs_and_summaries():
     from showrunner.runner import run_companion_wave
-    with patch("showrunner.runner.call_llm", side_effect=["kaelen out"]):
-        result = run_companion_wave({"kaelen": "ctx"}, "beat ctx", "action")
-    assert result == {"kaelen": "kaelen out"}
+    with patch("showrunner.runner.call_llm", side_effect=["kaelen out", "kaelen summary"]):
+        outputs, summaries = run_companion_wave({"kaelen": "ctx"}, "beat ctx", "action")
+    assert outputs == {"kaelen": "kaelen out"}
+    assert summaries == {"kaelen": "kaelen summary"}
 
 
 # ---------------------------------------------------------------------------

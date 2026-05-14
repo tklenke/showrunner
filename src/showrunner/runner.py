@@ -8,12 +8,12 @@ def run_npc_wave(
     npcs: dict[str, str],
     beat_ctx: str,
     user_action: str,
-    companion_outputs: dict[str, str],
+    companion_summaries: dict[str, str],
     summaries_log_path,
 ) -> dict[str, str]:
     """Step 3: Each NPC acts, then Narrator summarizes (2N calls for N NPCs).
 
-    Each NPC receives beat context, user action, companion outputs, and compact
+    Each NPC receives beat context, player action, companion summaries, and compact
     summaries of prior NPCs. Summaries are appended to summaries_log_path.
     Returns {npc_id: full_output}.
     """
@@ -22,18 +22,15 @@ def run_npc_wave(
 
     for npc_id, npc_context in npcs.items():
         sections = []
-        if user_action:
-            sections.append(f"\n\n## Player action:\n{user_action}")
-        if companion_outputs:
-            companions_text = "\n\n".join(
-                f"[{cid}]: {out}" for cid, out in companion_outputs.items()
-            )
-            sections.append(f"\n\n## Companion actions:\n{companions_text}")
+        if companion_summaries:
+            for cid, summary in companion_summaries.items():
+                sections.append(f"\n{cid}: {summary}")
         if prior_summaries:
-            sections.append(f"\n\n## Earlier NPC actions this turn:\n{prior_summaries}")
+            sections.append(prior_summaries)
         msg = load_task_prompt("run_npc_wave").format(
             npc_context=npc_context,
             beat_ctx=beat_ctx,
+            player_action=user_action,
             optional_sections="".join(sections),
         )
 
@@ -56,15 +53,16 @@ def run_companion_wave(
     companion_contexts: dict[str, str],
     beat_ctx: str,
     player_action: str,
-) -> dict[str, str]:
-    """Step 2: Each Companion responds to the beat context and player action.
+) -> tuple[dict[str, str], dict[str, str]]:
+    """Step 2: Each Companion responds; Narrator summarizes each.
 
-    Companions act before the NPC wave and do not see NPC outputs.
-    Returns {} for empty companion_contexts.
+    Returns (full_outputs, summaries). full_outputs go to the session log;
+    summaries go to the NPC wave so NPCs see compact companion context.
     """
     if not companion_contexts:
-        return {}
+        return {}, {}
     outputs: dict[str, str] = {}
+    summaries: dict[str, str] = {}
     for pc_id, pc_context in companion_contexts.items():
         msg = load_task_prompt("run_companion_wave").format(
             pc_context=pc_context,
@@ -74,7 +72,11 @@ def run_companion_wave(
         output = call_llm("actors", build_system_prompt("actors"), msg, label=pc_id)
         print(f"\n=== {pc_id} ===\n{output}")
         outputs[pc_id] = output
-    return outputs
+        summary_msg = load_task_prompt("run_npc_wave_summary").format(
+            npc_id=pc_id, full_output=output
+        )
+        summaries[pc_id] = call_llm("narrator", build_system_prompt("narrator"), summary_msg, label=pc_id)
+    return outputs, summaries
 
 
 def run_summaries(party_actions: dict[str, str], summaries_log_path) -> None:
