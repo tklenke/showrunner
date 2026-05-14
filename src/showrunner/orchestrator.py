@@ -24,6 +24,7 @@ from showrunner.runner import (
     run_summaries,
     run_checks,
 )
+from showrunner.dice import dice_result_from_input, parse_dice_input
 from showrunner.tools.dice_roller import roll_pool
 from showrunner.tools.state_reader import load_party_stats, load_scene_state
 from showrunner.tools.state_writer import advance_beat, initialize_npc_stats, initialize_scene_state, update_party_stats, update_scene_state
@@ -441,13 +442,28 @@ def _make_ruling_callback(stats_path: Path, name_to_id: dict[str, str]):
 
 
 def _roll_specs(specs: list[dict]) -> None:
-    """Add roll_result to each spec in-place using the embedded stat values."""
+    """Add roll_result to each spec in-place using the embedded stat values.
+
+    Prompts the player to enter a manual dice result (S2A1T1 format) before
+    each roll; falls back to auto-roll if the player presses Enter.
+    """
     for spec in specs:
         ability = max(spec["char_value"], spec["skill_rank"])
         proficiency = min(spec["char_value"], spec["skill_rank"])
         diff_word = spec["difficulty"].split()[0]
         diff_dice = _DIFFICULTY_MAP.get(diff_word, 2)
-        result = roll_pool({"ability": ability, "proficiency": proficiency, "difficulty": diff_dice})
+
+        print(
+            f"\nRoll: {spec['actor']} — {spec['skill']} ({spec['characteristic']} {spec['char_value']}, "
+            f"rank {spec['skill_rank']}, {spec['difficulty']})"
+        )
+        raw = input("Enter result (S2A1T1) or Enter to auto-roll: ").strip()
+        if raw:
+            parsed = parse_dice_input(raw)
+            result = dice_result_from_input(parsed)
+        else:
+            result = roll_pool({"ability": ability, "proficiency": proficiency, "difficulty": diff_dice})
+
         outcome = "passed" if result.passed else "failed"
         spec["roll_result"] = (
             f"Roll {outcome}: net {result.net_successes:+d} successes, "

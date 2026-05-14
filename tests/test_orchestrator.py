@@ -646,3 +646,46 @@ def test_make_ruling_callback_falls_back_to_raw_actor_when_not_in_map(tmp_path, 
     callback("z_4p0", "Z-4P0 takes 1 wound.")
     updated = yaml.safe_load((tmp_path / "state" / "party_stats.yaml").read_text())
     assert updated["characters"]["z_4p0"]["wounds_current"] == 1
+
+
+# ---------------------------------------------------------------------------
+# _roll_specs — manual dice input wiring
+# ---------------------------------------------------------------------------
+
+_SPEC = {
+    "actor": "Kaelen",
+    "skill": "Negotiation",
+    "characteristic": "Presence",
+    "char_value": 3,
+    "skill_rank": 2,
+    "difficulty": "Average",
+    "opposed_skill": "",
+}
+
+
+def test_roll_specs_auto_roll_when_no_input(monkeypatch):
+    from showrunner.orchestrator import _roll_specs
+    monkeypatch.setattr("builtins.input", lambda _: "")
+    spec = dict(_SPEC)
+    _roll_specs([spec])
+    assert "roll_result" in spec
+    assert "passed" in spec["roll_result"] or "failed" in spec["roll_result"]
+
+
+def test_roll_specs_manual_input_sets_roll_result(monkeypatch):
+    from showrunner.orchestrator import _roll_specs
+    monkeypatch.setattr("builtins.input", lambda _: "S3A1")
+    spec = dict(_SPEC)
+    _roll_specs([spec])
+    assert "roll_result" in spec
+    assert "passed" in spec["roll_result"]
+    assert "+3" in spec["roll_result"]  # net_successes 3
+
+
+def test_roll_specs_manual_failure_marked_failed(monkeypatch):
+    from showrunner.orchestrator import _roll_specs
+    monkeypatch.setattr("builtins.input", lambda _: "F3")
+    spec = dict(_SPEC)
+    _roll_specs([spec])
+    assert "failed" in spec["roll_result"]
+    assert "-3" in spec["roll_result"]
