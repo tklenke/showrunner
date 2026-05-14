@@ -193,6 +193,24 @@ def _parse_ruling_specs(text: str) -> list[dict]:
     return specs
 
 
+def _ruling_specs_parser(raw: str) -> tuple[list[dict], bool]:
+    """parse_structured-compatible parser for run_checks output.
+
+    Returns (specs, ok). ok is True for NO_CHECKS (valid empty result) or when
+    at least one spec parses successfully. False means malformed output.
+    """
+    if "NO_CHECKS" in raw:
+        return [], True
+    specs = _parse_ruling_specs(raw)
+    return specs, len(specs) > 0
+
+
+_CHECK_REPAIR_CONTEXT = (
+    "Reformat each check to: N. actor | skill | characteristic value | skill_rank | difficulty | notes\n"
+    "One numbered line per check. If no checks apply, output exactly: NO_CHECKS"
+)
+
+
 def _build_char_stats(yamls: dict[str, dict]) -> dict[str, str]:
     """Format character stats from raw YAML dicts into per-character strings."""
     result: dict[str, str] = {}
@@ -474,7 +492,7 @@ def run_turn_loop(scene: dict, verbose: bool = False, dump_prompts: bool = False
         char_stats = _build_char_stats(scene_yamls)
         check_output = run_checks(char_summaries, char_stats)
         checks_text = _write_turn_file(logs_dir, scene_num, _beat_num, current_beat, _turn_num, "checks", check_output)
-        ruling_specs = _parse_ruling_specs(checks_text)
+        ruling_specs, _ = parse_structured(checks_text, _ruling_specs_parser, context=_CHECK_REPAIR_CONTEXT)
         log.info(f"Step 5 complete: {len(ruling_specs)} checks identified")
 
         # ── Step 6: Dice rolling + rulings ──────────────────────────────────

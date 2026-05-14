@@ -116,6 +116,32 @@ def test_parse_ruling_specs_noninteger_values_default_to_zero():
 
 
 # ---------------------------------------------------------------------------
+# _ruling_specs_parser
+# ---------------------------------------------------------------------------
+
+def test_ruling_specs_parser_no_checks_is_ok():
+    from showrunner.orchestrator import _ruling_specs_parser
+    specs, ok = _ruling_specs_parser("NO_CHECKS")
+    assert specs == []
+    assert ok is True
+
+
+def test_ruling_specs_parser_valid_line_is_ok():
+    from showrunner.orchestrator import _ruling_specs_parser
+    raw = "1. Z-4P0 | Negotiation | Presence 2 | 1 | Average | notes"
+    specs, ok = _ruling_specs_parser(raw)
+    assert len(specs) == 1
+    assert ok is True
+
+
+def test_ruling_specs_parser_malformed_is_not_ok():
+    from showrunner.orchestrator import _ruling_specs_parser
+    specs, ok = _ruling_specs_parser("{Kaelin} | Negotiation | garbage")
+    assert specs == []
+    assert ok is False
+
+
+# ---------------------------------------------------------------------------
 # _build_char_stats
 # ---------------------------------------------------------------------------
 
