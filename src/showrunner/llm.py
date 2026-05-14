@@ -27,6 +27,15 @@ def load_task_prompt(name: str) -> str:
     return (_PROMPTS_DIR / f"task_{name}.md").read_text()
 
 
+def load_yaml_task_prompt(name: str, **kwargs) -> str:
+    """Load a YAML task prompt template and format with kwargs.
+
+    The YAML file must have a `user_template` key with Python str.format() placeholders.
+    """
+    data = yaml.safe_load((_PROMPTS_DIR / f"task_{name}.yaml").read_text())
+    return data["user_template"].format(**kwargs)
+
+
 def _load_world_yaml() -> dict:
     """Load skin/world.yaml and return the parsed dict."""
     with open(_WORLD_YAML) as f:

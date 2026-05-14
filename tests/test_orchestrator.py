@@ -356,22 +356,20 @@ def test_parse_structured_clean_input_no_llm_calls():
     assert recovered is False
 
 
-def test_parse_structured_malformed_calls_narrator():
+def test_parse_structured_malformed_calls_scribe():
     from unittest.mock import patch
     from showrunner.orchestrator import parse_structured
     with patch("showrunner.orchestrator.call_llm", return_value="fixed") as mock:
         result, recovered = parse_structured("bad", _fail_parser, context="ctx")
-    narrator_calls = [c for c in mock.call_args_list if c.args[0] == "narrator"]
-    assert len(narrator_calls) >= 1
+    scribe_calls = [c for c in mock.call_args_list if c.args[0] == "scribe"]
+    assert len(scribe_calls) >= 1
 
 
-def test_parse_structured_narrator_fixes_returns_recovered_true():
+def test_parse_structured_scribe_fixes_returns_recovered_true():
     from unittest.mock import patch
     from showrunner.orchestrator import parse_structured
-    calls = []
 
     def parser(raw):
-        calls.append(raw)
         return (raw, True) if "fixed" in raw else (None, False)
 
     with patch("showrunner.orchestrator.call_llm", return_value="fixed output"):
@@ -380,13 +378,13 @@ def test_parse_structured_narrator_fixes_returns_recovered_true():
     assert result == "fixed output"
 
 
-def test_parse_structured_narrator_fails_calls_show_runner():
+def test_parse_structured_repair_prompt_includes_python_sample():
     from unittest.mock import patch
     from showrunner.orchestrator import parse_structured
     with patch("showrunner.orchestrator.call_llm", return_value="still bad") as mock:
-        parse_structured("bad", _fail_parser, context="ctx")
-    sr_calls = [c for c in mock.call_args_list if c.args[0] == "show_runner"]
-    assert len(sr_calls) >= 1
+        parse_structured("bad", _fail_parser, context="ctx", python_sample="{'actor': 'Bargos'}")
+    scribe_call = next(c for c in mock.call_args_list if c.args[0] == "scribe")
+    assert "{'actor': 'Bargos'}" in scribe_call.args[2]
 
 
 def test_parse_structured_all_llm_fail_returns_zero_fallback(tmp_path, monkeypatch):

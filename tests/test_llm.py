@@ -147,6 +147,25 @@ def test_call_llm_label_appears_in_log(tmp_path):
     assert "bargos_the_hutt" in log_file.read_text()
 
 
+def test_load_yaml_task_prompt_loads_and_formats_template(tmp_path, monkeypatch):
+    from showrunner.llm import load_yaml_task_prompt
+    fake_yaml = tmp_path / "task_test_task.yaml"
+    fake_yaml.write_text("user_template: 'raw={raw} ctx={context}'\n")
+    monkeypatch.setattr("showrunner.llm._PROMPTS_DIR", tmp_path)
+    result = load_yaml_task_prompt("test_task", raw="BAD", context="step ctx", python_sample="")
+    assert "BAD" in result
+    assert "step ctx" in result
+
+
+def test_load_yaml_task_prompt_includes_python_sample(tmp_path, monkeypatch):
+    from showrunner.llm import load_yaml_task_prompt
+    fake_yaml = tmp_path / "task_test_task.yaml"
+    fake_yaml.write_text("user_template: 'sample={python_sample}'\n")
+    monkeypatch.setattr("showrunner.llm._PROMPTS_DIR", tmp_path)
+    result = load_yaml_task_prompt("test_task", raw="", context="", python_sample="{'actor': 'Bargos'}")
+    assert "{'actor': 'Bargos'}" in result
+
+
 def test_build_system_prompt_contains_role():
     from showrunner.llm import build_system_prompt
     prompt = build_system_prompt("narrator")

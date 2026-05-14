@@ -12,7 +12,7 @@ from showrunner.agents.narrator import render_narrator_context
 from showrunner.agents.show_runner import render_show_runner_context
 from showrunner.config import apply_litellm_settings, load_agent_configs
 from showrunner.instrumentation import setup_instrumentation
-from showrunner.llm import build_system_prompt, call_llm
+from showrunner.llm import build_system_prompt, call_llm, load_yaml_task_prompt
 from showrunner.runner import (
     run_beat_opener,
     run_last_actions,
@@ -205,9 +205,13 @@ def _ruling_specs_parser(raw: str) -> tuple[list[dict], bool]:
     return specs, len(specs) > 0
 
 
-_CHECK_REPAIR_CONTEXT = (
-    "Reformat each check to: N. actor | skill | characteristic value | skill_rank | difficulty | notes\n"
-    "One numbered line per check. If no checks apply, output exactly: NO_CHECKS"
+_CHECK_PYTHON_SAMPLE = (
+    "# One numbered pipe-delimited line per check:\n"
+    "1. Bargos | Negotiation | Presence 4 | 2 | Average | vs. Docking Authority\n"
+    "2. Kaelen | Perception | Cunning 3 | 1 | Hard | \n"
+    "\n"
+    "# Or if no checks are needed:\n"
+    "NO_CHECKS"
 )
 
 
@@ -244,31 +248,30 @@ def _parse_summaries_log(path) -> dict[str, str]:
     return result
 
 
-def parse_structured(raw: str, parser, *, context: str = "") -> tuple:
+def parse_structured(raw: str, parser, *, context: str = "", python_sample: str = "") -> tuple:
     """Parse raw LLM output, escalating through a repair chain on failure.
 
     parser(raw) -> (result, ok: bool). Returns (result, recovered: bool).
-    Steps: direct parse → Narrator → Show Runner → User+Narrator → zero fallback.
+    Steps: direct parse → Scribe → User+Scribe → zero fallback.
     """
     result, ok = parser(raw)
     if ok:
         return result, False
 
-    repair_prompt = f"{context}\n\nRaw output to fix:\n{raw}" if context else f"Raw output to fix:\n{raw}"
+    repair_msg = load_yaml_task_prompt("repair_structured", raw=raw, context=context, python_sample=python_sample)
+    fixed = call_llm("scribe", build_system_prompt("scribe"), repair_msg)
+    result, ok = parser(fixed)
+    if ok:
+        return result, True
 
-    for agent in ("narrator", "show_runner"):
-        fixed = call_llm(agent, build_system_prompt(agent), repair_prompt)
-        result, ok = parser(fixed)
-        if ok:
-            return result, True
-
-    # User prompt → Narrator interprets (max 1 attempt)
+    # User prompt → Scribe interprets
     try:
         user_input = input("Parse failed. Enter correction (or press Enter to skip): ").strip()
     except (EOFError, OSError):
         user_input = ""
     if user_input:
-        fixed = call_llm("narrator", build_system_prompt("narrator"), f"{context}\n\nUser correction:\n{user_input}")
+        user_msg = load_yaml_task_prompt("repair_structured", raw=user_input, context=context, python_sample=python_sample)
+        fixed = call_llm("scribe", build_system_prompt("scribe"), user_msg)
         result, ok = parser(fixed)
         if ok:
             return result, True
@@ -492,7 +495,7 @@ def run_turn_loop(scene: dict, verbose: bool = False, dump_prompts: bool = False
         char_stats = _build_char_stats(scene_yamls)
         check_output = run_checks(char_summaries, char_stats)
         checks_text = _write_turn_file(logs_dir, scene_num, _beat_num, current_beat, _turn_num, "checks", check_output)
-        ruling_specs, _ = parse_structured(checks_text, _ruling_specs_parser, context=_CHECK_REPAIR_CONTEXT)
+        ruling_specs, _ = parse_structured(checks_text, _ruling_specs_parser, python_sample=_CHECK_PYTHON_SAMPLE)
         log.info(f"Step 5 complete: {len(ruling_specs)} checks identified")
 
         # ── Step 6: Dice rolling + rulings ──────────────────────────────────

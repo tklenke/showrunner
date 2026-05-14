@@ -1,0 +1,16 @@
+# Scribe repair task — structured output that failed to parse.
+# Placeholders: {raw}, {context}, {python_sample}
+
+user_template: |
+  The step below produced output that could not be parsed automatically.
+
+  ## Expected format:
+  {python_sample}
+
+  ## Context:
+  {context}
+
+  ## Malformed output:
+  {raw}
+
+  Return only the corrected output in the format shown. No explanation. No commentary.
