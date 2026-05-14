@@ -53,11 +53,17 @@ python -m showrunner.main                      # scene 0 (default)
 python -m showrunner.main 1                    # scene 1
 python -m showrunner.main -v                   # verbose: labels each output block by step
 python -m showrunner.main --dump-prompts       # write full prompt+response MD files to logs/prompts/
+python -m showrunner.main --reset              # clear logs and scene state, restart from beat 1
 python -m showrunner.main 1 -v --dump-prompts  # scene 1, verbose, with prompt capture
 ```
 
 **`-v` / `--verbose`** adds `=== Step Name ===` headers before each major output block
 (beat opener, resolution narrative) so you can see which agent produced which output.
+
+**`--reset`** deletes `state/scene_state.yaml`, `state/session_log.md`, and everything
+under `logs/` (including `logs/prompts/`), then starts from the first beat. Use this
+when you want a clean run rather than resuming a prior session. `state/party_stats.yaml`
+is preserved — delete it manually if you need fully clean wound/strain tracking.
 
 **`--dump-prompts`** writes one Markdown file per LLM call to `logs/prompts/`:
 
