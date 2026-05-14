@@ -35,7 +35,7 @@ location:
     "Welcome to Gavos. I am EV-8D3, mine supervisor. I am so relieved you
     have come. There has been... a terrible tragedy."
 
-npcs_present:
+characters_present:
   - "kaelen_sunara"
 
 inline_npcs:

@@ -1,5 +1,5 @@
 location: "Receiving Hall, Bargos Estate, Gavos"
-npcs_present:
+characters_present:
   - "Gamorrean Guard"
   - "Bargos the Hutt"
 ticking_clocks: []

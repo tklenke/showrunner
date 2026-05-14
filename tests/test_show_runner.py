@@ -9,7 +9,7 @@ SCENE = {
         "atmosphere": "Opulent but slightly nervous money.",
         "read_aloud": "You are ushered into the audience chamber.",
     },
-    "npcs_present": ["bargos_the_hutt", "kaelen_sunara"],
+    "characters_present": ["bargos_the_hutt", "kaelen_sunara"],
     "inline_npcs": [
         {
             "id": "c3p9",

@@ -147,7 +147,7 @@ def test_initialize_npc_stats_adds_npc_with_thresholds(tmp_path):
     chars_dir = tmp_path / "chars"
     chars_dir.mkdir()
     _write_char_yaml(chars_dir, "bargos_the_hutt", _NPC_YAML)
-    scene = {"npcs_present": ["bargos_the_hutt"]}
+    scene = {"characters_present": ["bargos_the_hutt"]}
     stats_path = str(tmp_path / "party_stats.yaml")
     initialize_npc_stats(scene, path=stats_path, characters_dir=str(chars_dir))
     with open(stats_path) as f:
@@ -166,7 +166,7 @@ def test_initialize_npc_stats_skips_human_pc(tmp_path):
     chars_dir = tmp_path / "chars"
     chars_dir.mkdir()
     _write_char_yaml(chars_dir, "Z-4P0", _HUMAN_YAML)
-    scene = {"npcs_present": ["Z-4P0"]}
+    scene = {"characters_present": ["Z-4P0"]}
     stats_path = str(tmp_path / "party_stats.yaml")
     initialize_npc_stats(scene, path=stats_path, characters_dir=str(chars_dir))
     if Path(stats_path).exists():
@@ -183,7 +183,7 @@ def test_initialize_npc_stats_preserves_existing_wounds(tmp_path):
     _write_char_yaml(chars_dir, "bargos_the_hutt", _NPC_YAML)
     stats_path = str(tmp_path / "party_stats.yaml")
     update_party_stats({"characters": {"bargos_the_hutt": {"wounds_current": 5, "wounds_threshold": 18}}}, path=stats_path)
-    scene = {"npcs_present": ["bargos_the_hutt"]}
+    scene = {"characters_present": ["bargos_the_hutt"]}
     initialize_npc_stats(scene, path=stats_path, characters_dir=str(chars_dir))
     with open(stats_path) as f:
         data = yaml.safe_load(f)
@@ -194,7 +194,7 @@ def test_initialize_npc_stats_skips_missing_yaml(tmp_path):
     from showrunner.tools.state_writer import initialize_npc_stats
     chars_dir = tmp_path / "chars"
     chars_dir.mkdir()
-    scene = {"npcs_present": ["inline_npc_no_file"]}
+    scene = {"characters_present": ["inline_npc_no_file"]}
     stats_path = str(tmp_path / "party_stats.yaml")
     initialize_npc_stats(scene, path=stats_path, characters_dir=str(chars_dir))  # must not raise
 

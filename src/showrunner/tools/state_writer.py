@@ -90,7 +90,7 @@ def initialize_npc_stats(
     existing = current.get("characters", {})
 
     additions: dict = {}
-    for name in scene.get("npcs_present", []):
+    for name in scene.get("characters_present", []):
         if name in existing:
             continue
         yaml_path = Path(characters_dir) / f"{name}.yaml"

@@ -7,7 +7,7 @@ location:
   read_aloud: |
     You are in a test.
 
-npcs_present:
+characters_present:
   - "character_test"
 
 inline_npcs: []

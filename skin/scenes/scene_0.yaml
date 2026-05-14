@@ -27,7 +27,7 @@ location:
     flutters nervously: Genko, his aide. A pristine protocol droid — C3-P9 — stands
     at attention nearby.
 
-npcs_present:
+characters_present:
   - "Z-4P0"
   - "bargos_the_hutt"
   - "kaelen_sunara"

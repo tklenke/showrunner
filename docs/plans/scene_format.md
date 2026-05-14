@@ -30,7 +30,7 @@ location:
   atmosphere: string      # 1-3 sentence mood description for World Runner
   read_aloud: |           # Opening narration; World Runner delivers this verbatim on scene entry
 
-npcs_present:             # List of character file stems in characters/
+characters_present:             # List of character file stems in characters/
   - string                # e.g. "bargos_the_hutt" → characters/bargos_the_hutt.yaml + .md
 
 inline_npcs:              # Minor NPCs not worth a full character file
@@ -97,7 +97,7 @@ most-volatile at bottom.
 ├─────────────────────────────────────────────────┤
 │  Scene file content (scene_N.yaml)               │  ← static for scene duration
 │    location, atmosphere                          │    loaded once on scene entry
-│    npcs_present + inline_npcs                   │    sits in prompt cache
+│    characters_present + inline_npcs                   │    sits in prompt cache
 │    minion_groups (if any)                        │
 │    full beats list (reference material)          │
 ├─────────────────────────────────────────────────┤
@@ -152,10 +152,10 @@ def load_adventure_scene(n: int, state_dir: str = "state") -> dict:
 ### Agent Usage
 
 - **Narrator**: Receives the full scene dict as context. Uses `beats` to manage pacing,
-  `npcs_present` to know who is available, `exit` to decide when to transition.
+  `characters_present` to know who is available, `exit` to decide when to transition.
 - **World Runner**: Uses `location.read_aloud` at scene entry. Uses `world_runner_notes`
   in beats for atmosphere cues during narration.
-- **Actors**: Uses `npcs_present` list to know which characters to voice.
+- **Actors**: Uses `characters_present` list to know which characters to voice.
   `render_actor_prompt()` is called per character using the character file.
   `inline_npcs` provides voice notes for minor characters.
 - **Referee**: Uses `beats[*].checks` for difficulty guidance and `minion_groups` for

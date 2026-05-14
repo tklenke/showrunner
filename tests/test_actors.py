@@ -1,17 +1,17 @@
 # ABOUTME: Tests for Actors agent — scene character loading and inline NPC handling.
-# ABOUTME: Verifies load_scene_characters builds prompts for npcs_present and inline_npcs.
+# ABOUTME: Verifies load_scene_characters builds prompts for characters_present and inline_npcs.
 
 from pathlib import Path
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
 SCENE_WITH_NPC = {
-    "npcs_present": ["character_test"],
+    "characters_present": ["character_test"],
     "inline_npcs": [],
 }
 
 SCENE_WITH_INLINE = {
-    "npcs_present": [],
+    "characters_present": [],
     "inline_npcs": [
         {
             "id": "c3p9",
@@ -42,7 +42,7 @@ def test_inline_npc_uses_key_traits():
 # --- player_filter tests ---
 
 SCENE_MIXED = {
-    "npcs_present": ["character_test", "npc_test"],
+    "characters_present": ["character_test", "npc_test"],
     "inline_npcs": [{"id": "guard", "name": "Guard", "role": "Guard", "key_traits": "Tough."}],
 }
 
@@ -119,7 +119,7 @@ def test_load_scene_yamls_excludes_human_players():
         human = {"identity": {"name": "Human PC", "species": "Human", "career": "Spy", "player": "human"},
                  "characteristics": {}, "skills": [], "talents": [], "derived": {}, "equipment": {}, "status": {}, "resources": {}}
         (Path(tmpdir) / "human_pc.yaml").write_text(yaml.dump(human))
-        scene = {"npcs_present": ["human_pc"], "inline_npcs": []}
+        scene = {"characters_present": ["human_pc"], "inline_npcs": []}
         result = load_scene_yamls(scene, characters_dir=tmpdir)
         assert "human_pc" not in result
 
@@ -141,7 +141,7 @@ def test_load_scene_characters_default_reads_skin_characters(tmp_path, monkeypat
         "resources": {},
     }
     (chars_dir / "test_npc.yaml").write_text(yaml.dump(char))
-    scene = {"npcs_present": ["test_npc"], "inline_npcs": []}
+    scene = {"characters_present": ["test_npc"], "inline_npcs": []}
     result = load_scene_characters(scene, {})
     assert "test_npc" in result
 
@@ -154,7 +154,7 @@ def test_load_scene_yamls_default_reads_skin_characters(tmp_path, monkeypatch):
     chars_dir.mkdir(parents=True)
     char = {"identity": {"name": "Test NPC"}}
     (chars_dir / "test_npc.yaml").write_text(yaml.dump(char))
-    scene = {"npcs_present": ["test_npc"], "inline_npcs": []}
+    scene = {"characters_present": ["test_npc"], "inline_npcs": []}
     result = load_scene_yamls(scene)
     assert "test_npc" in result
 

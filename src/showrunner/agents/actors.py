@@ -156,7 +156,7 @@ def load_scene_characters(
 
     result = {}
 
-    for name in scene.get("npcs_present", []):
+    for name in scene.get("characters_present", []):
         yaml_path = Path(characters_dir) / f"{name}.yaml"
         md_path = Path(characters_dir) / f"{name}.md"
         with open(yaml_path) as f:
@@ -182,7 +182,7 @@ def load_scene_yamls(
     scene: dict,
     characters_dir: str = "skin/characters",
 ) -> dict[str, dict]:
-    """Return {id: raw_yaml_dict} for non-human characters in scene["npcs_present"].
+    """Return {id: raw_yaml_dict} for non-human characters in scene["characters_present"].
 
     Inline NPCs are skipped — they have no YAML file. Human players are excluded.
     Used to supply character stats (characteristic values, skill ranks) for check
@@ -192,7 +192,7 @@ def load_scene_yamls(
     from pathlib import Path
 
     result = {}
-    for name in scene.get("npcs_present", []):
+    for name in scene.get("characters_present", []):
         yaml_path = Path(characters_dir) / f"{name}.yaml"
         with open(yaml_path) as f:
             char_yaml = pyyaml.safe_load(f)

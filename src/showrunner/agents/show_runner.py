@@ -26,7 +26,7 @@ def render_show_runner_context(
     lines.append(loc["atmosphere"])
     lines.append("")
 
-    npcs = scene.get("npcs_present", [])
+    npcs = scene.get("characters_present", [])
     inline = scene.get("inline_npcs", [])
     if npcs or inline:
         lines.append("## NPCs Present")

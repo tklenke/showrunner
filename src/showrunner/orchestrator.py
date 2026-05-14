@@ -67,7 +67,7 @@ def _find_human_pc_name(scene: dict, characters_dir: str = "skin/characters") ->
     """Return identity.name of the human player character in this scene, or 'Player'."""
     import yaml as pyyaml
     from pathlib import Path
-    for name in scene.get("npcs_present", []):
+    for name in scene.get("characters_present", []):
         yaml_path = Path(characters_dir) / f"{name}.yaml"
         try:
             with open(yaml_path) as f:
