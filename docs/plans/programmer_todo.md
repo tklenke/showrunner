@@ -16,6 +16,23 @@ Reference documents:
 
 ---
 
+### [ ] 4.34 — Route pipeline-internal calls to Scribe agent
+
+Per game_loop.md Ref A, the following `call_llm` calls must change from `"narrator"` / `"show_runner"` to `"scribe"`:
+
+- `run_companion_wave` — narrator summary call → `"scribe"`
+- `run_npc_wave` — narrator summary call → `"scribe"`
+- `run_summaries` — narrator call → `"scribe"`
+- `run_plan_update` — individual plan calls → `"scribe"`
+
+The Scribe system prompt (`config/prompts/agent_scribe.md`, or fallback goal/backstory in `agents.yaml`)
+needs to be rewritten to reflect its new role: compact summarization and per-character plan generation
+(pipeline-internal, not state file writing). Update `agents.yaml` to give Scribe a `prompt_file`.
+
+Follow TDD. Update `test_runner.py` assertions that check `call_llm` agent names.
+
+---
+
 ### [~] 4.33 — End-to-End Scene Playthrough
 
 No tests for this task — this is exploratory play. Run `src/showrunner/main.py` and
