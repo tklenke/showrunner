@@ -159,6 +159,22 @@ dice pool without further lookups.
 - Ruling output is parsed by the orchestrator using the **Structured Output Chain** (see Ref C).
 - Orchestrator updates `party_stats.yaml` after each successful parse. Skipped entirely if `NO_CHECKS`.
 
+**Manual dice input format** — When the player enters a roll manually, the input is parsed
+as single-letter keys with counts. Spaces are tolerated. Valid letters:
+
+| Letter | Symbol |
+|---|---|
+| S | Success |
+| A | Advantage |
+| T | Triumph |
+| F | Failure |
+| H | Threat |
+| D | Despair |
+
+Examples: `S2A1` = 2 Successes 1 Advantage · `S2 A1 T1` = 2 Successes 1 Advantage 1 Triumph · `F1H2D1` = 1 Failure 2 Threat 1 Despair
+
+Case-insensitive. Unknown letters are ignored with a warning.
+
 ---
 
 ## Step 7 — Resolution Narrative (`run_narrative()`)

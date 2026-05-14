@@ -53,6 +53,41 @@ model assignments (all agents now on gemini) and the referee/scribe prompt_file 
 
 ---
 
+### [ ] 4.35 — Manual Dice Input Parser
+
+Implement `parse_dice_input(text: str) -> dict` in `src/showrunner/dice.py`.
+
+Format (from game_loop.md Step 6): single-letter keys with integer counts, case-insensitive,
+spaces tolerated. Valid keys: S=Success, A=Advantage, T=Triumph, F=Failure, H=Threat, D=Despair.
+Unknown letters are ignored with a warning logged. Returns a dict of symbol→count.
+
+Examples:
+- `"S2A1"` → `{"success": 2, "advantage": 1}`
+- `"S2 A1 T1"` → `{"success": 2, "advantage": 1, "triumph": 1}`
+- `"f1h2d1"` → `{"failure": 1, "threat": 2, "despair": 1}`
+
+Wire into the orchestrator at Step 6 when manual dice input is requested.
+
+Follow TDD.
+
+---
+
+### [ ] 4.36 — Context Window Pre-flight Check
+
+Add `max_context_tokens` (integer) to each agent entry in `config/agents.yaml`.
+In `call_llm()` in `llm.py`, before calling `litellm.completion`, estimate the prompt
+token count (`len(system + user) // 4`) and log a warning if it exceeds the agent's
+`max_context_tokens`. Do not abort — warn only, so play continues.
+
+Reasonable starting values (can be tuned):
+- gemini/gemini-2.5-flash: 1_000_000
+- sardinia/llama-3.1-8b: 8_192
+- alien models: 8_192
+
+Follow TDD. The warning must be captured and asserted in tests (per project testing standards).
+
+---
+
 ### [~] 4.33 — End-to-End Scene Playthrough
 
 No tests for this task — this is exploratory play. Run `src/showrunner/main.py` and

@@ -29,15 +29,17 @@ For resolved decisions, see git log.
 Items that have not yet been fully resolved. These need an answer before the relevant
 implementation phase begins.
 
-- [ ] **Sardinia context window** — LM Studio / Llama 3.1 8B max context. The rendered
-  actor prompt for a complex NPC + scene state could be 2–3K tokens. Confirm the model
-  can handle this while leaving enough room for generation.
+- [ ] **Context window pre-flight check** — Before each `call_llm()`, estimate token
+  count of the assembled prompt (characters ÷ 4 is a reasonable approximation) and warn
+  or abort if it would exceed the model's limit. Requires: (1) `max_context_tokens` field
+  added to each agent entry in `agents.yaml`; (2) pre-flight check in `call_llm()` that
+  reads that field and compares against estimated prompt size. See programmer_todo for
+  the implementation task.
 
-- [ ] **! directive scope** — Exactly what context does a `!` player directive inject into?
-  Narrator only? Or broadcast to all agents on that turn? Decide before Phase 4.
-
-- [ ] **Manual dice input format** — Confirm the symbol notation Tom wants to type.
-  Current plan: `2s 1a 1f 1t`, `1tr`, `1de`. Ratify or change before Phase 1.
+- [x] **Manual dice input format** — Ratified. Single-letter keys with counts; spaces
+  tolerated. Letters: S=Success, A=Advantage, T=Triumph, F=Failure, H=Threat, D=Despair.
+  Example: `S2A1T1` = 2 Successes, 1 Advantage, 1 Triumph. `S2 A1 T1` also valid.
+  See game_loop.md Step 6 for the full spec.
 
 ---
 
