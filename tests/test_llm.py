@@ -208,6 +208,52 @@ def test_load_yaml_task_prompt_includes_python_sample(tmp_path, monkeypatch):
     assert "{'actor': 'Bargos'}" in result
 
 
+# ---------------------------------------------------------------------------
+# context window pre-flight check (4.36)
+# ---------------------------------------------------------------------------
+
+import logging
+
+
+def test_call_llm_warns_when_prompt_exceeds_max_context_tokens(caplog):
+    from showrunner.llm import call_llm
+    big_system = "x" * 400   # 400 + 100 = 500 chars → ~125 estimated tokens
+    big_user = "y" * 100
+    with caplog.at_level(logging.WARNING, logger="showrunner.llm"):
+        with patch("showrunner.llm.load_agent_configs") as mock_cfg:
+            mock_cfg.return_value = {
+                "narrator": {
+                    "litellm_params": {"model": "test/model"},
+                    "model_alias": "test/narrator",
+                    "temperature": 0.8,
+                    "max_context_tokens": 10,  # tiny limit to force warning
+                }
+            }
+            with patch("litellm.completion", return_value=_mock_response("ok")):
+                call_llm("narrator", big_system, big_user)
+    showrunner_warnings = [r for r in caplog.records if r.name == "showrunner.llm" and r.levelno == logging.WARNING]
+    assert showrunner_warnings, "Expected a WARNING from showrunner.llm"
+    assert any("token" in r.message.lower() for r in showrunner_warnings)
+
+
+def test_call_llm_no_warning_when_within_max_context_tokens(caplog):
+    from showrunner.llm import call_llm
+    with caplog.at_level(logging.WARNING, logger="showrunner.llm"):
+        with patch("showrunner.llm.load_agent_configs") as mock_cfg:
+            mock_cfg.return_value = {
+                "narrator": {
+                    "litellm_params": {"model": "test/model"},
+                    "model_alias": "test/narrator",
+                    "temperature": 0.8,
+                    "max_context_tokens": 1_000_000,
+                }
+            }
+            with patch("litellm.completion", return_value=_mock_response("ok")):
+                call_llm("narrator", "short system", "short user")
+    showrunner_warnings = [r for r in caplog.records if r.name == "showrunner.llm" and r.levelno == logging.WARNING]
+    assert not showrunner_warnings, f"Unexpected warnings: {[r.message for r in showrunner_warnings]}"
+
+
 def test_build_system_prompt_contains_role():
     from showrunner.llm import build_system_prompt
     prompt = build_system_prompt("narrator")

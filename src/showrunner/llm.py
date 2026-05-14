@@ -2,10 +2,13 @@
 # ABOUTME: Provides setup_llm_logging() to enable per-call summary logging to a file.
 
 import inspect
+import logging
 from pathlib import Path
 
 import litellm
 import yaml
+
+_log = logging.getLogger(__name__)
 
 from showrunner.config import load_agent_configs
 
@@ -84,6 +87,15 @@ def call_llm(agent_name: str, system_prompt: str, user_message: str, label: str 
     # Gemini 2.5 thinking mode disabled — we want direct answers, not chain-of-thought
     if "gemini-2.5" in params["model"]:
         kwargs["thinking"] = {"type": "disabled"}
+
+    max_ctx = cfg.get("max_context_tokens")
+    if max_ctx:
+        estimated = (len(system_prompt) + len(user_message)) // 4
+        if estimated > max_ctx:
+            _log.warning(
+                "Context pre-flight: agent=%s estimated=%d tokens exceeds max_context_tokens=%d",
+                agent_name, estimated, max_ctx,
+            )
 
     response = litellm.completion(**kwargs)
     content = response.choices[0].message.content

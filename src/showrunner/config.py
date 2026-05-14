@@ -62,6 +62,7 @@ def load_agent_configs() -> dict:
             "prompt_file": cfg.get("prompt_file"),
             "context_tier": cfg.get("context_tier", "medium"),
             "temperature": cfg.get("temperature", 0.7),
+            "max_context_tokens": cfg.get("max_context_tokens"),
         }
     return result
 

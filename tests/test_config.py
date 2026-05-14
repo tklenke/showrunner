@@ -94,3 +94,16 @@ def test_apply_litellm_settings_sets_retries():
     from showrunner.config import apply_litellm_settings
     apply_litellm_settings()
     assert litellm.num_retries == 2
+
+
+def test_load_agent_configs_includes_max_context_tokens():
+    from showrunner.config import load_agent_configs
+    cfg = load_agent_configs()
+    for agent_name, agent_cfg in cfg.items():
+        assert "max_context_tokens" in agent_cfg, f"{agent_name} missing max_context_tokens"
+
+
+def test_narrator_max_context_tokens_is_set():
+    from showrunner.config import load_agent_configs
+    cfg = load_agent_configs()
+    assert cfg["narrator"]["max_context_tokens"] == 1_000_000

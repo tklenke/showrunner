@@ -6,25 +6,30 @@ show_runner:
   context_tier: medium
   model: gemini/gemini-2.5-flash
   temperature: 0.4
+  max_context_tokens: 1_000_000
 
 narrator:
   prompt_file: prompts/agent_narrator.md
   model: gemini/gemini-2.5-flash
   temperature: 0.8
+  max_context_tokens: 1_000_000
 
 actors:
   prompt_file: prompts/agent_actors.md
   model: gemini/gemini-2.5-flash
   temperature: 0.9
+  max_context_tokens: 1_000_000
 
 referee:
   prompt_file: prompts/agent_referee.md
   context_tier: small
   model: gemini/gemini-2.5-flash
   temperature: 0.2
+  max_context_tokens: 1_000_000
 
 scribe:
   prompt_file: prompts/agent_scribe.md
   context_tier: small
   model: gemini/gemini-2.5-flash
   temperature: 0.3
+  max_context_tokens: 1_000_000
