@@ -249,7 +249,7 @@ defined there but not called by the current pipeline.
 | 4 | `logs/{scene:02d}_{beat:02d}_{beat_id}_{turn:04d}_summaries.txt` | Orchestrator |
 | 5 | `logs/{scene:02d}_{beat:02d}_{beat_id}_{turn:04d}_checks.txt` | Orchestrator |
 | 6 | `logs/{scene:02d}_{beat:02d}_{beat_id}_{turn:04d}_results.txt` | Orchestrator |
-| 6 | `state/party_stats.yaml` | Orchestrator *(not yet implemented)* |
+| 6 | `state/party_stats.yaml` | Orchestrator |
 | 7 | `state/session_log.md` | Orchestrator |
 | 8 | `state/scene_state.yaml` `last_actions` | Orchestrator |
 | 9 | `logs/{scene:02d}_{beat:02d}_{beat_id}_{turn:04d}_sr_plan.txt` | Orchestrator |
