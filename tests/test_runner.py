@@ -531,3 +531,66 @@ def test_run_plan_update_empty_characters_no_file_written(tmp_path):
     with patch("showrunner.runner.call_llm"):
         run_plan_update({}, "summaries", "results", {}, plan_log_path=log_path)
     assert not log_path.exists()
+
+
+# ---------------------------------------------------------------------------
+# run_beat_advance
+# ---------------------------------------------------------------------------
+
+def test_run_beat_advance_returns_true_on_advance():
+    from showrunner.runner import run_beat_advance
+    with patch("showrunner.runner.call_llm", return_value="ADVANCE"):
+        result = run_beat_advance("The Job", "After PCs acknowledged.", "check passed", "Bargos: spoke.")
+    assert result is True
+
+
+def test_run_beat_advance_case_insensitive():
+    from showrunner.runner import run_beat_advance
+    with patch("showrunner.runner.call_llm", return_value="advance"):
+        result = run_beat_advance("The Job", "After PCs acknowledged.", "check passed", "Bargos: spoke.")
+    assert result is True
+
+
+def test_run_beat_advance_returns_false_on_stay():
+    from showrunner.runner import run_beat_advance
+    with patch("showrunner.runner.call_llm", return_value="STAY"):
+        result = run_beat_advance("The Job", "After PCs acknowledged.", "no checks", "Bargos: waited.")
+    assert result is False
+
+
+def test_run_beat_advance_returns_false_on_unexpected_output():
+    from showrunner.runner import run_beat_advance
+    with patch("showrunner.runner.call_llm", return_value="I'm not sure yet."):
+        result = run_beat_advance("The Job", "After PCs acknowledged.", "no checks", "")
+    assert result is False
+
+
+def test_run_beat_advance_skips_llm_when_no_next_trigger():
+    from showrunner.runner import run_beat_advance
+    with patch("showrunner.runner.call_llm") as mock:
+        result = run_beat_advance("Mission Brief", "", "no checks", "")
+    assert result is False
+    mock.assert_not_called()
+
+
+def test_run_beat_advance_calls_show_runner():
+    from showrunner.runner import run_beat_advance
+    with patch("showrunner.runner.call_llm", return_value="STAY") as mock:
+        run_beat_advance("The Job", "After PCs acknowledged.", "no checks", "Bargos: spoke.")
+    assert mock.call_args_list[0].args[0] == "show_runner"
+
+
+def test_run_beat_advance_prompt_contains_trigger():
+    from showrunner.runner import run_beat_advance
+    with patch("showrunner.runner.call_llm", return_value="STAY") as mock:
+        run_beat_advance("The Job", "After all guards fall.", "guards fell", "Kaelen: fought.")
+    user_msg = mock.call_args_list[0].args[2]
+    assert "After all guards fall." in user_msg
+
+
+def test_run_beat_advance_prompt_contains_results():
+    from showrunner.runner import run_beat_advance
+    with patch("showrunner.runner.call_llm", return_value="STAY") as mock:
+        run_beat_advance("The Job", "After PCs acknowledged.", "Roll passed: net +2", "Bargos: spoke.")
+    user_msg = mock.call_args_list[0].args[2]
+    assert "Roll passed: net +2" in user_msg

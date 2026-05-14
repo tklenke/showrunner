@@ -196,6 +196,29 @@ def run_plan_update(
     return individual_plans
 
 
+def run_beat_advance(
+    current_beat_title: str,
+    next_beat_trigger: str,
+    results_text: str,
+    last_actions: str,
+) -> bool:
+    """Step 8.5: Ask the Show Runner whether the current beat's exit condition has been met.
+
+    Returns True if the SR responds ADVANCE, False for STAY or any other response.
+    Skips the LLM call and returns False when next_beat_trigger is empty (no next beat).
+    """
+    if not next_beat_trigger:
+        return False
+    msg = load_task_prompt("run_beat_advance").format(
+        current_beat_title=current_beat_title,
+        next_beat_trigger=next_beat_trigger,
+        results_text=results_text,
+        last_actions=last_actions,
+    )
+    response = call_llm("show_runner", build_system_prompt("show_runner"), msg)
+    return "advance" in response.strip().lower()
+
+
 def run_beat_opener(beat: dict, last_log_entry: str, verbose: bool = False) -> None:
     """Print a 2-3 sentence player-facing opener for the start of a new beat."""
     msg = load_task_prompt("run_beat_opener").format(

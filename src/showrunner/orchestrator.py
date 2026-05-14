@@ -14,6 +14,7 @@ from showrunner.config import apply_litellm_settings, load_agent_configs
 from showrunner.instrumentation import setup_instrumentation
 from showrunner.llm import build_system_prompt, call_llm, load_yaml_task_prompt
 from showrunner.runner import (
+    run_beat_advance,
     run_beat_opener,
     run_last_actions,
     run_npc_wave,
@@ -606,6 +607,60 @@ def run_turn_loop(scene: dict, verbose: bool = False, dump_prompts: bool = False
         if not last_actions_extracted:
             last_actions_extracted = all_actors
 
+        # ── Step 8.5: SR beat advancement ────────────────────────────────────
+        next_id = _next_beat_id(scene, current_beat)
+        scene_complete = False
+        if next_id:
+            next_beat = next((b for b in beat_list if b["id"] == next_id), {})
+            last_actions_str = "\n".join(f"{k}: {v}" for k, v in last_actions_extracted.items())
+            current_beat_title = next((b.get("title", current_beat) for b in beat_list if b["id"] == current_beat), current_beat)
+            should_advance = run_beat_advance(
+                current_beat_title=current_beat_title,
+                next_beat_trigger=next_beat.get("trigger", ""),
+                results_text=results_text,
+                last_actions=last_actions_str,
+            )
+            if should_advance:
+                advance_beat(next_id)
+                log.info(f"SR advanced beat: {current_beat} → {next_id}")
+                active_ids = _active_npc_ids(scene, next_id)
+                npc_chars = load_scene_characters(scene, scene_state, player_filter="npc", active_ids=active_ids)
+                companion_chars = load_scene_characters(scene, scene_state, player_filter="companion")
+            else:
+                log.info(f"SR staying on beat: {current_beat}")
+        else:
+            should_advance = False
+
+        if verbose:
+            sr_decision = "ADVANCE" if should_advance else "STAY"
+            print(f"\n[SR beat decision: {sr_decision}]")
+            choice = _beat_prompt(scene, scene_state.get("current_beat", current_beat) if should_advance else current_beat)
+            if choice in ("quit", "exit", "q"):
+                print("Session ended.")
+                log.info("Session ended by player.")
+                break
+            elif choice == "advance" and not should_advance:
+                override_id = _next_beat_id(scene, current_beat)
+                if override_id:
+                    advance_beat(override_id)
+                    log.info(f"Manual override: advanced to {override_id}")
+                    active_ids = _active_npc_ids(scene, override_id)
+                    npc_chars = load_scene_characters(scene, scene_state, player_filter="npc", active_ids=active_ids)
+                    companion_chars = load_scene_characters(scene, scene_state, player_filter="companion")
+                else:
+                    scene_complete = True
+            elif choice not in ("stay", "advance", ""):
+                advance_beat(choice)
+                log.info(f"Manual jump to beat: {choice}")
+                active_ids = _active_npc_ids(scene, choice)
+                npc_chars = load_scene_characters(scene, scene_state, player_filter="npc", active_ids=active_ids)
+                companion_chars = load_scene_characters(scene, scene_state, player_filter="companion")
+
+        if scene_complete or (should_advance and not next_id):
+            print("Scene complete.")
+            log.info("Scene complete — no more beats.")
+            break
+
         # ── Step 9: Plan update ───────────────────────────────────────────────
         active_chars = {**npc_chars, **companion_chars}
         sr_plan_path = logs_dir / f"{scene_num:02d}_{_beat_num:02d}_{current_beat}_{_turn_num:04d}_sr_plan.txt"
@@ -628,27 +683,5 @@ def run_turn_loop(scene: dict, verbose: bool = False, dump_prompts: bool = False
             with session_log_path.open("a") as f:
                 f.write(f"{narrative}\n\n")
             log.info(f"Session log: {narrative[:120]}")
-
-        # ── Beat advancement ──────────────────────────────────────────────────
-        choice = _beat_prompt(scene, current_beat)
-        if choice in ("quit", "exit", "q"):
-            print("Session ended.")
-            log.info("Session ended by player.")
-            break
-
-        if choice == "stay":
-            log.info(f"Staying on beat: {current_beat}")
-        elif choice == "advance":
-            next_id = _next_beat_id(scene, current_beat)
-            if next_id:
-                advance_beat(next_id)
-                log.info(f"Advanced to beat: {next_id}")
-            else:
-                print("Scene complete.")
-                log.info("Scene complete — no more beats.")
-                break
-        else:
-            advance_beat(choice)
-            log.info(f"Jumped to beat: {choice}")
 
         _turn_num += 1

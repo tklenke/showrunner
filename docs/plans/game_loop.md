@@ -222,6 +222,25 @@ Case-insensitive. Unknown letters are ignored with a warning.
 
 ---
 
+## Step 8.5 — SR Beat Advancement (`run_beat_advance()`)
+
+| | |
+|---|---|
+| Agent | Show Runner, one call |
+| Input | Current beat title, next beat trigger, results_text, last_actions |
+| Output | `ADVANCE` or `STAY` |
+
+- Runs between Step 8 and Step 9 so that Step 9's plan update is written for the new beat.
+- The SR is shown the *next* beat's `trigger` field (the condition that starts it) and asked
+  whether what just happened satisfies that condition.
+- If `ADVANCE`: `advance_beat()` writes the new `current_beat` to `scene_state.yaml`, then
+  the orchestrator reloads `active_chars` from the new beat's `active_ids` before Step 9.
+- If there is no next beat, returns `STAY` without calling the LLM.
+- In `--verbose` mode, the SR decision is printed and `_beat_prompt` is shown as a manual
+  override (useful for debugging and playtesting).
+
+---
+
 ## Step 9 — Plan Update (`run_plan_update()`)
 
 SR reviews the full turn and updates each character's plan for next turn.
@@ -239,17 +258,7 @@ N calls: SR  →  overall plan + that character's situation         →  individ
 - The overall plan is SR's private coordination notes — logged for debugging but never
   shared with characters.
 - Orchestrator writes updated plans to `scene_state.yaml` → `character_plans`.
-
----
-
-## Step 10 — Beat Advancement
-
-```
-CLI: [Enter] stay  |  [a] advance  |  [beat ID] jump  |  [q] quit
-```
-
-`advance_beat()` writes the new `current_beat` to `scene_state.yaml`. If no beats remain,
-the scene ends.
+- `active_chars` passed to Step 9 reflects the beat after any Step 8.5 advancement.
 
 ---
 
@@ -267,6 +276,7 @@ the scene ends.
 | 6 dice + rulings | `run_rulings` | 1 per check | Show Runner | Prose ruling + embedded numbers | `_extract_stat_changes` parses wounds/strain |
 | 7 resolution narrative | `run_narrative` | 1 | Narrator | Player-facing prose | — |
 | 8 last-action extraction | `run_last_actions` | 1 per active character | Scribe | 1 sentence | Written to `scene_state.yaml` → `last_actions` |
+| 8.5 beat advancement | `run_beat_advance` | 1 | Show Runner | `ADVANCE` or `STAY` | Skipped if no next beat; active roster reloaded on advance |
 | 9 overall plan | `run_plan_update` | 1 | Show Runner | Prose (internal) | SR coordination notes; not shared with characters |
 | 9 individual plans | `run_plan_update` | 1 per NPC + Companion | Scribe | Prose plan | Written to `scene_state.yaml` → `character_plans` |
 
