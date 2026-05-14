@@ -31,7 +31,7 @@ def run_npc_wave(
             npc_context=npc_context,
             beat_ctx=beat_ctx,
             player_action=user_action,
-            optional_sections="".join(sections),
+            other_character_actions="".join(sections),
         )
 
         full_output = call_llm("actors", build_system_prompt("actors"), msg, label=npc_id)

@@ -5,7 +5,7 @@
 {beat_ctx}
 
 ## WHAT HAPPENED THIS TURN
-Player Character: {player_action}{optional_sections}
+Player Character: {player_action}{other_character_actions}
 
 - USE BRACKETED ACTION: Describe your physical movements in brackets 
 - SPEECH: Precede all dialogue with your character name in caps
