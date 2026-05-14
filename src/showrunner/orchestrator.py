@@ -361,9 +361,23 @@ def _extract_stat_changes(ruling_text: str) -> dict[str, int]:
     return result
 
 
-def _make_ruling_callback(stats_path: Path):
+def _build_actor_name_map(scene: dict, scene_yamls: dict) -> dict[str, str]:
+    """Return {lowercase_display_name: char_id} from all character sources in the scene."""
+    name_to_id: dict[str, str] = {}
+    for char_id, yaml_data in scene_yamls.items():
+        name = yaml_data.get("identity", {}).get("name", char_id)
+        name_to_id[name.lower()] = char_id
+    for npc in scene.get("inline_npcs", []):
+        name_to_id[npc["name"].lower()] = npc["id"]
+    for group in scene.get("minion_groups", []):
+        name_to_id[group["name"].lower()] = group["id"]
+    return name_to_id
+
+
+def _make_ruling_callback(stats_path: Path, name_to_id: dict[str, str]):
     """Return an on_ruling callback that updates party_stats after each ruling."""
     def callback(actor: str, ruling_text: str) -> str:
+        actor_key = name_to_id.get(actor.lower(), actor)
         changes = _extract_stat_changes(ruling_text)
         if changes:
             try:
@@ -371,7 +385,7 @@ def _make_ruling_callback(stats_path: Path):
             except FileNotFoundError:
                 party_stats = {"characters": {}}
             chars = party_stats.get("characters", {})
-            char = chars.get(actor, {})
+            char = chars.get(actor_key, {})
             if "wounds" in changes:
                 char["wounds_current"] = char.get("wounds_current", 0) + changes["wounds"]
                 threshold = char.get("wounds_threshold", 0)
@@ -381,7 +395,7 @@ def _make_ruling_callback(stats_path: Path):
                         f.write(f"\n{actor} has reached wound threshold ({threshold})!\n")
             if "strain" in changes:
                 char["strain_current"] = char.get("strain_current", 0) + changes["strain"]
-            chars[actor] = char
+            chars[actor_key] = char
             update_party_stats({"characters": chars}, str(stats_path))
         try:
             party_stats = load_party_stats(str(stats_path))
@@ -429,6 +443,7 @@ def run_turn_loop(scene: dict, verbose: bool = False, dump_prompts: bool = False
     initialize_scene_state(scene)
     initialize_npc_stats(scene)
     scene_yamls = load_scene_yamls(scene)
+    actor_name_map = _build_actor_name_map(scene, scene_yamls)
     human_pc_name = _find_human_pc_name(scene)
     scene_num: int = scene.get("scene_num", 0)
     beat_list = scene.get("beats", [])
@@ -503,7 +518,7 @@ def run_turn_loop(scene: dict, verbose: bool = False, dump_prompts: bool = False
         _roll_specs(ruling_specs)
         rulings = run_rulings(
             ruling_specs,
-            on_ruling=_make_ruling_callback(party_stats_path) if ruling_specs else None,
+            on_ruling=_make_ruling_callback(party_stats_path, actor_name_map) if ruling_specs else None,
         )
         results_text = "\n".join(f"{k}: {v}" for k, v in rulings.items()) if rulings else "No checks this turn."
         _write_turn_file(logs_dir, scene_num, _beat_num, current_beat, _turn_num, "results", results_text)

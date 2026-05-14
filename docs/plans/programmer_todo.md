@@ -53,7 +53,7 @@ model assignments (all agents now on gemini) and the referee/scribe prompt_file 
 
 ---
 
-### [ ] 4.38 — Actor name→ID normalisation in ruling callback
+### [x] 4.38 — Actor name→ID normalisation in ruling callback
 
 Fixes the known issue (architect_todo): ruling wounds silently miss party_stats because
 the Referee writes display names ("Bargos") but party_stats keys are file-stem IDs
@@ -188,7 +188,7 @@ Follow TDD. The warning must be captured and asserted in tests (per project test
 
 ---
 
-### [ ] 4.37 — Inline NPC stats, minion group stats, and pronoun support
+### [~] 4.37 — Inline NPC stats, minion group stats, and pronoun support
 
 Fixes two known issues (architect_todo): inline NPCs invisible to `_build_char_stats`,
 and inline NPCs entering the NPC wave with no name or mechanical context.

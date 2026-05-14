@@ -493,6 +493,53 @@ def test_extract_stat_changes_returns_zero_for_no_damage():
 # _make_ruling_callback (orchestrator's on_ruling factory)
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# _build_actor_name_map
+# ---------------------------------------------------------------------------
+
+def test_build_actor_name_map_maps_yaml_characters():
+    from showrunner.orchestrator import _build_actor_name_map
+    scene = {"characters_present": ["bargos_the_hutt"], "inline_npcs": [], "minion_groups": []}
+    scene_yamls = {"bargos_the_hutt": {"identity": {"name": "Bargos"}}}
+    result = _build_actor_name_map(scene, scene_yamls)
+    assert result["bargos"] == "bargos_the_hutt"
+
+
+def test_build_actor_name_map_maps_inline_npcs():
+    from showrunner.orchestrator import _build_actor_name_map
+    scene = {
+        "characters_present": [],
+        "inline_npcs": [{"id": "genko", "name": "Genko"}],
+        "minion_groups": [],
+    }
+    result = _build_actor_name_map(scene, {})
+    assert result["genko"] == "genko"
+
+
+def test_build_actor_name_map_maps_minion_groups():
+    from showrunner.orchestrator import _build_actor_name_map
+    scene = {
+        "characters_present": [],
+        "inline_npcs": [],
+        "minion_groups": [{"id": "gamorrean_guards", "name": "Renegade Gamorrean Guards"}],
+    }
+    result = _build_actor_name_map(scene, {})
+    assert result["renegade gamorrean guards"] == "gamorrean_guards"
+
+
+def test_build_actor_name_map_keys_are_lowercase():
+    from showrunner.orchestrator import _build_actor_name_map
+    scene = {"characters_present": [], "inline_npcs": [], "minion_groups": []}
+    scene_yamls = {"bargos_the_hutt": {"identity": {"name": "Bargos The Hutt"}}}
+    result = _build_actor_name_map(scene, scene_yamls)
+    assert "bargos the hutt" in result
+    assert "Bargos The Hutt" not in result
+
+
+# ---------------------------------------------------------------------------
+# _make_ruling_callback (updated signature)
+# ---------------------------------------------------------------------------
+
 def test_make_ruling_callback_updates_party_stats_on_ruling(tmp_path, monkeypatch):
     from showrunner.orchestrator import _make_ruling_callback
     monkeypatch.chdir(tmp_path)
@@ -501,7 +548,7 @@ def test_make_ruling_callback_updates_party_stats_on_ruling(tmp_path, monkeypatc
     (tmp_path / "state" / "party_stats.yaml").write_text(
         yaml.dump({"characters": {"z_4p0": {"wounds_current": 0, "wounds_threshold": 12}}})
     )
-    callback = _make_ruling_callback(tmp_path / "state" / "party_stats.yaml")
+    callback = _make_ruling_callback(tmp_path / "state" / "party_stats.yaml", {})
     callback("z_4p0", "Z-4P0 takes 2 wounds.")
     updated = yaml.safe_load((tmp_path / "state" / "party_stats.yaml").read_text())
     assert updated["characters"]["z_4p0"]["wounds_current"] == 2
@@ -515,7 +562,36 @@ def test_make_ruling_callback_returns_stats_text_for_next_ruling(tmp_path, monke
     (tmp_path / "state" / "party_stats.yaml").write_text(
         yaml.dump({"characters": {"z_4p0": {"wounds_current": 0, "wounds_threshold": 12}}})
     )
-    callback = _make_ruling_callback(tmp_path / "state" / "party_stats.yaml")
+    callback = _make_ruling_callback(tmp_path / "state" / "party_stats.yaml", {})
     context = callback("z_4p0", "Z-4P0 takes 2 wounds.")
     assert context is not None
     assert isinstance(context, str)
+
+
+def test_make_ruling_callback_resolves_display_name_to_id(tmp_path, monkeypatch):
+    from showrunner.orchestrator import _make_ruling_callback
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "state").mkdir()
+    import yaml
+    (tmp_path / "state" / "party_stats.yaml").write_text(
+        yaml.dump({"characters": {"bargos_the_hutt": {"wounds_current": 0, "wounds_threshold": 20}}})
+    )
+    name_to_id = {"bargos": "bargos_the_hutt"}
+    callback = _make_ruling_callback(tmp_path / "state" / "party_stats.yaml", name_to_id)
+    callback("Bargos", "Bargos takes 3 wounds.")
+    updated = yaml.safe_load((tmp_path / "state" / "party_stats.yaml").read_text())
+    assert updated["characters"]["bargos_the_hutt"]["wounds_current"] == 3
+
+
+def test_make_ruling_callback_falls_back_to_raw_actor_when_not_in_map(tmp_path, monkeypatch):
+    from showrunner.orchestrator import _make_ruling_callback
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "state").mkdir()
+    import yaml
+    (tmp_path / "state" / "party_stats.yaml").write_text(
+        yaml.dump({"characters": {"z_4p0": {"wounds_current": 0, "wounds_threshold": 12}}})
+    )
+    callback = _make_ruling_callback(tmp_path / "state" / "party_stats.yaml", {})
+    callback("z_4p0", "Z-4P0 takes 1 wound.")
+    updated = yaml.safe_load((tmp_path / "state" / "party_stats.yaml").read_text())
+    assert updated["characters"]["z_4p0"]["wounds_current"] == 1
