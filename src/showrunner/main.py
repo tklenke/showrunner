@@ -8,10 +8,14 @@ import shutil
 import sys
 from pathlib import Path
 
+import litellm
 from dotenv import load_dotenv
 
 logging.getLogger("opentelemetry").setLevel(logging.ERROR)
 logging.getLogger("crewai.telemetry").setLevel(logging.ERROR)
+logging.getLogger("LiteLLM").setLevel(logging.ERROR)
+logging.getLogger("LiteLLM Router").setLevel(logging.ERROR)
+litellm.suppress_debug_info = True
 
 from showrunner.orchestrator import run_turn_loop
 from showrunner.tools.state_reader import load_adventure_scene
