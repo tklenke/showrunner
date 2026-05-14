@@ -35,19 +35,58 @@ characters_present:
 inline_npcs:
   - id: "c3p9"
     name: "C3-P9"
+    pronoun: "it"
     role: "Bargos's protocol droid; delivers messages, facilitates introductions"
     key_traits: "Deferential, precise, genuinely loyal to Bargos. Speaks in complete
       sentences. Slightly condescending to organics in a polite, oblivious way."
+    characteristics:
+      brawn: 1
+      agility: 1
+      intellect: 3
+      cunning: 2
+      willpower: 2
+      presence: 3
+    skills:
+      - name: Charm
+        ranks: 2
+      - name: Negotiation
+        ranks: 1
+      - name: Knowledge (Outer Rim)
+        ranks: 2
+    derived:
+      wound_threshold: 11
+      strain_threshold: 10
+      soak: 2
   - id: "genko"
     name: "Genko"
+    pronoun: "he"
     role: "Bargos's Toydarian aide; whispers counsel, manages logistics"
     key_traits: "Furtive, anxious, speaks in a rapid Toydarian-accented Basic. Knows
       more than he lets on about the Gavos situation. Visibly uncomfortable when
       the subject of the mine comes up."
+    characteristics:
+      brawn: 1
+      agility: 2
+      intellect: 3
+      cunning: 3
+      willpower: 2
+      presence: 2
+    skills:
+      - name: Deception
+        ranks: 2
+      - name: Negotiation
+        ranks: 1
+      - name: Streetwise
+        ranks: 1
+    derived:
+      wound_threshold: 11
+      strain_threshold: 12
+      soak: 1
 
 minion_groups:
   - id: "gamorrean_guards"
     name: "Renegade Gamorrean Guards"
+    pronoun: "they"
     count: 6
     characteristics:
       brawn: 3
@@ -57,8 +96,10 @@ minion_groups:
       willpower: 2
       presence: 1
     skills:
-      melee: 1
-      brawl: 1
+      - name: Melee
+        ranks: 1
+      - name: Brawl
+        ranks: 1
     soak: 4
     wound_threshold: 5    # group of 6 = 30 total wounds; minion dies each 5 wounds
     weapons:
@@ -145,6 +186,7 @@ beats:
         take it; but don't push so hard that Bargos shuts down.
 
   - id: "gamorrean_warning"
+    add_npcs: ["gamorrean_guards"]
     title: "Something Is Wrong"
     trigger: >
       After Bargos has finished explaining the job and the PCs are about to
@@ -188,6 +230,8 @@ beats:
         Assess the numbers and weapons. Call out to Z-4P0 for a coordinated response.
 
   - id: "gamorrean_rumble"
+    add_npcs: ["gamorrean_guards"]
+    remove_npcs: ["c3p9", "genko"]
     title: "The Gamorrean Rumble"
     trigger: "Immediately after the warning beat; combat begins."
     show_runner_notes: |
@@ -207,6 +251,10 @@ beats:
       If Bargos takes any wounds: he is angered and blames the PCs for letting
       it happen, despite it being their fault.
     narrator_notes: |
+      Open the beat by describing C3-P9 flattening himself against the wall
+      and bolting through a side door; Genko vanishes behind a pillar and is
+      gone. The chamber is now the PCs, Bargos, and six angry Gamorreans.
+
       Gamorrean combat is visceral and loud — grunts, crashing furniture, the
       hum of vibro-weapons. The room that looked like a throne room suddenly
       feels like a pit fight. Describe environmental details as they get

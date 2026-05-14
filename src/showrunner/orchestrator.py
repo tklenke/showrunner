@@ -7,7 +7,7 @@ from pathlib import Path
 
 _log = logging.getLogger(__name__)
 
-from showrunner.agents.actors import load_scene_characters, load_scene_yamls, render_actor_beat_context
+from showrunner.agents.actors import _active_npc_ids, load_scene_characters, load_scene_yamls, render_actor_beat_context
 from showrunner.agents.narrator import render_narrator_context
 from showrunner.agents.show_runner import render_show_runner_context
 from showrunner.config import apply_litellm_settings, load_agent_configs
@@ -215,16 +215,20 @@ _CHECK_PYTHON_SAMPLE = (
 )
 
 
-def _build_char_stats(yamls: dict[str, dict]) -> dict[str, str]:
-    """Format character stats from raw YAML dicts into per-character strings."""
-    result: dict[str, str] = {}
-    for char_id, yaml in yamls.items():
-        name = yaml.get("identity", {}).get("name", char_id)
-        chars = yaml.get("characteristics", {})
+def _build_char_stats(
+    yamls: dict[str, dict],
+    inline_npcs: list[dict] | None = None,
+    minion_groups: list[dict] | None = None,
+) -> dict[str, str]:
+    """Format character stats from raw YAML dicts into per-character strings.
+
+    Also accepts inline_npcs and minion_groups (flat dicts from scene YAML).
+    Inline NPCs without characteristics are skipped (they have no check-relevant stats).
+    """
+    def _format_entry(char_id: str, name: str, chars: dict, skills: list) -> str:
         char_str = ", ".join(
             f"{k.capitalize()} {v}" for k, v in chars.items() if isinstance(v, int)
         )
-        skills = yaml.get("skills", [])
         skill_str = ", ".join(
             f"{s['name']} rank {s.get('ranks', 1)}" for s in skills
         ) if skills else "none"
@@ -232,7 +236,34 @@ def _build_char_stats(yamls: dict[str, dict]) -> dict[str, str]:
         if char_str:
             lines.append(f"Characteristics: {char_str}")
         lines.append(f"Skills: {skill_str}")
-        result[char_id] = "\n".join(lines)
+        return "\n".join(lines)
+
+    result: dict[str, str] = {}
+
+    for char_id, yaml in yamls.items():
+        name = yaml.get("identity", {}).get("name", char_id)
+        result[char_id] = _format_entry(
+            char_id, name,
+            yaml.get("characteristics", {}),
+            yaml.get("skills", []),
+        )
+
+    for npc in (inline_npcs or []):
+        if not npc.get("characteristics"):
+            continue
+        result[npc["id"]] = _format_entry(
+            npc["id"], npc.get("name", npc["id"]),
+            npc.get("characteristics", {}),
+            npc.get("skills", []),
+        )
+
+    for group in (minion_groups or []):
+        result[group["id"]] = _format_entry(
+            group["id"], group.get("name", group["id"]),
+            group.get("characteristics", {}),
+            group.get("skills", []),
+        )
+
     return result
 
 
@@ -475,7 +506,8 @@ def run_turn_loop(scene: dict, verbose: bool = False, dump_prompts: bool = False
             _last_beat = current_beat
             _turn_num = 1
 
-        npc_chars = load_scene_characters(scene, scene_state, player_filter="npc")
+        active_ids = _active_npc_ids(scene, current_beat)
+        npc_chars = load_scene_characters(scene, scene_state, player_filter="npc", active_ids=active_ids)
         companion_chars = load_scene_characters(scene, scene_state, player_filter="companion")
 
         log.debug(f"Beat: {current_beat} turn: {_turn_num}  npcs: {list(npc_chars)}  companions: {list(companion_chars)}")
@@ -507,7 +539,11 @@ def run_turn_loop(scene: dict, verbose: bool = False, dump_prompts: bool = False
         # ── Step 5: Check identification ─────────────────────────────────────
         char_summaries = _parse_summaries_log(summaries_log_path)
         all_summaries = summaries_log_path.read_text() if summaries_log_path.exists() else ""
-        char_stats = _build_char_stats(scene_yamls)
+        char_stats = _build_char_stats(
+            scene_yamls,
+            inline_npcs=[n for n in scene.get("inline_npcs", []) if n["id"] in active_ids],
+            minion_groups=[g for g in scene.get("minion_groups", []) if g["id"] in active_ids],
+        )
         check_output = run_checks(char_summaries, char_stats)
         checks_text = _write_turn_file(logs_dir, scene_num, _beat_num, current_beat, _turn_num, "checks", check_output)
         ruling_specs, _ = parse_structured(checks_text, _ruling_specs_parser, python_sample=_CHECK_PYTHON_SAMPLE)
@@ -525,7 +561,18 @@ def run_turn_loop(scene: dict, verbose: bool = False, dump_prompts: bool = False
         log.info(f"Step 6 complete: {len(ruling_specs)} checks resolved")
 
         # ── Step 7: Resolution narrative (printed to player) ─────────────────
-        narrative = run_narrative(all_summaries, checks_text, results_text)
+        pronoun_map: dict[str, str] = {}
+        for char_id, yaml in scene_yamls.items():
+            p = yaml.get("identity", {}).get("pronoun")
+            if p:
+                pronoun_map[char_id] = p
+        for npc in scene.get("inline_npcs", []):
+            if npc["id"] in active_ids and npc.get("pronoun"):
+                pronoun_map[npc["id"]] = npc["pronoun"]
+        for group in scene.get("minion_groups", []):
+            if group["id"] in active_ids and group.get("pronoun"):
+                pronoun_map[group["id"]] = group["pronoun"]
+        narrative = run_narrative(all_summaries, checks_text, results_text, pronoun_map=pronoun_map or None)
         if narrative:
             label = "\n=== Resolution Narrative ===" if verbose else ""
             print(f"{label}\n{narrative}")

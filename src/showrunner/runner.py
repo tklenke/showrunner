@@ -132,10 +132,19 @@ def run_rulings(check_specs: list[dict], *, on_ruling=None) -> dict[str, str]:
     return rulings
 
 
-def run_narrative(summaries: str, checks: str, results: str) -> str:
+def run_narrative(
+    summaries: str,
+    checks: str,
+    results: str,
+    pronoun_map: dict[str, str] | None = None,
+) -> str:
     """Step 3d: Generate player-facing narrative prose from the full resolution record."""
     msg = load_task_prompt("run_narrative").format(summaries=summaries, checks=checks, results=results)
-    return call_llm("narrator", build_system_prompt("narrator"), msg)
+    system = build_system_prompt("narrator")
+    if pronoun_map:
+        pronoun_lines = "\n".join(f"- {actor}: {pronoun}" for actor, pronoun in pronoun_map.items())
+        system = system + f"\n\n## Pronouns\n{pronoun_lines}"
+    return call_llm("narrator", system, msg)
 
 
 def run_last_actions(actor_summaries: dict[str, str]) -> dict[str, str]:

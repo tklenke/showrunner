@@ -177,6 +177,57 @@ def test_build_char_stats_includes_skill_names():
     assert "Negotiation" in result["bargos"]
 
 
+def test_build_char_stats_includes_inline_npcs_with_stats():
+    from showrunner.orchestrator import _build_char_stats
+    inline_npc = {
+        "id": "genko", "name": "Genko",
+        "characteristics": {"brawn": 1, "agility": 2, "intellect": 3, "cunning": 3, "willpower": 2, "presence": 2},
+        "skills": [{"name": "Deception", "ranks": 2}],
+    }
+    result = _build_char_stats({}, inline_npcs=[inline_npc])
+    assert "genko" in result
+    assert "Genko" in result["genko"]
+    assert "Deception" in result["genko"]
+
+
+def test_build_char_stats_skips_inline_npcs_without_characteristics():
+    from showrunner.orchestrator import _build_char_stats
+    inline_npc = {"id": "servant", "name": "Servant"}
+    result = _build_char_stats({}, inline_npcs=[inline_npc])
+    assert "servant" not in result
+
+
+def test_build_char_stats_includes_minion_groups():
+    from showrunner.orchestrator import _build_char_stats
+    minion = {
+        "id": "guards", "name": "Gamorrean Guards",
+        "characteristics": {"brawn": 3, "agility": 2, "intellect": 1, "cunning": 1, "willpower": 2, "presence": 1},
+        "skills": [{"name": "Melee", "ranks": 1}],
+    }
+    result = _build_char_stats({}, minion_groups=[minion])
+    assert "guards" in result
+    assert "Gamorrean Guards" in result["guards"]
+    assert "Melee" in result["guards"]
+
+
+def test_build_char_stats_merges_yaml_inline_and_minion():
+    from showrunner.orchestrator import _build_char_stats
+    inline_npc = {
+        "id": "genko", "name": "Genko",
+        "characteristics": {"cunning": 3},
+        "skills": [],
+    }
+    minion = {
+        "id": "guards", "name": "Guards",
+        "characteristics": {"brawn": 3},
+        "skills": [],
+    }
+    result = _build_char_stats({"bargos": _BARGOS_YAML}, inline_npcs=[inline_npc], minion_groups=[minion])
+    assert "bargos" in result
+    assert "genko" in result
+    assert "guards" in result
+
+
 # ---------------------------------------------------------------------------
 # _parse_summaries_log
 # ---------------------------------------------------------------------------

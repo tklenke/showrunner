@@ -207,3 +207,245 @@ def test_render_actor_beat_context_excludes_ticking_clocks():
     result = render_actor_beat_context(scene, state)
     assert "Alarm" not in result
     assert "clock" not in result.lower()
+
+
+# --- render_inline_npc_prompt tests (sub-task B) ---
+
+_INLINE_NPC_FULL = {
+    "id": "genko",
+    "name": "Genko",
+    "pronoun": "he",
+    "role": "Toydarian aide",
+    "key_traits": "Furtive and anxious.",
+    "characteristics": {
+        "brawn": 1, "agility": 2, "intellect": 3,
+        "cunning": 3, "willpower": 2, "presence": 2,
+    },
+    "skills": [
+        {"name": "Deception", "ranks": 2},
+        {"name": "Negotiation", "ranks": 1},
+    ],
+    "derived": {"wound_threshold": 11, "strain_threshold": 12, "soak": 1},
+}
+
+_INLINE_NPC_MINIMAL = {
+    "id": "servant",
+    "name": "Terrified Servant",
+    "pronoun": "they",
+    "role": "Background extra",
+    "key_traits": "Panicked.",
+}
+
+
+def test_render_inline_npc_prompt_contains_name():
+    from showrunner.agents.actors import render_inline_npc_prompt
+    result = render_inline_npc_prompt(_INLINE_NPC_FULL)
+    assert "Genko" in result
+
+
+def test_render_inline_npc_prompt_contains_pronoun():
+    from showrunner.agents.actors import render_inline_npc_prompt
+    result = render_inline_npc_prompt(_INLINE_NPC_FULL)
+    assert "he" in result
+
+
+def test_render_inline_npc_prompt_contains_role():
+    from showrunner.agents.actors import render_inline_npc_prompt
+    result = render_inline_npc_prompt(_INLINE_NPC_FULL)
+    assert "Toydarian aide" in result
+
+
+def test_render_inline_npc_prompt_contains_key_traits():
+    from showrunner.agents.actors import render_inline_npc_prompt
+    result = render_inline_npc_prompt(_INLINE_NPC_FULL)
+    assert "Furtive" in result
+
+
+def test_render_inline_npc_prompt_contains_characteristics_when_present():
+    from showrunner.agents.actors import render_inline_npc_prompt
+    result = render_inline_npc_prompt(_INLINE_NPC_FULL)
+    assert "Intellect" in result
+    assert "3" in result
+
+
+def test_render_inline_npc_prompt_contains_skills_when_present():
+    from showrunner.agents.actors import render_inline_npc_prompt
+    result = render_inline_npc_prompt(_INLINE_NPC_FULL)
+    assert "Deception" in result
+
+
+def test_render_inline_npc_prompt_contains_derived_when_present():
+    from showrunner.agents.actors import render_inline_npc_prompt
+    result = render_inline_npc_prompt(_INLINE_NPC_FULL)
+    assert "11" in result  # wound_threshold
+
+
+def test_render_inline_npc_prompt_no_stats_is_graceful():
+    from showrunner.agents.actors import render_inline_npc_prompt
+    result = render_inline_npc_prompt(_INLINE_NPC_MINIMAL)
+    assert "Terrified Servant" in result
+    assert "Panicked" in result
+
+
+def test_load_scene_characters_inline_uses_render_inline_npc_prompt():
+    from showrunner.agents.actors import load_scene_characters
+    scene = {"characters_present": [], "inline_npcs": [_INLINE_NPC_FULL]}
+    result = load_scene_characters(scene, SCENE_STATE)
+    assert "genko" in result
+    assert "Toydarian aide" in result["genko"]
+
+
+# --- pronoun in render_actor_prompt (sub-task C) ---
+
+def test_render_actor_prompt_includes_pronoun():
+    from showrunner.agents.actors import render_actor_prompt
+    import yaml as pyyaml
+    with open(FIXTURES / "character_test.yaml") as f:
+        char_yaml = pyyaml.safe_load(f)
+    char_yaml["identity"]["pronoun"] = "she"
+    result = render_actor_prompt(char_yaml, "", {})
+    assert "she" in result
+
+
+def test_render_actor_prompt_no_pronoun_still_renders():
+    from showrunner.agents.actors import render_actor_prompt
+    import yaml as pyyaml
+    with open(FIXTURES / "character_test.yaml") as f:
+        char_yaml = pyyaml.safe_load(f)
+    char_yaml["identity"].pop("pronoun", None)
+    result = render_actor_prompt(char_yaml, "", {})
+    assert char_yaml["identity"]["name"] in result
+
+
+# --- render_minion_group_prompt tests (sub-task F) ---
+
+_MINION_GROUP = {
+    "id": "gamorrean_guards",
+    "name": "Renegade Gamorrean Guards",
+    "pronoun": "they",
+    "count": 6,
+    "characteristics": {"brawn": 3, "agility": 2, "intellect": 1, "cunning": 1, "willpower": 2, "presence": 1},
+    "skills": [{"name": "Melee", "ranks": 1}, {"name": "Brawl", "ranks": 1}],
+    "soak": 4,
+    "wound_threshold": 5,
+    "weapons": [{"name": "Vibro-Axe", "skill": "Melee", "damage": 5, "critical": 3, "range": "Engaged", "special": "Vicious 2"}],
+}
+
+
+def test_render_minion_group_prompt_contains_name():
+    from showrunner.agents.actors import render_minion_group_prompt
+    result = render_minion_group_prompt(_MINION_GROUP)
+    assert "Renegade Gamorrean Guards" in result
+
+
+def test_render_minion_group_prompt_contains_pronoun():
+    from showrunner.agents.actors import render_minion_group_prompt
+    result = render_minion_group_prompt(_MINION_GROUP)
+    assert "they" in result
+
+
+def test_render_minion_group_prompt_contains_count():
+    from showrunner.agents.actors import render_minion_group_prompt
+    result = render_minion_group_prompt(_MINION_GROUP)
+    assert "6" in result
+
+
+def test_render_minion_group_prompt_contains_characteristics():
+    from showrunner.agents.actors import render_minion_group_prompt
+    result = render_minion_group_prompt(_MINION_GROUP)
+    assert "Brawn" in result
+    assert "3" in result
+
+
+def test_render_minion_group_prompt_contains_weapon():
+    from showrunner.agents.actors import render_minion_group_prompt
+    result = render_minion_group_prompt(_MINION_GROUP)
+    assert "Vibro-Axe" in result
+
+
+# --- _active_npc_ids tests (sub-task G) ---
+
+_SCENE_WITH_BEATS = {
+    "inline_npcs": [
+        {"id": "c3p9", "name": "C3-P9"},
+        {"id": "genko", "name": "Genko"},
+    ],
+    "minion_groups": [
+        {"id": "gamorrean_guards", "name": "Renegade Gamorrean Guards"},
+    ],
+    "beats": [
+        {"id": "arrival", "title": "Arrival"},
+        {"id": "rumble", "title": "Rumble", "add_npcs": ["gamorrean_guards"], "remove_npcs": ["c3p9", "genko"]},
+        {"id": "brief", "title": "Brief", "add_npcs": ["gamorrean_guards"]},
+    ],
+}
+
+
+def test_active_npc_ids_default_includes_inline_npcs():
+    from showrunner.agents.actors import _active_npc_ids
+    result = _active_npc_ids(_SCENE_WITH_BEATS, "arrival")
+    assert "c3p9" in result
+    assert "genko" in result
+
+
+def test_active_npc_ids_default_excludes_minion_groups():
+    from showrunner.agents.actors import _active_npc_ids
+    result = _active_npc_ids(_SCENE_WITH_BEATS, "arrival")
+    assert "gamorrean_guards" not in result
+
+
+def test_active_npc_ids_add_npcs_includes_minion_group():
+    from showrunner.agents.actors import _active_npc_ids
+    result = _active_npc_ids(_SCENE_WITH_BEATS, "rumble")
+    assert "gamorrean_guards" in result
+
+
+def test_active_npc_ids_remove_npcs_excludes_inline_npc():
+    from showrunner.agents.actors import _active_npc_ids
+    result = _active_npc_ids(_SCENE_WITH_BEATS, "rumble")
+    assert "c3p9" not in result
+    assert "genko" not in result
+
+
+def test_active_npc_ids_beat_not_found_returns_inline_defaults():
+    from showrunner.agents.actors import _active_npc_ids
+    result = _active_npc_ids(_SCENE_WITH_BEATS, "nonexistent_beat")
+    assert "c3p9" in result
+    assert "genko" in result
+    assert "gamorrean_guards" not in result
+
+
+def test_load_scene_characters_with_active_ids_filters_npcs():
+    from showrunner.agents.actors import load_scene_characters
+    scene = {
+        "characters_present": [],
+        "inline_npcs": [_INLINE_NPC_FULL, _INLINE_NPC_MINIMAL],
+        "minion_groups": [],
+    }
+    result = load_scene_characters(scene, SCENE_STATE, active_ids={"genko"})
+    assert "genko" in result
+    assert "servant" not in result
+
+
+def test_load_scene_characters_with_no_active_ids_returns_all_inline():
+    from showrunner.agents.actors import load_scene_characters
+    scene = {
+        "characters_present": [],
+        "inline_npcs": [_INLINE_NPC_FULL, _INLINE_NPC_MINIMAL],
+        "minion_groups": [],
+    }
+    result = load_scene_characters(scene, SCENE_STATE)
+    assert "genko" in result
+    assert "servant" in result
+
+
+def test_load_scene_characters_includes_minion_group_when_in_active_ids():
+    from showrunner.agents.actors import load_scene_characters
+    scene = {
+        "characters_present": [],
+        "inline_npcs": [],
+        "minion_groups": [_MINION_GROUP],
+    }
+    result = load_scene_characters(scene, SCENE_STATE, active_ids={"gamorrean_guards"})
+    assert "gamorrean_guards" in result
+    assert "Renegade Gamorrean Guards" in result["gamorrean_guards"]

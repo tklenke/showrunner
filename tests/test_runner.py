@@ -355,6 +355,27 @@ def test_run_narrative_returns_llm_output():
     assert result == "The battle concludes."
 
 
+def test_run_narrative_pronoun_map_injected_into_system_prompt():
+    from showrunner.runner import run_narrative
+    with patch("showrunner.runner.call_llm", return_value="prose") as mock:
+        with patch("showrunner.runner.build_system_prompt", return_value="BASE") as mock_sys:
+            run_narrative("s", "c", "r", pronoun_map={"genko": "he", "guards": "they"})
+    sys_prompt = mock.call_args_list[0].args[1]
+    assert "genko" in sys_prompt
+    assert "he" in sys_prompt
+    assert "guards" in sys_prompt
+    assert "they" in sys_prompt
+
+
+def test_run_narrative_no_pronoun_map_omits_pronoun_section():
+    from showrunner.runner import run_narrative
+    with patch("showrunner.runner.call_llm", return_value="prose") as mock:
+        with patch("showrunner.runner.build_system_prompt", return_value="BASE"):
+            run_narrative("s", "c", "r")
+    sys_prompt = mock.call_args_list[0].args[1]
+    assert "Pronouns" not in sys_prompt
+
+
 # ---------------------------------------------------------------------------
 # run_last_actions
 # ---------------------------------------------------------------------------

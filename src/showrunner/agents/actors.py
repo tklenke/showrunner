@@ -2,6 +2,97 @@
 # ABOUTME: Receives rendered character prompt from render_actor_prompt().
 
 
+def render_inline_npc_prompt(npc: dict) -> str:
+    """Build a context block for an inline NPC (no separate YAML file)."""
+    lines = [f"# {npc['name']}"]
+    pronoun = npc.get("pronoun")
+    if pronoun:
+        lines.append(f"Pronoun: {pronoun}")
+    lines.append(f"Role: {npc['role']}")
+    lines.append(f"Traits: {npc['key_traits']}")
+
+    chars = npc.get("characteristics")
+    if chars:
+        lines.append("")
+        lines.append("## Characteristics")
+        lines.append(
+            " | ".join(f"{k.capitalize()} {v}" for k, v in chars.items() if isinstance(v, int))
+        )
+
+    skills = npc.get("skills")
+    if skills:
+        lines.append("## Skills")
+        for s in skills:
+            lines.append(f"- {s['name']} rank {s.get('ranks', 1)}")
+
+    derived = npc.get("derived")
+    if derived:
+        lines.append("## Derived")
+        parts = []
+        if "wound_threshold" in derived:
+            parts.append(f"Wounds {derived['wound_threshold']}")
+        if "strain_threshold" in derived:
+            parts.append(f"Strain {derived['strain_threshold']}")
+        if "soak" in derived:
+            parts.append(f"Soak {derived['soak']}")
+        lines.append(" | ".join(parts))
+
+    return "\n".join(lines)
+
+
+def render_minion_group_prompt(group: dict) -> str:
+    """Build a context block for a minion group."""
+    lines = [f"# {group['name']} (Minion Group, count: {group.get('count', '?')})"]
+    pronoun = group.get("pronoun")
+    if pronoun:
+        lines.append(f"Pronoun: {pronoun}")
+
+    chars = group.get("characteristics")
+    if chars:
+        lines.append("")
+        lines.append("## Characteristics")
+        lines.append(
+            " | ".join(f"{k.capitalize()} {v}" for k, v in chars.items() if isinstance(v, int))
+        )
+
+    skills = group.get("skills")
+    if skills:
+        lines.append("## Skills")
+        for s in skills:
+            lines.append(f"- {s['name']} rank {s.get('ranks', 1)}")
+
+    lines.append(f"Soak: {group.get('soak', '?')} | Wound threshold (per member): {group.get('wound_threshold', '?')}")
+
+    weapons = group.get("weapons", [])
+    if weapons:
+        lines.append("## Weapons")
+        for w in weapons:
+            lines.append(
+                f"- {w['name']}: damage {w.get('damage', '?')}, "
+                f"crit {w.get('critical', '?')}, range {w.get('range', '?')}"
+                + (f", {w['special']}" if w.get("special") else "")
+            )
+
+    return "\n".join(lines)
+
+
+def _active_npc_ids(scene: dict, beat_id: str) -> set[str]:
+    """Return the set of NPC/minion IDs active in the given beat.
+
+    Default set = all inline_npc IDs. Beat-level add_npcs adds minion group IDs;
+    remove_npcs suppresses inline NPC IDs.
+    """
+    inline_ids = {npc["id"] for npc in scene.get("inline_npcs", [])}
+    beat = next((b for b in scene.get("beats", []) if b["id"] == beat_id), None)
+    active = set(inline_ids)
+    if beat:
+        for npc_id in beat.get("add_npcs", []):
+            active.add(npc_id)
+        for npc_id in beat.get("remove_npcs", []):
+            active.discard(npc_id)
+    return active
+
+
 def render_actor_prompt(character_yaml: dict, persona_md: str, scene_state: dict) -> str:
     """Build the full system prompt for an NPC actor.
 
@@ -17,11 +108,14 @@ def render_actor_prompt(character_yaml: dict, persona_md: str, scene_state: dict
 
     # 1. Identity
     lines.append(f"# {identity['name']}")
-    lines.append(
+    id_line = (
         f"Species: {identity['species']} | Career: {identity['career']}"
         + (f" | Specialization: {identity['specialization']}"
            if identity.get("specialization") else "")
     )
+    if identity.get("pronoun"):
+        id_line += f" | Pronoun: {identity['pronoun']}"
+    lines.append(id_line)
     lines.append("")
 
     # 2. Persona
@@ -142,6 +236,7 @@ def load_scene_characters(
     scene_state: dict,
     characters_dir: str = "skin/characters",
     player_filter: str | None = None,
+    active_ids: set[str] | None = None,
 ) -> dict:
     """Return {id: rendered_prompt} for characters in the scene.
 
@@ -150,6 +245,9 @@ def load_scene_characters(
       "npc"        → only characters with no player field (pure NPCs); inline NPCs always included
       "companion"  → only characters with player: "companion" (Companions); inline NPCs excluded
     Characters with player: "human" are never returned by any filter.
+
+    active_ids: when provided, filters inline_npcs and minion_groups to only those IDs.
+    When None, all inline_npcs are included; minion_groups are excluded unless in active_ids.
     """
     import yaml as pyyaml
     from pathlib import Path
@@ -173,7 +271,13 @@ def load_scene_characters(
 
     if player_filter != "companion":
         for npc in scene.get("inline_npcs", []):
-            result[npc["id"]] = npc["key_traits"]
+            if active_ids is not None and npc["id"] not in active_ids:
+                continue
+            result[npc["id"]] = render_inline_npc_prompt(npc)
+
+        for group in scene.get("minion_groups", []):
+            if active_ids is not None and group["id"] in active_ids:
+                result[group["id"]] = render_minion_group_prompt(group)
 
     return result
 
