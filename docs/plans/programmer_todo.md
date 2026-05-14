@@ -36,6 +36,21 @@ Agent prompt files to create/update:
 
 Follow TDD. Update `test_runner.py` assertions that check `call_llm` agent names.
 
+The following tests now fail due to config changes and must be updated to reflect current
+model assignments (all agents now on gemini) and the referee/scribe prompt_file path:
+
+- `test_config.py`: `test_show_runner_uses_sardinia`, `test_narrator_uses_sardinia_endpoint`,
+  `test_referee_uses_alien_endpoint`, `test_scribe_uses_alien_endpoint`,
+  `test_actors_uses_sardinia_endpoint` — assertions reference old local model endpoints;
+  update to assert gemini model is used.
+- `test_llm.py`: `test_call_llm_passes_model_from_config`,
+  `test_call_llm_passes_api_base_for_local_models` — narrator now routes to gemini, not
+  sardinia; update accordingly.
+- `test_llm.py`: `test_call_llm_non_gemini_does_not_include_thinking` — narrator is now
+  gemini; pick a genuinely non-gemini agent or use a fake config.
+- `test_llm.py`: `test_build_system_prompt_referee_fallback_contains_role` — referee now
+  has a `prompt_file`; the fallback path no longer applies. Delete or replace this test.
+
 ---
 
 ### [~] 4.33 — End-to-End Scene Playthrough

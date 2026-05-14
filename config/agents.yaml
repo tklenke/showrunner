@@ -4,38 +4,25 @@
 show_runner:
   prompt_file: prompts/agent_show_runner.md
   context_tier: medium
-  model: sardinia/llama-3.1-8b
+  #model: sardinia/llama-3.1-8b
+  model: gemini/gemini-2.5-flash
 
 narrator:
   prompt_file: prompts/agent_narrator.md
-  context_tier: medium
-  model: sardinia/llama-3.1-8b
+  #model: sardinia/llama-3.1-8b
+  model: gemini/gemini-2.5-flash
 
 actors:
   prompt_file: prompts/agent_actors.md
-  context_tier: medium
-  model: sardinia/llama-3.1-8b
+  #model: sardinia/llama-3.1-8b
+  model: gemini/gemini-2.5-flash
 
 referee:
-  role: "Rules Engine"
-  goal: >
-    Determine whether a skill check is needed, set difficulty, construct the dice pool,
-    interpret symbols, and deliver a ruling on outcome.
-  backstory: >
-    You are a precise rules arbiter with the Genesys Core Rulebook memorised.
-    You are fast, consistent, and impartial.
+  prompt_file: prompts/agent_referee.md
   context_tier: small
-  model: alien/llama-3.2-3b
+  model: gemini/gemini-2.5-flash
 
 scribe:
-  role: "State Keeper"
-  goal: >
-    After each resolved action, write structured updates to session_log.md and
-    party_stats.yaml. Update scene_state.yaml only for character plans, NPC presence,
-    and ticking clock status. Do NOT change current_beat — beat progression is the
-    Show Runner's sole responsibility.
-  backstory: >
-    You are the keeper of record. You write exactly what happened — no embellishment,
-    no omission. Your files are the source of truth for the next turn.
+  prompt_file: prompts/agent_scribe.md
   context_tier: small
-  model: alien/llama-3.2-3b
+  model: gemini/gemini-2.5-flash
