@@ -153,7 +153,7 @@ Follow TDD. Test that `call_llm` passes the configured temperature to `litellm.c
 
 ---
 
-### [ ] 4.35 — Manual Dice Input Parser
+### [x] 4.35 — Manual Dice Input Parser
 
 Implement `parse_dice_input(text: str) -> dict` in `src/showrunner/dice.py`.
 
@@ -172,7 +172,7 @@ Follow TDD.
 
 ---
 
-### [ ] 4.36 — Context Window Pre-flight Check
+### [x] 4.36 — Context Window Pre-flight Check
 
 Add `max_context_tokens` (integer) to each agent entry in `config/agents.yaml`.
 In `call_llm()` in `llm.py`, before calling `litellm.completion`, estimate the prompt
@@ -188,7 +188,7 @@ Follow TDD. The warning must be captured and asserted in tests (per project test
 
 ---
 
-### [~] 4.37 — Inline NPC stats, minion group stats, and pronoun support
+### [x] 4.37 — Inline NPC stats, minion group stats, and pronoun support
 
 Fixes two known issues (architect_todo): inline NPCs invisible to `_build_char_stats`,
 and inline NPCs entering the NPC wave with no name or mechanical context.
