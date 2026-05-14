@@ -104,6 +104,90 @@ Needed before Phase 7. Not blocking Phase 4.
 - [ ] Way station encounter and miner rescue
 - [ ] Final negotiation with Bargos (Charm check resolution)
 
+### Character Memory and Inventory (Phase 7 design)
+
+**Background:** During the Bargos negotiation (scene_0), Kae successfully used directness
+to win terms from Bargos and received a data chip with a smuggler contact. Two distinct
+things need to survive scene transitions: relational/narrative memory, and a concrete item.
+
+---
+
+#### Narrative memory — `state/memories/{char_id}.md`
+
+At significant moments the Show Runner appends a structured entry to a per-character
+memory file. "Significant" means: a major check succeeded or failed with story
+consequences, a relationship changed, or a secret was learned.
+
+Entry format:
+
+```
+## [Scene {N}, Beat: {beat_id}]
+{1–3 sentences of plain prose describing what happened and why it matters to this character.}
+```
+
+**Who writes it:** The Show Runner, as an optional extra call at beat transitions (not
+every turn — only when SR beat advancement fires `ADVANCE`, i.e. a beat actually ended).
+If the beat had no significant check or story event, the SR outputs `NONE` and no entry
+is written.
+
+**How it's used:** At scene load and after each beat transition, the most recent N entries
+(suggested: last 5, ~500 tokens) are appended to the character's system prompt under a
+`## Memory` heading. This keeps the context window bounded regardless of session length.
+
+**Scope:** PC and Companions only. NPCs do not carry memory across scenes; their
+characterisation is owned by the scene YAML.
+
+---
+
+#### Inventory — `state/party_inventory.yaml`
+
+A simple list of items held by the party, keyed by character. Items are concrete objects
+with story or mechanical implications (data chips, weapons, credits, keycards). Pure
+narrative flavor ("grudging respect from Bargos") lives in the memory file, not here.
+
+Schema sketch:
+
+```yaml
+kae:
+  - id: bargos_contact_chip
+    name: "Data chip — Bargos contact"
+    description: >
+      A worn chip smelling of ozone. Bargos called the contact 'a useful distraction' —
+      implied rival. Unknown name.
+    acquired: "scene_0 / bargos_audience"
+    mechanical_effect: ""      # filled in when the contact becomes actionable
+```
+
+**Who writes it:** The orchestrator, not an LLM — item acquisition is always a direct
+consequence of a story event the SR already ruled on (e.g. Bargos slides the chip across
+the floor). The scene YAML can declare `loot` entries on a beat, and on beat advance the
+orchestrator moves them into `party_inventory.yaml` deterministically.
+
+**How it's used:** Inventory is shown to the player in a future `--status` command and
+injected into relevant agent contexts (e.g. Show Runner when ruling on a check that
+involves a held item).
+
+---
+
+#### Scene transition checklist (Phase 7 addition)
+
+When a scene ends, before loading the next scene:
+
+1. SR writes memory entries for each PC/Companion with a significant event this scene.
+2. Orchestrator appends any declared `loot` from the final beat to `party_inventory.yaml`.
+3. `scene_state.yaml` is reset for the new scene (existing `--reset` logic).
+4. Memory files and `party_inventory.yaml` are **not** reset — they are the cross-scene
+   persistent layer.
+
+---
+
+#### Open questions (to answer when Phase 7 begins)
+
+- How many memory entries to include in context? Start with 5; tune during playthrough.
+- Does the PC (User) get a memory file, or is their memory implicit in session_log.md?
+- Should `loot` be declared in scene YAML beats, or always written manually by Tom?
+- Does `mechanical_effect` on inventory items need a standard schema, or free-text for now?
+
 ---
 
 ## Phase 8: Polish and Extensibility
