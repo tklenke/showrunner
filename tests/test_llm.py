@@ -122,7 +122,7 @@ def test_call_llm_label_appears_in_log(tmp_path):
 def test_build_system_prompt_contains_role():
     from showrunner.llm import build_system_prompt
     prompt = build_system_prompt("narrator")
-    assert "Narrator" in prompt
+    assert "NARRATOR" in prompt
 
 
 def test_build_system_prompt_contains_goal():
@@ -143,6 +143,7 @@ def test_load_task_prompt_all_task_files_exist():
     tasks = [
         "run_checks", "run_rulings", "run_narrative", "run_summaries",
         "run_last_actions", "run_plan_update", "run_beat_opener",
+        "run_companion_wave", "run_npc_wave", "run_npc_wave_summary",
     ]
     for task in tasks:
         result = load_task_prompt(task)

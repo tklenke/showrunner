@@ -21,22 +21,29 @@ def run_npc_wave(
     npc_outputs: dict[str, str] = {}
 
     for npc_id, npc_context in npcs.items():
-        msg = f"{npc_context}\n\n{beat_ctx}"
+        sections = []
         if user_action:
-            msg += f"\n\n## Player action:\n{user_action}"
+            sections.append(f"\n\n## Player action:\n{user_action}")
         if companion_outputs:
             companions_text = "\n\n".join(
                 f"[{cid}]: {out}" for cid, out in companion_outputs.items()
             )
-            msg += f"\n\n## Companion actions:\n{companions_text}"
+            sections.append(f"\n\n## Companion actions:\n{companions_text}")
         if prior_summaries:
-            msg += f"\n\n## Earlier NPC actions this turn:\n{prior_summaries}"
+            sections.append(f"\n\n## Earlier NPC actions this turn:\n{prior_summaries}")
+        msg = load_task_prompt("run_npc_wave").format(
+            npc_context=npc_context,
+            beat_ctx=beat_ctx,
+            optional_sections="".join(sections),
+        )
 
         full_output = call_llm("actors", build_system_prompt("actors"), msg, label=npc_id)
         print(f"\n=== {npc_id} ===\n{full_output}")
         npc_outputs[npc_id] = full_output
 
-        summary_msg = f"Summarize in 1-2 sentences what {npc_id} just did:\n{full_output}"
+        summary_msg = load_task_prompt("run_npc_wave_summary").format(
+            npc_id=npc_id, full_output=full_output
+        )
         summary = call_llm("narrator", build_system_prompt("narrator"), summary_msg, label=npc_id)
         with open(summaries_log_path, "a") as f:
             f.write(f"{npc_id}: {summary}\n")
@@ -59,10 +66,10 @@ def run_companion_wave(
         return {}
     outputs: dict[str, str] = {}
     for pc_id, pc_context in companion_contexts.items():
-        msg = (
-            f"{pc_context}\n\n"
-            f"{beat_ctx}\n\n"
-            f"## Player action:\n{player_action}"
+        msg = load_task_prompt("run_companion_wave").format(
+            pc_context=pc_context,
+            beat_ctx=beat_ctx,
+            player_action=player_action,
         )
         output = call_llm("actors", build_system_prompt("actors"), msg, label=pc_id)
         print(f"\n=== {pc_id} ===\n{output}")
