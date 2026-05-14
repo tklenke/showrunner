@@ -8,13 +8,11 @@ For resolved decisions, see git log.
 
 ## Known Issues (from playthrough)
 
-- [ ] **Inline NPC stats missing from check identification** — `_build_char_stats` only covers
-  characters with YAML files (`load_scene_yamls`). Inline NPCs (e.g. Genko, C3-P9 defined
-  in `scene.inline_npcs`) have no stats block, so the Show Runner receives no mechanical
-  context when identifying checks for them. Result: malformed check output (wrong actor
-  name format, garbage characteristic/difficulty values) that parses unreliably. Options:
-  add a `stats` field to inline NPC definitions in the scene YAML, or give inline NPCs
-  their own YAML files and fold them into `load_scene_yamls`.
+- [x] **Inline NPC stats missing from check identification** — addressed by programmer
+  task 4.37. Inline NPCs get an optional flat stats block in the scene YAML (same shape
+  as minion_groups). `_build_char_stats` extended to cover both. `render_inline_npc_prompt`
+  replaces the bare `key_traits` string so inline NPCs enter the NPC wave with name,
+  pronoun, role, and mechanical context.
 
 - [ ] **Ruling actor ID doesn't reliably match party_stats keys** — `_make_ruling_callback`
   looks up `spec["actor"]` in `party_stats["characters"]`, but LLM output often uses display

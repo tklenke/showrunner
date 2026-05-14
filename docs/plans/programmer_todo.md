@@ -88,6 +88,160 @@ Follow TDD. The warning must be captured and asserted in tests (per project test
 
 ---
 
+### [ ] 4.37 — Inline NPC stats, minion group stats, and pronoun support
+
+Fixes two known issues (architect_todo): inline NPCs invisible to `_build_char_stats`,
+and inline NPCs entering the NPC wave with no name or mechanical context.
+
+---
+
+#### A — Data: scene_0.yaml and character YAMLs
+
+Add `pronoun` to `identity` in every character YAML under `skin/characters/`:
+- `bargos_the_hutt.yaml`: `pronoun: "he"`
+- `kaelen_sunara.yaml`: `pronoun: "she"`
+- `z4p0.yaml`: `pronoun: "it"`
+- any others present
+
+Update `skin/scenes/scene_0.yaml` inline_npcs to add `pronoun` and flat stats block.
+Stats shape mirrors `minion_groups` (characteristics/skills/derived at top level, no
+wrapper key). Stats are optional — omit for purely atmospheric NPCs.
+
+```yaml
+inline_npcs:
+  - id: "c3p9"
+    name: "C3-P9"
+    pronoun: "it"
+    role: "Bargos's protocol droid; delivers messages, facilitates introductions"
+    key_traits: "Deferential, precise, genuinely loyal to Bargos. Speaks in complete
+      sentences. Slightly condescending to organics in a polite, oblivious way."
+    characteristics:
+      brawn: 1
+      agility: 1
+      intellect: 3
+      cunning: 2
+      willpower: 2
+      presence: 3
+    skills:
+      - name: Charm
+        ranks: 2
+      - name: Negotiation
+        ranks: 1
+      - name: Knowledge (Outer Rim)
+        ranks: 2
+    derived:
+      wound_threshold: 11
+      strain_threshold: 10
+      soak: 2
+  - id: "genko"
+    name: "Genko"
+    pronoun: "he"
+    role: "Bargos's Toydarian aide; whispers counsel, manages logistics"
+    key_traits: "Furtive, anxious, speaks in a rapid Toydarian-accented Basic. Knows
+      more than he lets on about the Gavos situation. Visibly uncomfortable when
+      the subject of the mine comes up."
+    characteristics:
+      brawn: 1
+      agility: 2
+      intellect: 3
+      cunning: 3
+      willpower: 2
+      presence: 2
+    skills:
+      - name: Deception
+        ranks: 2
+      - name: Negotiation
+        ranks: 1
+      - name: Streetwise
+        ranks: 1
+    derived:
+      wound_threshold: 11
+      strain_threshold: 12
+      soak: 1
+```
+
+Add `pronoun: "they"` to the `gamorrean_guards` entry in `minion_groups`.
+
+---
+
+#### B — `actors.py`: `render_inline_npc_prompt(npc: dict) -> str` (new function)
+
+Replace the bare `npc["key_traits"]` string in `load_scene_characters` with a rendered
+prompt built by this new function. Output format:
+
+```
+# {name}
+Pronouns: {pronoun}
+Role: {role}
+{key_traits}
+
+## Characteristics                          ← only if characteristics present
+Brawn {n} | Agility {n} | ...
+
+## Skills                                   ← only if skills present
+- {Skill} rank {n}
+...
+```
+
+`load_scene_characters` calls `render_inline_npc_prompt(npc)` for every inline NPC
+instead of `npc["key_traits"]`.
+
+---
+
+#### C — `actors.py`: `render_actor_prompt` — add pronoun
+
+Add one line to the identity block (position 1, after name/species line):
+
+```
+Pronouns: {pronoun}
+```
+
+Read from `identity.get("pronoun", "they")`. Default `"they"` if absent.
+
+---
+
+#### D — `orchestrator.py`: extend `_build_char_stats` coverage
+
+`_build_char_stats(yamls)` currently only processes characters from `load_scene_yamls`
+(full YAML files). Extend the orchestrator to also build stats for:
+
+1. **Inline NPCs with stats** — iterate `scene.get("inline_npcs", [])`. For each that
+   has a `characteristics` key, construct a minimal YAML-shaped dict and pass it through
+   `_build_char_stats`. Set `identity.name` from `npc["name"]`.
+
+2. **Minion groups** — iterate `scene.get("minion_groups", [])`. Each already has
+   `characteristics` and `skills` at the top level. Same approach.
+
+Merge all three into a single `char_stats` dict before passing to `run_checks`.
+Do not change `_build_char_stats` itself — normalise the input dicts in the caller.
+
+---
+
+#### E — `orchestrator.py` + `runner.py` + task prompt: pronoun map into `run_narrative`
+
+Build a pronoun map in the orchestrator from all character sources:
+- Full YAML characters: `identity.pronoun`
+- Inline NPCs: `npc["pronoun"]`
+- Minion groups: `group.get("pronoun", "they")`
+- Human PC: from YAML `identity.pronoun`
+
+Format as a small block, e.g.:
+```
+Bargos: he | Kaelen: she | Z-4P0: it | Genko: he | C3-P9: it | Renegade Gamorrean Guards: they
+```
+
+Add `pronoun_map: str = ""` parameter to `run_narrative()` in `runner.py`.
+Add `{pronoun_map}` placeholder to `config/prompts/task_run_narrative.md` under a
+`## Character Pronouns` header. Pass the map from the orchestrator's `run_narrative` call.
+
+`run_beat_opener` does not need the pronoun map.
+
+---
+
+Follow TDD throughout. All four code changes need tests before implementation.
+
+---
+
 ### [~] 4.33 — End-to-End Scene Playthrough
 
 No tests for this task — this is exploratory play. Run `src/showrunner/main.py` and

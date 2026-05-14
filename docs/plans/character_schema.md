@@ -6,6 +6,7 @@ The `player` field controls who drives the character: `"human"` = User-controlle
 ```yaml
 identity:
   name: string               # character's full name
+  pronoun: "he" | "she" | "it" | "ze"   # used in Actor system prompt and Narrator prose
   species: string            # e.g. "Human", "Twi'lek", "Rodian"
   career: string             # e.g. "Smuggler", "Hired Gun", "Explorer"
   specialization: string     # e.g. "Pilot", "Mercenary Soldier"
