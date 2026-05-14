@@ -5,7 +5,7 @@
 {beat_ctx}
 
 ## OTHER PLAYERS RECENT ACTIONS:
-{player_action}
+{pc_name}: {player_action}
 
 IMPORTANT: IGNORE ACTIONS THAT YOU REASONABLY ARE UNAWARE OF
 e.g. one player whispers or uses secure data link to talk to another and you are not close enough.  Or someone is invisible or hidden and you are not aware of them.

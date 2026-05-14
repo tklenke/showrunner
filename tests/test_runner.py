@@ -155,6 +155,14 @@ def test_run_companion_wave_returns_outputs_and_summaries():
     assert summaries == {"kaelen": "kaelen summary"}
 
 
+def test_run_companion_wave_player_action_uses_pc_name():
+    from showrunner.runner import run_companion_wave
+    with patch("showrunner.runner.call_llm", side_effect=["kaelen out", "summary"]) as mock:
+        run_companion_wave({"kaelen": "ctx"}, "beat ctx", "player action", pc_name="Z-4P0")
+    actors_call = next(c for c in mock.call_args_list if c.args[0] == "actors")
+    assert "Z-4P0" in actors_call.args[2]
+
+
 # ---------------------------------------------------------------------------
 # run_summaries
 # ---------------------------------------------------------------------------

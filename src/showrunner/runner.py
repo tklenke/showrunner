@@ -55,6 +55,7 @@ def run_companion_wave(
     companion_contexts: dict[str, str],
     beat_ctx: str,
     player_action: str,
+    pc_name: str = "Player",
 ) -> tuple[dict[str, str], dict[str, str]]:
     """Step 2: Each Companion responds; Narrator summarizes each.
 
@@ -69,6 +70,7 @@ def run_companion_wave(
         msg = load_task_prompt("run_companion_wave").format(
             pc_context=pc_context,
             beat_ctx=beat_ctx,
+            pc_name=pc_name,
             player_action=player_action,
         )
         output = call_llm("actors", build_system_prompt("actors"), msg, label=pc_id)

@@ -455,7 +455,7 @@ def run_turn_loop(scene: dict, verbose: bool = False, dump_prompts: bool = False
 
         # ── Step 2: Companion wave ───────────────────────────────────────────
         actor_beat_ctx = render_actor_beat_context(scene, scene_state)
-        companion_outputs, companion_summaries = run_companion_wave(companion_chars, actor_beat_ctx, player_action)
+        companion_outputs, companion_summaries = run_companion_wave(companion_chars, actor_beat_ctx, player_action, pc_name=human_pc_name)
         log.info(f"Step 2 complete: {len(companion_outputs)} Companions voiced")
 
         # ── Step 3: NPC wave with inline summaries ───────────────────────────
