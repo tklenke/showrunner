@@ -6,6 +6,18 @@ For resolved decisions, see git log.
 
 ---
 
+## Known Issues (from playthrough)
+
+- [ ] **Inline NPC stats missing from check identification** — `_build_char_stats` only covers
+  characters with YAML files (`load_scene_yamls`). Inline NPCs (e.g. Genko, C3-P9 defined
+  in `scene.inline_npcs`) have no stats block, so the Show Runner receives no mechanical
+  context when identifying checks for them. Result: malformed check output (wrong actor
+  name format, garbage characteristic/difficulty values) that parses unreliably. Options:
+  add a `stats` field to inline NPC definitions in the scene YAML, or give inline NPCs
+  their own YAML files and fold them into `load_scene_yamls`.
+
+---
+
 ## Open Decisions
 
 Items that have not yet been fully resolved. These need an answer before the relevant
