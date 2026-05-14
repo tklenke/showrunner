@@ -31,35 +31,34 @@ def test_litellm_params_contains_model():
         assert "model" in cfg["litellm_params"], f"{name} litellm_params missing model"
 
 
-def test_show_runner_uses_sardinia():
+def test_show_runner_uses_gemini():
     from showrunner.config import load_agent_configs
     configs = load_agent_configs()
-    assert "llama-3.1-8b" in configs["show_runner"]["litellm_params"]["model"].lower()
+    assert "gemini" in configs["show_runner"]["litellm_params"]["model"].lower()
 
 
-
-def test_narrator_uses_sardinia_endpoint():
+def test_narrator_uses_gemini():
     from showrunner.config import load_agent_configs
     configs = load_agent_configs()
-    assert "192.168.1.45" in (configs["narrator"]["litellm_params"].get("api_base") or "")
+    assert "gemini" in configs["narrator"]["litellm_params"]["model"].lower()
 
 
-def test_referee_uses_alien_endpoint():
+def test_referee_uses_gemini():
     from showrunner.config import load_agent_configs
     configs = load_agent_configs()
-    assert "192.168.1.144" in (configs["referee"]["litellm_params"].get("api_base") or "")
+    assert "gemini" in configs["referee"]["litellm_params"]["model"].lower()
 
 
-def test_scribe_uses_alien_endpoint():
+def test_scribe_uses_gemini():
     from showrunner.config import load_agent_configs
     configs = load_agent_configs()
-    assert "192.168.1.144" in (configs["scribe"]["litellm_params"].get("api_base") or "")
+    assert "gemini" in configs["scribe"]["litellm_params"]["model"].lower()
 
 
-def test_actors_uses_sardinia_endpoint():
+def test_actors_uses_gemini():
     from showrunner.config import load_agent_configs
     configs = load_agent_configs()
-    assert "192.168.1.45" in (configs["actors"]["litellm_params"].get("api_base") or "")
+    assert "gemini" in configs["actors"]["litellm_params"]["model"].lower()
 
 
 def test_load_agent_configs_has_no_verbose_field():

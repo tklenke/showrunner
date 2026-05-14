@@ -41,13 +41,27 @@ def test_call_llm_passes_model_from_config():
         call_llm("narrator", "sys", "user")
     kwargs = mock_completion.call_args.kwargs
     assert "model" in kwargs
-    assert "llama" in kwargs["model"].lower()
+    assert "gemini" in kwargs["model"].lower()
 
 
 def test_call_llm_passes_api_base_for_local_models():
     from showrunner.llm import call_llm
-    with patch("litellm.completion", return_value=_mock_response("ok")) as mock_completion:
-        call_llm("narrator", "sys", "user")
+    fake_configs = {
+        "local_agent": {
+            "role": "Test",
+            "goal": "Test",
+            "backstory": "Test",
+            "litellm_params": {
+                "model": "openai/llama-3.1-8b",
+                "api_base": "http://192.168.1.45:11434/v1",
+                "api_key": "local",
+            },
+            "model_alias": "local/llama",
+        }
+    }
+    with patch("showrunner.llm.load_agent_configs", return_value=fake_configs):
+        with patch("litellm.completion", return_value=_mock_response("ok")) as mock_completion:
+            call_llm("local_agent", "sys", "user")
     kwargs = mock_completion.call_args.kwargs
     assert "api_base" in kwargs
     assert "192.168" in kwargs["api_base"]
@@ -78,8 +92,22 @@ def test_call_llm_gemini_disables_thinking():
 
 def test_call_llm_non_gemini_does_not_include_thinking():
     from showrunner.llm import call_llm
-    with patch("litellm.completion", return_value=_mock_response("ok")) as mock_completion:
-        call_llm("narrator", "sys", "user")
+    fake_configs = {
+        "local_agent": {
+            "role": "Test",
+            "goal": "Test",
+            "backstory": "Test",
+            "litellm_params": {
+                "model": "openai/llama-3.1-8b",
+                "api_base": "http://192.168.1.45:11434/v1",
+                "api_key": "local",
+            },
+            "model_alias": "local/llama",
+        }
+    }
+    with patch("showrunner.llm.load_agent_configs", return_value=fake_configs):
+        with patch("litellm.completion", return_value=_mock_response("ok")) as mock_completion:
+            call_llm("local_agent", "sys", "user")
     kwargs = mock_completion.call_args.kwargs
     assert "thinking" not in kwargs
 
@@ -203,10 +231,10 @@ def test_build_system_prompt_uses_context_tier():
     assert "MEDIUM world description" not in prompt
 
 
-def test_build_system_prompt_referee_fallback_contains_role():
+def test_build_system_prompt_referee_uses_prompt_file():
     from showrunner.llm import build_system_prompt
     prompt = build_system_prompt("referee")
-    assert "Rules Engine" in prompt
+    assert "REFEREE" in prompt
 
 
 def test_build_system_prompt_narrator_returns_nonempty():

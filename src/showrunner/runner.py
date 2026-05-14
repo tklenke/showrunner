@@ -43,7 +43,7 @@ def run_npc_wave(
         summary_msg = load_task_prompt("run_npc_wave_summary").format(
             npc_id=npc_id, full_output=full_output
         )
-        summary = call_llm("narrator", build_system_prompt("narrator"), summary_msg, label=npc_id)
+        summary = call_llm("scribe", build_system_prompt("scribe"), summary_msg, label=npc_id)
         with open(summaries_log_path, "a") as f:
             f.write(f"{npc_id}: {summary}\n")
         prior_summaries += f"\n{npc_id}: {summary}"
@@ -79,7 +79,7 @@ def run_companion_wave(
         summary_msg = load_task_prompt("run_npc_wave_summary").format(
             npc_id=pc_id, full_output=output
         )
-        summaries[pc_id] = call_llm("narrator", build_system_prompt("narrator"), summary_msg, label=pc_id)
+        summaries[pc_id] = call_llm("scribe", build_system_prompt("scribe"), summary_msg, label=pc_id)
     return outputs, summaries
 
 
@@ -87,7 +87,7 @@ def run_summaries(party_actions: dict[str, str], summaries_log_path) -> None:
     """Step 4: Narrator summarises each party member's action, appending to summaries log."""
     for actor_id, action_text in party_actions.items():
         msg = load_task_prompt("run_summaries").format(actor_id=actor_id, action_text=action_text)
-        summary = call_llm("narrator", build_system_prompt("narrator"), msg)
+        summary = call_llm("scribe", build_system_prompt("scribe"), msg)
         with open(summaries_log_path, "a") as f:
             f.write(f"{actor_id}: {summary}\n")
 
@@ -98,7 +98,7 @@ def run_checks(char_summaries: dict[str, str], char_stats: dict[str, str]) -> st
     for char_id, summary in char_summaries.items():
         stats = char_stats.get(char_id, "")
         msg = load_task_prompt("run_checks").format(char_id=char_id, summary=summary, stats=stats)
-        output = call_llm("show_runner", build_system_prompt("show_runner"), msg, label=char_id)
+        output = call_llm("referee", build_system_prompt("referee"), msg, label=char_id)
         if "NO_CHECKS" not in output:
             check_lines.append(output.strip())
     return "\n".join(f"{i + 1}. {line}" for i, line in enumerate(check_lines)) if check_lines else "NO_CHECKS"
@@ -135,7 +135,7 @@ def run_rulings(check_specs: list[dict], *, on_ruling=None) -> dict[str, str]:
 def run_narrative(summaries: str, checks: str, results: str) -> str:
     """Step 3d: Generate player-facing narrative prose from the full resolution record."""
     msg = load_task_prompt("run_narrative").format(summaries=summaries, checks=checks, results=results)
-    return call_llm("show_runner", build_system_prompt("show_runner"), msg)
+    return call_llm("narrator", build_system_prompt("narrator"), msg)
 
 
 def run_last_actions(actor_summaries: dict[str, str]) -> dict[str, str]:
@@ -148,7 +148,7 @@ def run_last_actions(actor_summaries: dict[str, str]) -> dict[str, str]:
     last_actions: dict[str, str] = {}
     for actor_id, summary in actor_summaries.items():
         msg = load_task_prompt("run_last_actions").format(actor_id=actor_id, summary=summary)
-        last_actions[actor_id] = call_llm("narrator", build_system_prompt("narrator"), msg, label=actor_id)
+        last_actions[actor_id] = call_llm("scribe", build_system_prompt("scribe"), msg, label=actor_id)
     return last_actions
 
 
@@ -182,7 +182,7 @@ def run_plan_update(
         msg = load_task_prompt("run_plan_update_individual").format(
             overall_plan=overall_plan, char_id=char_id, char_context=char_context
         )
-        individual_plans[char_id] = call_llm("show_runner", build_system_prompt("show_runner"), msg, label=char_id)
+        individual_plans[char_id] = call_llm("scribe", build_system_prompt("scribe"), msg, label=char_id)
 
     return individual_plans
 

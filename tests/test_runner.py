@@ -95,6 +95,15 @@ def test_run_npc_wave_player_action_uses_pc_name(tmp_path):
     assert "Z-4P0" in actors_call.args[2]
 
 
+def test_run_npc_wave_makes_scribe_summary_call_per_npc(tmp_path):
+    from showrunner.runner import run_npc_wave
+    log_path = tmp_path / "summaries.txt"
+    with patch("showrunner.runner.call_llm", side_effect=["npc1 out", "sum1", "npc2 out", "sum2"]) as mock:
+        run_npc_wave({"a": "ctx a", "b": "ctx b"}, "beat ctx", "player action", {}, log_path)
+    scribe_calls = [c for c in mock.call_args_list if c.args[0] == "scribe"]
+    assert len(scribe_calls) == 2
+
+
 # ---------------------------------------------------------------------------
 # run_companion_wave
 # ---------------------------------------------------------------------------
@@ -114,12 +123,12 @@ def test_run_companion_wave_calls_actors_once_per_companion():
     assert len(actors_calls) == 1
 
 
-def test_run_companion_wave_makes_narrator_summary_call_per_companion():
+def test_run_companion_wave_makes_scribe_summary_call_per_companion():
     from showrunner.runner import run_companion_wave
     with patch("showrunner.runner.call_llm", side_effect=["kaelen out", "kaelen summary"]) as mock:
         run_companion_wave({"kaelen": "kaelen ctx"}, "beat ctx", "player action")
-    narrator_calls = [c for c in mock.call_args_list if c.args[0] == "narrator"]
-    assert len(narrator_calls) == 1
+    scribe_calls = [c for c in mock.call_args_list if c.args[0] == "scribe"]
+    assert len(scribe_calls) == 1
 
 
 def test_run_companion_wave_user_message_contains_beat_ctx():
@@ -167,13 +176,13 @@ def test_run_companion_wave_player_action_uses_pc_name():
 # run_summaries
 # ---------------------------------------------------------------------------
 
-def test_run_summaries_calls_narrator_once_per_actor(tmp_path):
+def test_run_summaries_calls_scribe_once_per_actor(tmp_path):
     from showrunner.runner import run_summaries
     log_path = tmp_path / "summaries.txt"
     with patch("showrunner.runner.call_llm", side_effect=["sum1", "sum2"]) as mock:
         run_summaries({"bargos": "did X", "kaelen": "did Y"}, log_path)
-    narrator_calls = [c for c in mock.call_args_list if c.args[0] == "narrator"]
-    assert len(narrator_calls) == 2
+    scribe_calls = [c for c in mock.call_args_list if c.args[0] == "scribe"]
+    assert len(scribe_calls) == 2
 
 
 def test_run_summaries_user_message_contains_action_text(tmp_path):
@@ -210,14 +219,14 @@ def test_run_summaries_empty_makes_no_calls_and_leaves_file_unchanged(tmp_path):
 # run_checks
 # ---------------------------------------------------------------------------
 
-def test_run_checks_calls_show_runner_once_per_character():
+def test_run_checks_calls_referee_once_per_character():
     from showrunner.runner import run_checks
     char_summaries = {"bargos": "Bargos spoke.", "kaelen": "Kaelen watched."}
     char_stats = {"bargos": "Presence 4", "kaelen": "Agility 3"}
     with patch("showrunner.runner.call_llm", side_effect=["NO_CHECKS", "NO_CHECKS"]) as mock:
         run_checks(char_summaries, char_stats)
-    sr_calls = [c for c in mock.call_args_list if c.args[0] == "show_runner"]
-    assert len(sr_calls) == 2
+    referee_calls = [c for c in mock.call_args_list if c.args[0] == "referee"]
+    assert len(referee_calls) == 2
 
 
 def test_run_checks_each_call_contains_only_that_chars_summary():
@@ -321,12 +330,12 @@ def test_run_rulings_returns_dict_keyed_by_actor():
 # run_narrative
 # ---------------------------------------------------------------------------
 
-def test_run_narrative_calls_show_runner_once():
+def test_run_narrative_calls_narrator_once():
     from showrunner.runner import run_narrative
     with patch("showrunner.runner.call_llm", return_value="prose") as mock:
         run_narrative("summaries", "checks", "results")
-    sr_calls = [c for c in mock.call_args_list if c.args[0] == "show_runner"]
-    assert len(sr_calls) == 1
+    narrator_calls = [c for c in mock.call_args_list if c.args[0] == "narrator"]
+    assert len(narrator_calls) == 1
 
 
 def test_run_narrative_user_message_contains_all_three_inputs():
@@ -356,12 +365,12 @@ def test_run_last_actions_empty_returns_empty_dict():
     assert result == {}
 
 
-def test_run_last_actions_calls_narrator_once_per_actor():
+def test_run_last_actions_calls_scribe_once_per_actor():
     from showrunner.runner import run_last_actions
     with patch("showrunner.runner.call_llm", side_effect=["act1", "act2"]) as mock:
         run_last_actions({"bargos": "summary1", "kaelen": "summary2"})
-    narrator_calls = [c for c in mock.call_args_list if c.args[0] == "narrator"]
-    assert len(narrator_calls) == 2
+    scribe_calls = [c for c in mock.call_args_list if c.args[0] == "scribe"]
+    assert len(scribe_calls) == 2
 
 
 def test_run_last_actions_bargos_call_does_not_contain_kaelen_summary():
@@ -449,7 +458,9 @@ def test_run_plan_update_fires_overall_plan_call_once():
     with patch("showrunner.runner.call_llm", side_effect=["overall plan", "plan_b", "plan_k"]) as mock:
         run_plan_update(_CHARS, "summaries", "results", {"bargos": "last act"})
     sr_calls = [c for c in mock.call_args_list if c.args[0] == "show_runner"]
-    assert len(sr_calls) == 3  # 1 overall + 2 individual
+    scribe_calls = [c for c in mock.call_args_list if c.args[0] == "scribe"]
+    assert len(sr_calls) == 1      # overall plan only
+    assert len(scribe_calls) == 2  # individual plans
 
 
 def test_run_plan_update_fires_one_individual_call_per_character():
