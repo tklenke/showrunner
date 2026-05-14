@@ -101,7 +101,7 @@ def run_checks(char_summaries: dict[str, str], char_stats: dict[str, str]) -> st
         output = call_llm("show_runner", build_system_prompt("show_runner"), msg, label=char_id)
         if "NO_CHECKS" not in output:
             check_lines.append(output.strip())
-    return "\n".join(check_lines) if check_lines else "NO_CHECKS"
+    return "\n".join(f"{i + 1}. {line}" for i, line in enumerate(check_lines)) if check_lines else "NO_CHECKS"
 
 
 def run_rulings(check_specs: list[dict], *, on_ruling=None) -> dict[str, str]:

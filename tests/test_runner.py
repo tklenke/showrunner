@@ -246,6 +246,17 @@ def test_run_checks_check_lines_combined_into_single_output():
     assert line2 in result
 
 
+def test_run_checks_check_lines_are_numbered():
+    from showrunner.runner import run_checks
+    line1 = "bargos | Negotiation | Presence 4 | 2 | Average | notes"
+    line2 = "kaelen | Athletics | Agility 3 | 1 | Easy | notes"
+    with patch("showrunner.runner.call_llm", side_effect=[line1, line2]):
+        result = run_checks({"bargos": "spoke", "kaelen": "ran"}, {"bargos": "", "kaelen": ""})
+    lines = result.strip().splitlines()
+    assert lines[0].startswith("1.")
+    assert lines[1].startswith("2.")
+
+
 # ---------------------------------------------------------------------------
 # run_rulings
 # ---------------------------------------------------------------------------
