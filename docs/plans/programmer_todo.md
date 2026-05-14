@@ -16,7 +16,7 @@ Reference documents:
 
 ---
 
-### [ ] 4.34 — Route pipeline-internal calls to Scribe agent
+### [x] 4.34 — Route pipeline-internal calls to Scribe agent
 
 Per game_loop.md Ref A, the following `call_llm` calls must change agent:
 
