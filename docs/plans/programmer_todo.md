@@ -109,7 +109,7 @@ Follow TDD. Tests should cover:
 
 ---
 
-### [ ] 4.39 — Per-agent temperature
+### [x] 4.39 — Per-agent temperature
 
 **`config/agents.yaml`** — add `temperature` to each agent:
 

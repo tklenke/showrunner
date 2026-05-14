@@ -4,25 +4,27 @@
 show_runner:
   prompt_file: prompts/agent_show_runner.md
   context_tier: medium
-  #model: sardinia/llama-3.1-8b
   model: gemini/gemini-2.5-flash
+  temperature: 0.4
 
 narrator:
   prompt_file: prompts/agent_narrator.md
-  #model: sardinia/llama-3.1-8b
   model: gemini/gemini-2.5-flash
+  temperature: 0.8
 
 actors:
   prompt_file: prompts/agent_actors.md
-  #model: sardinia/llama-3.1-8b
   model: gemini/gemini-2.5-flash
+  temperature: 0.9
 
 referee:
   prompt_file: prompts/agent_referee.md
   context_tier: small
   model: gemini/gemini-2.5-flash
+  temperature: 0.2
 
 scribe:
   prompt_file: prompts/agent_scribe.md
   context_tier: small
   model: gemini/gemini-2.5-flash
+  temperature: 0.3

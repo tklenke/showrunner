@@ -61,6 +61,7 @@ def load_agent_configs() -> dict:
             "model_alias": model_alias,
             "prompt_file": cfg.get("prompt_file"),
             "context_tier": cfg.get("context_tier", "medium"),
+            "temperature": cfg.get("temperature", 0.7),
         }
     return result
 

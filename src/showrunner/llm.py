@@ -80,6 +80,7 @@ def call_llm(agent_name: str, system_prompt: str, user_message: str, label: str 
         kwargs["api_base"] = params["api_base"]
     if "api_key" in params:
         kwargs["api_key"] = params["api_key"]
+    kwargs["temperature"] = cfg.get("temperature", 0.7)
     # Gemini 2.5 thinking mode disabled — we want direct answers, not chain-of-thought
     if "gemini-2.5" in params["model"]:
         kwargs["thinking"] = {"type": "disabled"}

@@ -35,6 +35,48 @@ def test_call_llm_returns_response_content():
     assert result == "The scene unfolds."
 
 
+def test_call_llm_passes_temperature_from_config():
+    from showrunner.llm import call_llm
+    fake_configs = {
+        "narrator": {
+            "role": "Narrator",
+            "goal": "",
+            "backstory": "",
+            "litellm_params": {"model": "gemini/gemini-2.5-flash", "api_key": "test"},
+            "model_alias": "gemini/gemini-2.5-flash",
+            "prompt_file": None,
+            "context_tier": "medium",
+            "temperature": 0.8,
+        }
+    }
+    with patch("showrunner.llm.load_agent_configs", return_value=fake_configs):
+        with patch("litellm.completion", return_value=_mock_response("ok")) as mock_completion:
+            call_llm("narrator", "sys", "user")
+    kwargs = mock_completion.call_args.kwargs
+    assert kwargs.get("temperature") == 0.8
+
+
+def test_call_llm_uses_default_temperature_when_absent():
+    from showrunner.llm import call_llm
+    fake_configs = {
+        "narrator": {
+            "role": "Narrator",
+            "goal": "",
+            "backstory": "",
+            "litellm_params": {"model": "gemini/gemini-2.5-flash", "api_key": "test"},
+            "model_alias": "gemini/gemini-2.5-flash",
+            "prompt_file": None,
+            "context_tier": "medium",
+        }
+    }
+    with patch("showrunner.llm.load_agent_configs", return_value=fake_configs):
+        with patch("litellm.completion", return_value=_mock_response("ok")) as mock_completion:
+            call_llm("narrator", "sys", "user")
+    kwargs = mock_completion.call_args.kwargs
+    assert "temperature" in kwargs
+    assert kwargs["temperature"] == 0.7
+
+
 def test_call_llm_passes_model_from_config():
     from showrunner.llm import call_llm
     with patch("litellm.completion", return_value=_mock_response("ok")) as mock_completion:
