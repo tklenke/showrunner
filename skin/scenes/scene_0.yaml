@@ -28,6 +28,7 @@ location:
     at attention nearby.
 
 npcs_present:
+  - "Z-4P0"
   - "bargos_the_hutt"
   - "kaelen_sunara"
 
