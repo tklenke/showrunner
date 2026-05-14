@@ -26,20 +26,13 @@ For resolved decisions, see git log.
 Items that have not yet been fully resolved. These need an answer before the relevant
 implementation phase begins.
 
-- [ ] **SR-driven beat advancement** — Replace (or supplement) the manual `[a / beat-id / Enter]`
-  prompt with a Show Runner call that decides whether to advance after each turn. Four design
-  questions to resolve before implementation:
-  1. **Trigger placement** — which step in the turn loop runs the SR advance check? After Step 9
-     (plan update) is the natural slot; confirm what context it receives (summaries log, results,
-     last_actions, or all three).
-  2. **What the SR judges against** — beats currently have a `trigger` field describing when the
-     beat *starts*, but no `exit_condition`. Options: (a) SR infers from narrative context alone,
-     (b) add an explicit `exit_condition` string to each beat YAML so the SR has a concrete target.
-     Option (b) is more reliable but requires a schema addition and scene file updates.
-  3. **Output format** — simple `ADVANCE` / `STAY`, or can the SR name a specific beat ID to
-     allow non-linear jumps (e.g. skip `gamorrean_warning` if the ambush was pre-empted)?
-  4. **Manual override** — keep the `[a / beat-id / Enter]` prompt as a debug escape hatch
-     (perhaps only in `--verbose` mode), or remove it entirely once SR advance is trusted?
+- [x] **SR-driven beat advancement** — Ratified. See programmer task 4.40.
+
+- [ ] **Auto-narrated character departures** — When a beat transition drops characters via
+  `remove_npcs`, the Narrator could generate a plausible in-world exit for each. Deferred:
+  for the current playtest, departures are handled by beat opener `narrator_notes` written
+  directly in the scene YAML (e.g. C3-P9 bolts through a side door in `gamorrean_rumble`).
+  Revisit when scenes have beats with dynamic or unanticipated character drops.
 
 - [ ] **Context window pre-flight check** — Before each `call_llm()`, estimate token
   count of the assembled prompt (characters ÷ 4 is a reasonable approximation) and warn
