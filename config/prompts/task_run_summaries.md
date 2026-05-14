@@ -1,1 +1,3 @@
-Summarise in 1-2 sentences what {actor_id} did: {action_text}
+{action_text}
+
+SUMMARIZE IN 1-2 SENTENCES WHAT {actor_id} JUST DID

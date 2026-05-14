@@ -401,6 +401,48 @@ def test_parse_structured_all_fail_logs_warning(tmp_path, monkeypatch):
 
 
 # ---------------------------------------------------------------------------
+# _find_human_pc_name
+# ---------------------------------------------------------------------------
+
+_HUMAN_YAML = {"identity": {"name": "Z-4P0 ('Zee')", "player": "human"}}
+_NPC_YAML = {"identity": {"name": "Bargos the Hutt"}}
+
+
+def test_find_human_pc_name_returns_identity_name(tmp_path):
+    import yaml as pyyaml
+    from showrunner.orchestrator import _find_human_pc_name
+    chars_dir = tmp_path / "chars"
+    chars_dir.mkdir()
+    (chars_dir / "Z-4P0.yaml").write_text(pyyaml.dump(_HUMAN_YAML))
+    scene = {"npcs_present": ["Z-4P0"]}
+    result = _find_human_pc_name(scene, characters_dir=str(chars_dir))
+    assert result == "Z-4P0 ('Zee')"
+
+
+def test_find_human_pc_name_skips_npcs(tmp_path):
+    import yaml as pyyaml
+    from showrunner.orchestrator import _find_human_pc_name
+    chars_dir = tmp_path / "chars"
+    chars_dir.mkdir()
+    (chars_dir / "bargos.yaml").write_text(pyyaml.dump(_NPC_YAML))
+    (chars_dir / "Z-4P0.yaml").write_text(pyyaml.dump(_HUMAN_YAML))
+    scene = {"npcs_present": ["bargos", "Z-4P0"]}
+    result = _find_human_pc_name(scene, characters_dir=str(chars_dir))
+    assert result == "Z-4P0 ('Zee')"
+
+
+def test_find_human_pc_name_returns_fallback_when_no_human(tmp_path):
+    import yaml as pyyaml
+    from showrunner.orchestrator import _find_human_pc_name
+    chars_dir = tmp_path / "chars"
+    chars_dir.mkdir()
+    (chars_dir / "bargos.yaml").write_text(pyyaml.dump(_NPC_YAML))
+    scene = {"npcs_present": ["bargos"]}
+    result = _find_human_pc_name(scene, characters_dir=str(chars_dir))
+    assert result == "Player"
+
+
+# ---------------------------------------------------------------------------
 # _extract_stat_changes
 # ---------------------------------------------------------------------------
 

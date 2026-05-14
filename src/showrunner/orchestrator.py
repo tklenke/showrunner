@@ -63,6 +63,22 @@ def is_human_character(character_yaml: dict) -> bool:
     return character_yaml.get("identity", {}).get("player") == "human"
 
 
+def _find_human_pc_name(scene: dict, characters_dir: str = "skin/characters") -> str:
+    """Return identity.name of the human player character in this scene, or 'Player'."""
+    import yaml as pyyaml
+    from pathlib import Path
+    for name in scene.get("npcs_present", []):
+        yaml_path = Path(characters_dir) / f"{name}.yaml"
+        try:
+            with open(yaml_path) as f:
+                char_yaml = pyyaml.safe_load(f)
+            if is_human_character(char_yaml):
+                return char_yaml["identity"].get("name", name)
+        except FileNotFoundError:
+            continue
+    return "Player"
+
+
 _DIVIDER = "─" * 60
 
 
@@ -391,6 +407,7 @@ def run_turn_loop(scene: dict, verbose: bool = False, dump_prompts: bool = False
 
     initialize_scene_state(scene)
     scene_yamls = load_scene_yamls(scene)
+    human_pc_name = _find_human_pc_name(scene)
     scene_num: int = scene.get("scene_num", 0)
     beat_list = scene.get("beats", [])
     beat_ids = [b["id"] for b in beat_list]
@@ -443,7 +460,7 @@ def run_turn_loop(scene: dict, verbose: bool = False, dump_prompts: bool = False
 
         # ── Step 3: NPC wave with inline summaries ───────────────────────────
         summaries_log_path = logs_dir / f"{scene_num:02d}_{_beat_num:02d}_{current_beat}_{_turn_num:04d}_summaries.txt"
-        npc_outputs = run_npc_wave(npc_chars, actor_beat_ctx, player_action, companion_summaries, summaries_log_path)
+        npc_outputs = run_npc_wave(npc_chars, actor_beat_ctx, player_action, companion_summaries, summaries_log_path, pc_name=human_pc_name)
         log.info(f"Step 3 complete: {len(npc_outputs)} NPCs voiced")
 
         # ── Step 4: Party action summaries ───────────────────────────────────

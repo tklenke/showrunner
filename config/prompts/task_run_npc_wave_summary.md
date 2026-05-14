@@ -1,2 +1,3 @@
-Summarize in 1-2 sentences what {npc_id} just did:
 {full_output}
+
+SUMMARIZE IN 1-2 SENTENCES WHAT {npc_id} JUST DID

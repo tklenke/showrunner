@@ -5,13 +5,16 @@
 {beat_ctx}
 
 ## WHAT HAPPENED THIS TURN
-Player Character: {player_action}{other_character_actions}
+{pc_name}: {player_action}{other_character_actions}
+
+IMPORTANT: IGNORE ACTIONS THAT YOU REASONABLY ARE UNAWARE OF
+e.g. one player whispers or uses secure data link to talk to another and you are not close enough.  Or someone is invisible or hidden and you are not aware of them.
 
 - USE BRACKETED ACTION: Describe your physical movements in brackets 
 - SPEECH: Precede all dialogue with your character name in caps
 
 FEW-SHOT ANCHOR: 
-[YOUR NAME checks the power cell on his blaster. He|She looks up at the Mark.]
+[I check the power cell on my blaster. I look up at the Mark.]
 YOUR NAME: You're late. Credits first, then we talk.
 
 ONLY RESPOND IN SCREENPLAY FORMAT. ONLY DESCRIBE *YOUR* ACTIONS AND WORDS

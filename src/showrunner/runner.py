@@ -10,6 +10,7 @@ def run_npc_wave(
     user_action: str,
     companion_summaries: dict[str, str],
     summaries_log_path,
+    pc_name: str = "Player",
 ) -> dict[str, str]:
     """Step 3: Each NPC acts, then Narrator summarizes (2N calls for N NPCs).
 
@@ -30,6 +31,7 @@ def run_npc_wave(
         msg = load_task_prompt("run_npc_wave").format(
             npc_context=npc_context,
             beat_ctx=beat_ctx,
+            pc_name=pc_name,
             player_action=user_action,
             other_character_actions="".join(sections),
         )

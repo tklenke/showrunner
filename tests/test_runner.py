@@ -86,6 +86,15 @@ def test_run_npc_wave_uses_section_header_format(tmp_path, capsys):
     assert "[bargos]" not in captured.out
 
 
+def test_run_npc_wave_player_action_uses_pc_name(tmp_path):
+    from showrunner.runner import run_npc_wave
+    log_path = tmp_path / "summaries.txt"
+    with patch("showrunner.runner.call_llm", side_effect=["npc out", "summary"]) as mock:
+        run_npc_wave({"npc": "ctx"}, "beat ctx", "player action", {}, log_path, pc_name="Z-4P0")
+    actors_call = next(c for c in mock.call_args_list if c.args[0] == "actors")
+    assert "Z-4P0" in actors_call.args[2]
+
+
 # ---------------------------------------------------------------------------
 # run_companion_wave
 # ---------------------------------------------------------------------------

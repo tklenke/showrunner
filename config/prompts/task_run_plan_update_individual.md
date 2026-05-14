@@ -4,4 +4,4 @@
 ## Character: {char_id}
 {char_context}
 
-What is {char_id}'s specific plan for the next turn? One concise paragraph.
+What is {char_id}'s specific plan for the next turn? Two concise sentences.
