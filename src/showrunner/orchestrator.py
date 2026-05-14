@@ -453,9 +453,16 @@ def _roll_specs(specs: list[dict]) -> None:
         diff_word = spec["difficulty"].split()[0]
         diff_dice = _DIFFICULTY_MAP.get(diff_word, 2)
 
+        pool_parts = []
+        if proficiency:
+            pool_parts.append(f"{proficiency} Proficiency (yellow)")
+        if ability:
+            pool_parts.append(f"{ability} Ability (green)")
+        pool_str = " + ".join(pool_parts) if pool_parts else "no positive dice"
         print(
-            f"\nRoll: {spec['actor']} — {spec['skill']} ({spec['characteristic']} {spec['char_value']}, "
-            f"rank {spec['skill_rank']}, {spec['difficulty']})"
+            f"\nRoll: {spec['actor']} — {spec['skill']} | {spec['difficulty']}"
+            f"\n  Pool: {pool_str}  vs  {diff_dice} Difficulty (purple)"
+            + (f"\n  Notes: {spec['notes']}" if spec.get("notes") else "")
         )
         raw = input("Enter result (S2A1T1) or Enter to auto-roll: ").strip()
         if raw:
