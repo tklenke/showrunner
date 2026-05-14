@@ -109,6 +109,50 @@ Follow TDD. Tests should cover:
 
 ---
 
+### [ ] 4.39 — Per-agent temperature
+
+**`config/agents.yaml`** — add `temperature` to each agent:
+
+```yaml
+show_runner:
+  temperature: 0.4   # consistent reasoning and rulings
+
+narrator:
+  temperature: 0.8   # creative prose, varied voice
+
+actors:
+  temperature: 0.9   # distinct character personality per call
+
+referee:
+  temperature: 0.2   # near-deterministic structured output
+
+scribe:
+  temperature: 0.3   # factual extraction with minimal variance
+```
+
+**`config.py` — `load_agent_configs`**
+
+Read `temperature` from the agent YAML entry and include it in the returned config dict
+(not inside `litellm_params` — it is per-agent behaviour, not per-model routing):
+
+```python
+"temperature": cfg.get("temperature", 0.7),
+```
+
+**`llm.py` — `call_llm`**
+
+Add temperature to the litellm kwargs:
+
+```python
+kwargs["temperature"] = cfg.get("temperature", 0.7)
+```
+
+Default `0.7` used if the field is absent (covers any future agent added without one).
+
+Follow TDD. Test that `call_llm` passes the configured temperature to `litellm.completion`.
+
+---
+
 ### [ ] 4.35 — Manual Dice Input Parser
 
 Implement `parse_dice_input(text: str) -> dict` in `src/showrunner/dice.py`.
