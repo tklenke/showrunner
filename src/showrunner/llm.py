@@ -3,6 +3,7 @@
 
 import inspect
 import logging
+import time
 from pathlib import Path
 
 import litellm
@@ -97,7 +98,19 @@ def call_llm(agent_name: str, system_prompt: str, user_message: str, label: str 
                 agent_name, estimated, max_ctx,
             )
 
-    response = litellm.completion(**kwargs)
+    _MAX_RETRIES = 5
+    _BACKOFF_BASE = 2  # seconds; doubles each attempt: 2, 4, 8, 16, 32
+    for attempt in range(_MAX_RETRIES + 1):
+        try:
+            response = litellm.completion(**kwargs)
+            break
+        except litellm.exceptions.ServiceUnavailableError as exc:
+            if attempt == _MAX_RETRIES:
+                raise
+            wait = _BACKOFF_BASE ** attempt
+            print(f"[showrunner] Gemini unavailable (503) — retrying in {wait}s (attempt {attempt + 1}/{_MAX_RETRIES})...")
+            time.sleep(wait)
+
     content = response.choices[0].message.content
 
     if _prompt_logger is not None:

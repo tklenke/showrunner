@@ -254,6 +254,53 @@ def test_call_llm_no_warning_when_within_max_context_tokens(caplog):
     assert not showrunner_warnings, f"Unexpected warnings: {[r.message for r in showrunner_warnings]}"
 
 
+# ---------------------------------------------------------------------------
+# 503 retry with backoff
+# ---------------------------------------------------------------------------
+
+def test_call_llm_retries_on_503_and_succeeds(capsys):
+    import litellm as _litellm
+    from showrunner.llm import call_llm
+    err = _litellm.exceptions.ServiceUnavailableError(
+        message="503", llm_provider="gemini", model="gemini-2.5-flash",
+    )
+    side_effects = [err, err, _mock_response("recovered")]
+    with patch("showrunner.llm.load_agent_configs") as mock_cfg:
+        mock_cfg.return_value = {
+            "narrator": {
+                "litellm_params": {"model": "test/model"},
+                "model_alias": "test/narrator",
+                "temperature": 0.8,
+            }
+        }
+        with patch("litellm.completion", side_effect=side_effects):
+            with patch("showrunner.llm.time.sleep"):  # don't actually sleep
+                result = call_llm("narrator", "sys", "user")
+    assert result == "recovered"
+    out = capsys.readouterr().out
+    assert "Retrying" in out or "retrying" in out.lower() or "503" in out or "unavailable" in out.lower()
+
+
+def test_call_llm_raises_after_max_retries():
+    import litellm as _litellm
+    from showrunner.llm import call_llm
+    err = _litellm.exceptions.ServiceUnavailableError(
+        message="503", llm_provider="gemini", model="gemini-2.5-flash",
+    )
+    with patch("showrunner.llm.load_agent_configs") as mock_cfg:
+        mock_cfg.return_value = {
+            "narrator": {
+                "litellm_params": {"model": "test/model"},
+                "model_alias": "test/narrator",
+                "temperature": 0.8,
+            }
+        }
+        with patch("litellm.completion", side_effect=err):
+            with patch("showrunner.llm.time.sleep"):
+                with pytest.raises(_litellm.exceptions.ServiceUnavailableError):
+                    call_llm("narrator", "sys", "user")
+
+
 def test_build_system_prompt_contains_role():
     from showrunner.llm import build_system_prompt
     prompt = build_system_prompt("narrator")
