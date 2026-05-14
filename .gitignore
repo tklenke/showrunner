@@ -221,5 +221,6 @@ logs/*.log
 # Copyrighted reference materials
 docs/references/copyrighted/
 
-# Runtime state (regenerated each session)
-state/scene_state.yaml
+# Runtime output (regenerated each session)
+logs/
+state/
