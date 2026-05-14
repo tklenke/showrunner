@@ -90,14 +90,24 @@ prose, character dialogue, and check results — and the prose sometimes ends wi
 question or a dramatic beat. **Wait for the horizontal rule (`────...`) before typing.**
 That line always appears immediately before a prompt that expects your input.
 
-At the end of each turn you are prompted for beat advancement:
+**Beat advancement** is decided automatically by the Show Runner after each turn. The SR
+reads what happened this turn against the next beat's entry condition and outputs `ADVANCE`
+or `STAY`. When it advances, NPC and Companion plans for the next turn are written with
+the new beat context — so characters react to where the story actually is.
+
+In `--verbose` mode the SR's decision is shown and you can accept it or override with a
+manual choice:
 
 ```
-[Enter]       stay on the current beat
+[SR beat decision: ADVANCE]
+[Enter]       accept SR decision
 a             advance to the next beat
 <beat-id>     jump to a specific beat (e.g. gamorrean_rumble)
+stay          stay on the current beat
 q             quit the session
 ```
+
+In normal mode the SR's decision is applied silently and play continues.
 
 ---
 

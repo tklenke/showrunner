@@ -471,6 +471,13 @@ def _roll_specs(specs: list[dict]) -> None:
             result = dice_result_from_input(parsed)
         else:
             result = roll_pool({"ability": ability, "proficiency": proficiency, "difficulty": diff_dice})
+            outcome = "passed" if result.passed else "failed"
+            print(
+                f"Roll {outcome}: net {result.net_successes:+d} successes, "
+                f"{result.net_advantage:+d} advantage"
+                + (f" | {result.triumphs} Triumph(s)" if result.triumphs else "")
+                + (f" | {result.despairs} Despair(s)" if result.despairs else "")
+            )
 
         outcome = "passed" if result.passed else "failed"
         spec["roll_result"] = (

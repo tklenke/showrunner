@@ -689,3 +689,12 @@ def test_roll_specs_manual_failure_marked_failed(monkeypatch):
     _roll_specs([spec])
     assert "failed" in spec["roll_result"]
     assert "-3" in spec["roll_result"]
+
+
+def test_roll_specs_auto_roll_prints_result(monkeypatch, capsys):
+    from showrunner.orchestrator import _roll_specs
+    monkeypatch.setattr("builtins.input", lambda _: "")
+    spec = dict(_SPEC)
+    _roll_specs([spec])
+    captured = capsys.readouterr()
+    assert "Roll passed" in captured.out or "Roll failed" in captured.out
