@@ -14,11 +14,10 @@ For resolved decisions, see git log.
   replaces the bare `key_traits` string so inline NPCs enter the NPC wave with name,
   pronoun, role, and mechanical context.
 
-- [ ] **Ruling actor ID doesn't reliably match party_stats keys** — `_make_ruling_callback`
-  looks up `spec["actor"]` in `party_stats["characters"]`, but LLM output often uses display
-  names ("Bargos") instead of file-stem IDs ("bargos_the_hutt"). Wounds applied by rulings
-  silently miss the right entry. Needs either normalisation of actor IDs before lookup, or
-  a name→key mapping table.
+- [x] **Ruling actor ID doesn't reliably match party_stats keys** — addressed by programmer
+  task 4.38. `_build_actor_name_map` builds a lowercase display-name → char_id lookup at
+  session start from all character sources. `_make_ruling_callback` normalises the actor
+  string through this map before touching party_stats.
 
 ---
 

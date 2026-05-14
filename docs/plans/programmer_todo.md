@@ -53,6 +53,62 @@ model assignments (all agents now on gemini) and the referee/scribe prompt_file 
 
 ---
 
+### [ ] 4.38 — Actor name→ID normalisation in ruling callback
+
+Fixes the known issue (architect_todo): ruling wounds silently miss party_stats because
+the Referee writes display names ("Bargos") but party_stats keys are file-stem IDs
+("bargos_the_hutt").
+
+---
+
+#### `_build_actor_name_map(scene, scene_yamls) -> dict[str, str]`
+
+New function in `orchestrator.py`. Builds a lowercase display-name → char_id lookup
+from all character sources in the scene:
+
+1. `scene_yamls` (full YAML files): `identity["name"].lower()` → `char_id`
+2. `scene.get("inline_npcs", [])`: `npc["name"].lower()` → `npc["id"]`
+3. `scene.get("minion_groups", [])`: `group["name"].lower()` → `group["id"]`
+
+Returns `dict[str, str]`. Called once at session start, after `load_scene_yamls`.
+
+---
+
+#### `_make_ruling_callback` — add `name_to_id` parameter
+
+Change signature to `_make_ruling_callback(stats_path, name_to_id: dict[str, str])`.
+
+Inside the callback, before `chars.get(actor, {})`, normalise the actor string:
+
+```python
+actor_key = name_to_id.get(actor.lower(), actor)
+```
+
+Use `actor_key` for all party_stats reads and writes (not the raw `actor` string).
+Keep using the raw `actor` string only for the session log wound-threshold message
+(display name is fine there).
+
+---
+
+#### Orchestrator call site
+
+Build the map and pass it:
+
+```python
+name_to_id = _build_actor_name_map(scene, scene_yamls)
+# ...
+on_ruling=_make_ruling_callback(party_stats_path, name_to_id) if ruling_specs else None
+```
+
+---
+
+Follow TDD. Tests should cover:
+- `_build_actor_name_map` returns correct lowercase mappings from all three sources
+- callback correctly resolves display name to ID before writing wounds
+- callback falls back to raw actor string when name not in map
+
+---
+
 ### [ ] 4.35 — Manual Dice Input Parser
 
 Implement `parse_dice_input(text: str) -> dict` in `src/showrunner/dice.py`.
