@@ -113,6 +113,30 @@ def render_actor_prompt(character_yaml: dict, persona_md: str, scene_state: dict
     return "\n".join(lines)
 
 
+def render_actor_beat_context(scene: dict, scene_state: dict) -> str:
+    """Build minimal beat context for actor (NPC/companion) roleplay calls.
+
+    Includes only location name, atmosphere, and current beat info.
+    Excludes party stats, ticking clocks, character plans, and beat sequence.
+    """
+    current_beat_id = scene_state["current_beat"]
+    beat = next((b for b in scene.get("beats", []) if b["id"] == current_beat_id), None)
+
+    loc = scene["location"]
+    lines = [
+        f"## Scene: {loc['name']}",
+        loc.get("atmosphere", "").strip(),
+    ]
+
+    if beat:
+        lines.append("")
+        lines.append(f"## Beat: {beat['title']}")
+        if beat.get("narrator_notes"):
+            lines.append(beat["narrator_notes"].strip())
+
+    return "\n".join(lines)
+
+
 def load_scene_characters(
     scene: dict,
     scene_state: dict,

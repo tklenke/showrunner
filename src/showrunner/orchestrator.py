@@ -5,7 +5,7 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
-from showrunner.agents.actors import load_scene_characters, load_scene_yamls
+from showrunner.agents.actors import load_scene_characters, load_scene_yamls, render_actor_beat_context
 from showrunner.agents.narrator import render_narrator_context
 from showrunner.agents.show_runner import render_show_runner_context
 from showrunner.config import apply_litellm_settings, load_agent_configs
@@ -438,12 +438,13 @@ def run_turn_loop(scene: dict, verbose: bool = False, dump_prompts: bool = False
             break
 
         # ── Step 2: Companion wave ───────────────────────────────────────────
-        companion_outputs = run_companion_wave(companion_chars, sr_ctx, player_action)
+        actor_beat_ctx = render_actor_beat_context(scene, scene_state)
+        companion_outputs = run_companion_wave(companion_chars, actor_beat_ctx, player_action)
         log.info(f"Step 2 complete: {len(companion_outputs)} Companions voiced")
 
         # ── Step 3: NPC wave with inline summaries ───────────────────────────
         summaries_log_path = logs_dir / f"{scene_num:02d}_{_beat_num:02d}_{current_beat}_{_turn_num:04d}_summaries.txt"
-        npc_outputs = run_npc_wave(npc_chars, sr_ctx, player_action, companion_outputs, summaries_log_path)
+        npc_outputs = run_npc_wave(npc_chars, actor_beat_ctx, player_action, companion_outputs, summaries_log_path)
         log.info(f"Step 3 complete: {len(npc_outputs)} NPCs voiced")
 
         # ── Step 4: Party action summaries ───────────────────────────────────

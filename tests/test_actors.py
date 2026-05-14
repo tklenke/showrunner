@@ -157,3 +157,53 @@ def test_load_scene_yamls_default_reads_skin_characters(tmp_path, monkeypatch):
     scene = {"npcs_present": ["test_npc"], "inline_npcs": []}
     result = load_scene_yamls(scene)
     assert "test_npc" in result
+
+
+# --- render_actor_beat_context tests ---
+
+_BEAT_SCENE = {
+    "location": {"name": "Bargos Mansion", "atmosphere": "Opulent and dangerous."},
+    "beats": [
+        {
+            "id": "arrival",
+            "title": "Grand Arrival",
+            "narrator_notes": "Marble columns and the smell of spice.",
+            "show_runner_notes": "SR directive only.",
+        }
+    ],
+}
+_BEAT_STATE = {"current_beat": "arrival", "character_plans": {}}
+
+
+def test_render_actor_beat_context_contains_beat_title():
+    from showrunner.agents.actors import render_actor_beat_context
+    result = render_actor_beat_context(_BEAT_SCENE, _BEAT_STATE)
+    assert "Grand Arrival" in result
+
+
+def test_render_actor_beat_context_contains_location():
+    from showrunner.agents.actors import render_actor_beat_context
+    result = render_actor_beat_context(_BEAT_SCENE, _BEAT_STATE)
+    assert "Bargos Mansion" in result
+
+
+def test_render_actor_beat_context_contains_narrator_notes():
+    from showrunner.agents.actors import render_actor_beat_context
+    result = render_actor_beat_context(_BEAT_SCENE, _BEAT_STATE)
+    assert "Marble columns" in result
+
+
+def test_render_actor_beat_context_excludes_party_stats():
+    from showrunner.agents.actors import render_actor_beat_context
+    result = render_actor_beat_context(_BEAT_SCENE, _BEAT_STATE)
+    assert "wounds" not in result
+    assert "strain" not in result
+
+
+def test_render_actor_beat_context_excludes_ticking_clocks():
+    from showrunner.agents.actors import render_actor_beat_context
+    scene = {**_BEAT_SCENE}
+    state = {**_BEAT_STATE, "ticking_clocks": [{"id": "clock1", "label": "Alarm", "destroyed": 1, "max": 3}]}
+    result = render_actor_beat_context(scene, state)
+    assert "Alarm" not in result
+    assert "clock" not in result.lower()
