@@ -5,6 +5,8 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
+_log = logging.getLogger(__name__)
+
 from showrunner.agents.actors import load_scene_characters, load_scene_yamls, render_actor_beat_context
 from showrunner.agents.narrator import render_narrator_context
 from showrunner.agents.show_runner import render_show_runner_context
@@ -238,10 +240,7 @@ def parse_structured(raw: str, parser, *, context: str = "") -> tuple:
             return result, True
 
     # Zero fallback
-    warning = f"\nWARNING: parse_structured failed for context: {context!r}. Using zero fallback.\n"
-    session_log_path = Path("state/session_log.md")
-    with session_log_path.open("a") as f:
-        f.write(warning)
+    _log.warning(f"parse_structured failed for context: {context!r}. Using zero fallback.")
     return result, False
 
 

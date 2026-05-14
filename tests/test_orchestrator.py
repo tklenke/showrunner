@@ -374,7 +374,7 @@ def test_parse_structured_all_llm_fail_returns_zero_fallback(tmp_path, monkeypat
     assert recovered is False
 
 
-def test_parse_structured_all_fail_writes_warning_to_session_log(tmp_path, monkeypatch):
+def test_parse_structured_all_fail_does_not_write_to_session_log(tmp_path, monkeypatch):
     from unittest.mock import patch
     from showrunner.orchestrator import parse_structured
     monkeypatch.chdir(tmp_path)
@@ -382,8 +382,22 @@ def test_parse_structured_all_fail_writes_warning_to_session_log(tmp_path, monke
     monkeypatch.setattr("builtins.input", lambda _: "")
     with patch("showrunner.orchestrator.call_llm", return_value="still bad"):
         parse_structured("bad", _fail_parser, context="ctx")
-    log_content = (tmp_path / "state" / "session_log.md").read_text()
-    assert "WARNING" in log_content
+    log_path = tmp_path / "state" / "session_log.md"
+    assert not log_path.exists() or "WARNING" not in log_path.read_text()
+
+
+def test_parse_structured_all_fail_logs_warning(tmp_path, monkeypatch):
+    import logging
+    from unittest.mock import patch
+    from showrunner.orchestrator import parse_structured
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "state").mkdir()
+    monkeypatch.setattr("builtins.input", lambda _: "")
+    with patch("showrunner.orchestrator.call_llm", return_value="still bad"):
+        with patch("showrunner.orchestrator._log") as mock_log:
+            parse_structured("bad", _fail_parser, context="ctx")
+    mock_log.warning.assert_called_once()
+    assert "ctx" in mock_log.warning.call_args.args[0]
 
 
 # ---------------------------------------------------------------------------
