@@ -101,25 +101,6 @@ def _next_beat_id(scene: dict, current_beat_id: str) -> str | None:
         return None
 
 
-def _beat_prompt(scene: dict, current_beat_id: str) -> str:
-    """Prompt for beat advancement; returns 'stay', 'advance', a beat ID, or 'quit'."""
-    beats = scene.get("beats", [])
-    beat_ids = [b["id"] for b in beats]
-    next_id = _next_beat_id(scene, current_beat_id)
-
-    print(f"\n{_DIVIDER}")
-    print(f"  Beat: {current_beat_id}  ({' → '.join(beat_ids)})")
-    if next_id:
-        prompt = f"  [Enter] stay  |  [a] advance to '{next_id}'  |  [beat ID] jump  |  [q] quit > "
-    else:
-        prompt = f"  Last beat.  [Enter] stay  |  [beat ID] jump  |  [q] quit > "
-    choice = input(prompt).strip().lower()
-    if choice == "":
-        return "stay"
-    if choice == "a" and next_id:
-        return "advance"
-    return choice
-
 
 def _parse_check_specs(review_output: str) -> list[dict]:
     """Parse the Show Runner review output into a list of check spec dicts.
@@ -337,29 +318,54 @@ def _read_last_session_log_entry() -> str:
     return paragraphs[-1] if paragraphs else ""
 
 
+def _write_session_log_sr_decision(log_path: Path, beat_id: str, decision: bool, next_id: str | None) -> None:
+    """Append the SR beat decision to session_log.md."""
+    if decision and next_id:
+        entry = f"SR decision: ADVANCE → {next_id} (from {beat_id})\n"
+    else:
+        entry = f"SR decision: STAY (beat: {beat_id})\n"
+    with log_path.open("a") as f:
+        f.write(entry)
+
+
+def _write_session_log_checks(log_path: Path, checks_text: str) -> None:
+    """Append check specs (or NO_CHECKS) to session_log.md."""
+    with log_path.open("a") as f:
+        f.write(f"Checks: {checks_text}\n")
+
+
+def _write_session_log_rulings(log_path: Path, rulings: dict[str, str]) -> None:
+    """Append rulings summary to session_log.md."""
+    lines = "\n".join(f"  {actor}: {text}" for actor, text in rulings.items())
+    with log_path.open("a") as f:
+        f.write(f"Rulings:\n{lines}\n")
+
+
+def _write_session_log_plans(log_path: Path, plans: dict[str, str]) -> None:
+    """Append plan update summary to session_log.md."""
+    lines = "\n".join(f"  {char_id}: {text}" for char_id, text in plans.items())
+    with log_path.open("a") as f:
+        f.write(f"Plans:\n{lines}\n")
+
+
 def _run_beat_initialization(
     beat: dict,
     sr_ctx: str,
     narrator_ctx: str,
     last_log_entry: str,
-    verbose: bool,
     log: logging.Logger,
 ) -> tuple[str, str]:
     """Run beat initialization for the first turn of a new beat.
 
     Writes character_plans, injects beat notes into contexts, calls the Narrator
-    opener, handles verbose output, and logs the transition.
-    Returns updated (sr_ctx, narrator_ctx).
+    opener, and logs the transition. Returns updated (sr_ctx, narrator_ctx).
     """
     character_plans = beat.get("character_plans", {})
     if character_plans:
         update_scene_state({"character_plans": character_plans})
 
     sr_ctx, narrator_ctx = _apply_beat_notes(beat, sr_ctx, narrator_ctx)
-    run_beat_opener(beat, last_log_entry, verbose=verbose)
-
-    if verbose:
-        print(f"\n=== {beat['title']} ===")
+    run_beat_opener(beat, last_log_entry)
 
     log.info(f"Beat transition: {beat['id']}")
     return sr_ctx, narrator_ctx
@@ -488,7 +494,7 @@ def _roll_specs(specs: list[dict]) -> None:
         )
 
 
-def run_turn_loop(scene: dict, verbose: bool = False, dump_prompts: bool = False) -> None:
+def run_turn_loop(scene: dict, dump_prompts: bool = False) -> None:
     """Run the agent turn loop for a loaded adventure scene."""
     apply_litellm_settings()
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -515,6 +521,7 @@ def run_turn_loop(scene: dict, verbose: bool = False, dump_prompts: bool = False
     print(scene["location"]["read_aloud"])
     log.info(f"Scene started: {scene['scene_id']}")
 
+    session_log_path = Path("state/session_log.md")
     _last_beat: str = ""
     _turn_num: int = 1
     _beat_num: int = 0
@@ -533,7 +540,7 @@ def run_turn_loop(scene: dict, verbose: bool = False, dump_prompts: bool = False
             beat = next((b for b in beat_list if b["id"] == current_beat), {})
             _beat_num = beat_ids.index(current_beat) if current_beat in beat_ids else 0
             last_log_entry = _read_last_session_log_entry()
-            sr_ctx, narrator_ctx = _run_beat_initialization(beat, sr_ctx, narrator_ctx, last_log_entry, verbose, log)
+            sr_ctx, narrator_ctx = _run_beat_initialization(beat, sr_ctx, narrator_ctx, last_log_entry, log)
             _last_beat = current_beat
             _turn_num = 1
 
@@ -579,6 +586,7 @@ def run_turn_loop(scene: dict, verbose: bool = False, dump_prompts: bool = False
         checks_text = _write_turn_file(logs_dir, scene_num, _beat_num, current_beat, _turn_num, "checks", check_output)
         ruling_specs, _ = parse_structured(checks_text, _ruling_specs_parser, python_sample=_CHECK_PYTHON_SAMPLE)
         log.info(f"Step 5 complete: {len(ruling_specs)} checks identified")
+        _write_session_log_checks(session_log_path, checks_text)
 
         # ── Step 6: Dice rolling + rulings ──────────────────────────────────
         party_stats_path = Path("state/party_stats.yaml")
@@ -590,6 +598,8 @@ def run_turn_loop(scene: dict, verbose: bool = False, dump_prompts: bool = False
         results_text = "\n".join(f"{k}: {v}" for k, v in rulings.items()) if rulings else "No checks this turn."
         _write_turn_file(logs_dir, scene_num, _beat_num, current_beat, _turn_num, "results", results_text)
         log.info(f"Step 6 complete: {len(ruling_specs)} checks resolved")
+        if rulings:
+            _write_session_log_rulings(session_log_path, rulings)
 
         # ── Step 7: Resolution narrative (printed to player) ─────────────────
         pronoun_map: dict[str, str] = {}
@@ -605,8 +615,7 @@ def run_turn_loop(scene: dict, verbose: bool = False, dump_prompts: bool = False
                 pronoun_map[group["id"]] = group["pronoun"]
         narrative = run_narrative(all_summaries, checks_text, results_text, pronoun_map=pronoun_map or None)
         if narrative:
-            label = "\n=== Resolution Narrative ===" if verbose else ""
-            print(f"{label}\n{narrative}")
+            print(f"\n{narrative}")
 
         # ── Step 8: Last-action extraction ───────────────────────────────────
         all_actors = {**npc_outputs, **party_actions}
@@ -638,32 +647,9 @@ def run_turn_loop(scene: dict, verbose: bool = False, dump_prompts: bool = False
         else:
             should_advance = False
 
-        if verbose:
-            sr_decision = "ADVANCE" if should_advance else "STAY"
-            print(f"\n[SR beat decision: {sr_decision}]")
-            choice = _beat_prompt(scene, scene_state.get("current_beat", current_beat) if should_advance else current_beat)
-            if choice in ("quit", "exit", "q"):
-                print("Session ended.")
-                log.info("Session ended by player.")
-                break
-            elif choice == "advance" and not should_advance:
-                override_id = _next_beat_id(scene, current_beat)
-                if override_id:
-                    advance_beat(override_id)
-                    log.info(f"Manual override: advanced to {override_id}")
-                    active_ids = _active_npc_ids(scene, override_id)
-                    npc_chars = load_scene_characters(scene, scene_state, player_filter="npc", active_ids=active_ids)
-                    companion_chars = load_scene_characters(scene, scene_state, player_filter="companion")
-                else:
-                    scene_complete = True
-            elif choice not in ("stay", "advance", ""):
-                advance_beat(choice)
-                log.info(f"Manual jump to beat: {choice}")
-                active_ids = _active_npc_ids(scene, choice)
-                npc_chars = load_scene_characters(scene, scene_state, player_filter="npc", active_ids=active_ids)
-                companion_chars = load_scene_characters(scene, scene_state, player_filter="companion")
+        _write_session_log_sr_decision(session_log_path, current_beat, should_advance, next_id if should_advance else None)
 
-        if scene_complete or (should_advance and not next_id):
+        if should_advance and not next_id:
             print("Scene complete.")
             log.info("Scene complete — no more beats.")
             break
@@ -679,6 +665,8 @@ def run_turn_loop(scene: dict, verbose: bool = False, dump_prompts: bool = False
             plan_log_path=sr_plan_path,
         )
         log.info("Turn complete")
+        if new_plans:
+            _write_session_log_plans(session_log_path, new_plans)
 
         # ── State writes ──────────────────────────────────────────────────────
         update_scene_state({"last_actions": last_actions_extracted})
@@ -686,7 +674,6 @@ def run_turn_loop(scene: dict, verbose: bool = False, dump_prompts: bool = False
             update_scene_state({"character_plans": new_plans})
 
         if narrative:
-            session_log_path = Path("state/session_log.md")
             with session_log_path.open("a") as f:
                 f.write(f"{narrative}\n\n")
             log.info(f"Session log: {narrative[:120]}")

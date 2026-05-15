@@ -453,18 +453,11 @@ def test_run_beat_opener_empty_last_log_does_not_crash():
         run_beat_opener(BEAT, "")  # must not raise
 
 
-def test_run_beat_opener_verbose_prints_step_label(capsys):
+def test_run_beat_opener_always_prints_output(capsys):
     from showrunner.runner import run_beat_opener
-    with patch("showrunner.runner.call_llm", return_value="You enter."):
-        run_beat_opener(BEAT, "", verbose=True)
-    assert "=== Beat Opener ===" in capsys.readouterr().out
-
-
-def test_run_beat_opener_not_verbose_no_step_label(capsys):
-    from showrunner.runner import run_beat_opener
-    with patch("showrunner.runner.call_llm", return_value="You enter."):
-        run_beat_opener(BEAT, "", verbose=False)
-    assert "=== Beat Opener ===" not in capsys.readouterr().out
+    with patch("showrunner.runner.call_llm", return_value="You enter the chamber."):
+        run_beat_opener(BEAT, "")
+    assert "You enter the chamber." in capsys.readouterr().out
 
 
 # ---------------------------------------------------------------------------

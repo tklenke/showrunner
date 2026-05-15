@@ -11,33 +11,6 @@ SCENE = {
 }
 
 
-def test_beat_prompt_enter_stays_on_current_beat(monkeypatch):
-    from showrunner.orchestrator import _beat_prompt
-    monkeypatch.setattr("builtins.input", lambda _: "")
-    result = _beat_prompt(SCENE, "summons")
-    assert result == "stay"
-
-
-def test_beat_prompt_a_advances(monkeypatch):
-    from showrunner.orchestrator import _beat_prompt
-    monkeypatch.setattr("builtins.input", lambda _: "a")
-    result = _beat_prompt(SCENE, "summons")
-    assert result == "advance"
-
-
-def test_beat_prompt_beat_id_returns_id(monkeypatch):
-    from showrunner.orchestrator import _beat_prompt
-    monkeypatch.setattr("builtins.input", lambda _: "mission_brief")
-    result = _beat_prompt(SCENE, "summons")
-    assert result == "mission_brief"
-
-
-def test_beat_prompt_quit_returns_quit(monkeypatch):
-    from showrunner.orchestrator import _beat_prompt
-    monkeypatch.setattr("builtins.input", lambda _: "q")
-    result = _beat_prompt(SCENE, "summons")
-    assert result == "q"
-
 
 def test_human_player_turn_prompts_cli(monkeypatch):
     from showrunner.orchestrator import prompt_player_action
@@ -340,49 +313,17 @@ def test_read_last_session_log_entry_returns_last_paragraph(tmp_path, monkeypatc
     assert "Second entry." in result
 
 
-# ---------------------------------------------------------------------------
-# verbose beat title print (via _run_beat_initialization)
-# ---------------------------------------------------------------------------
-
-def test_run_beat_initialization_prints_title_when_verbose(capsys, tmp_path, monkeypatch):
-    import logging
-    from unittest.mock import patch
-    from showrunner.orchestrator import _run_beat_initialization
-    monkeypatch.chdir(tmp_path)
-    (tmp_path / "state").mkdir()
-    log = logging.getLogger("test")
-    with patch("showrunner.orchestrator.update_scene_state"), \
-         patch("showrunner.orchestrator.run_beat_opener"):
-        _run_beat_initialization(_BEAT_WITH_NOTES, "sr", "nar", "", verbose=True, log=log)
-    captured = capsys.readouterr()
-    assert "The Summons" in captured.out
-
-
-def test_run_beat_initialization_no_print_when_not_verbose(capsys, tmp_path, monkeypatch):
-    import logging
-    from unittest.mock import patch
-    from showrunner.orchestrator import _run_beat_initialization
-    monkeypatch.chdir(tmp_path)
-    (tmp_path / "state").mkdir()
-    log = logging.getLogger("test")
-    with patch("showrunner.orchestrator.update_scene_state"), \
-         patch("showrunner.orchestrator.run_beat_opener"):
-        _run_beat_initialization(_BEAT_WITH_NOTES, "sr", "nar", "", verbose=False, log=log)
-    captured = capsys.readouterr()
-    assert "The Summons" not in captured.out
-
-
 def test_run_beat_initialization_calls_run_beat_opener(tmp_path, monkeypatch):
     import logging
-    from unittest.mock import patch, MagicMock
+    from unittest.mock import patch
     from showrunner.orchestrator import _run_beat_initialization
     monkeypatch.chdir(tmp_path)
     (tmp_path / "state").mkdir()
     log = logging.getLogger("test")
     with patch("showrunner.orchestrator.update_scene_state"), \
          patch("showrunner.orchestrator.run_beat_opener") as mock_opener:
-        _run_beat_initialization(_BEAT_WITH_NOTES, "sr", "nar", "last entry", verbose=False, log=log)
-    mock_opener.assert_called_once_with(_BEAT_WITH_NOTES, "last entry", verbose=False)
+        _run_beat_initialization(_BEAT_WITH_NOTES, "sr", "nar", "last entry", log=log)
+    mock_opener.assert_called_once_with(_BEAT_WITH_NOTES, "last entry")
 
 
 # ---------------------------------------------------------------------------

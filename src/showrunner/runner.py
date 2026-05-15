@@ -219,7 +219,7 @@ def run_beat_advance(
     return "advance" in response.strip().lower()
 
 
-def run_beat_opener(beat: dict, last_log_entry: str, verbose: bool = False) -> None:
+def run_beat_opener(beat: dict, last_log_entry: str) -> None:
     """Print a 2-3 sentence player-facing opener for the start of a new beat."""
     msg = load_task_prompt("run_beat_opener").format(
         show_runner_notes=beat.get("show_runner_notes", ""),
@@ -228,7 +228,4 @@ def run_beat_opener(beat: dict, last_log_entry: str, verbose: bool = False) -> N
     if last_log_entry:
         msg += f"\n\n## Previous session log entry:\n{last_log_entry}"
     opener = call_llm("narrator", build_system_prompt("narrator"), msg)
-    if verbose:
-        print(f"=== Beat Opener ===\n{opener}")
-    else:
-        print(opener)
+    print(opener)
