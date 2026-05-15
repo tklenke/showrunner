@@ -49,16 +49,11 @@ Loads `state/scene_0.yaml` by default (Bargos mansion, Act 1).
 **Options:**
 
 ```bash
-python -m showrunner.main                      # scene 0 (default)
-python -m showrunner.main 1                    # scene 1
-python -m showrunner.main -v                   # verbose: labels each output block by step
-python -m showrunner.main --dump-prompts       # write full prompt+response MD files to logs/prompts/
-python -m showrunner.main --reset              # clear logs and scene state, restart from beat 1
-python -m showrunner.main 1 -v --dump-prompts  # scene 1, verbose, with prompt capture
+python -m showrunner.main                  # scene 0 (default)
+python -m showrunner.main 1               # scene 1
+python -m showrunner.main --dump-prompts  # write full prompt+response MD files to logs/prompts/
+python -m showrunner.main --reset         # clear logs and scene state, restart from beat 1
 ```
-
-**`-v` / `--verbose`** adds `=== Step Name ===` headers before each major output block
-(beat opener, resolution narrative) so you can see which agent produced which output.
 
 **`--reset`** deletes `state/scene_state.yaml`, `state/session_log.md`, and everything
 under `logs/` (including `logs/prompts/`), then starts from the first beat. Use this
@@ -93,21 +88,23 @@ That line always appears immediately before a prompt that expects your input.
 **Beat advancement** is decided automatically by the Show Runner after each turn. The SR
 reads what happened this turn against the next beat's entry condition and outputs `ADVANCE`
 or `STAY`. When it advances, NPC and Companion plans for the next turn are written with
-the new beat context — so characters react to where the story actually is.
+the new beat context — so characters react to where the story actually is. The SR's
+decision is applied silently and play continues.
 
-In `--verbose` mode the SR's decision is shown and you can accept it or override with a
-manual choice:
+---
 
+## Web App
+
+Start the browser-based interface:
+
+```bash
+source venv/bin/activate
+uvicorn showrunner.web.app:app --host 0.0.0.0 --port 8000
 ```
-[SR beat decision: ADVANCE]
-[Enter]       accept SR decision
-a             advance to the next beat
-<beat-id>     jump to a specific beat (e.g. gamorrean_rumble)
-stay          stay on the current beat
-q             quit the session
-```
 
-In normal mode the SR's decision is applied silently and play continues.
+Then open `http://localhost:8000` in a browser. The app streams narrative events via SSE;
+player input is posted back to `/play/input`. Single-session: opening a second tab cancels
+the first.
 
 ---
 
@@ -117,3 +114,46 @@ In normal mode the SR's decision is applied silently and play continues.
 source venv/bin/activate
 pytest
 ```
+
+---
+
+## Deployment (AWS t4g.small)
+
+Provision an Ubuntu 24.04 ARM instance. Then:
+
+```bash
+# 1. Install system packages
+sudo apt update
+sudo apt install -y python3.11 python3.11-venv nginx certbot python3-certbot-nginx
+
+# 2. Create app user and directory
+sudo useradd -r -s /bin/false showrunner
+sudo mkdir -p /opt/showrunner
+sudo chown showrunner:showrunner /opt/showrunner
+
+# 3. Deploy code
+sudo -u showrunner git clone <repo-url> /opt/showrunner
+cd /opt/showrunner
+sudo -u showrunner python3.11 -m venv venv
+sudo -u showrunner venv/bin/pip install -e . -r requirements.txt
+
+# 4. Add API key
+echo "GEMINI_API_KEY=your_key_here" | sudo -u showrunner tee /opt/showrunner/.env
+
+# 5. Install and start the systemd unit
+sudo cp deploy/showrunner.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now showrunner
+
+# 6. Configure nginx
+sudo cp deploy/nginx.conf /etc/nginx/sites-available/showrunner
+# Edit /etc/nginx/sites-available/showrunner: replace 'your.domain.here' with your domain
+sudo ln -s /etc/nginx/sites-available/showrunner /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+
+# 7. Provision TLS (requires DNS pointing at the instance)
+sudo certbot --nginx -d your.domain.here
+```
+
+State files live at `/opt/showrunner/state/`. Back up `party_stats.yaml` and
+`scene_state.yaml` before deploying updates.

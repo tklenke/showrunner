@@ -262,7 +262,7 @@ Follow TDD. Key tests:
 
 ---
 
-### [ ] 100.5 — Frontend
+### [x] 100.5 — Frontend
 
 `src/showrunner/web/static/index.html` — single file, no build step.
 
@@ -287,7 +287,7 @@ Manual test (no automated tests for frontend):
 
 ---
 
-### [ ] 100.6 — Deployment
+### [x] 100.6 — Deployment
 
 - `deploy/showrunner.service` — systemd unit: `uvicorn showrunner.web.app:app --host 127.0.0.1 --port 8000`
 - `deploy/nginx.conf` — reverse proxy to uvicorn; serve static files directly; TLS via Let's Encrypt
