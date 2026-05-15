@@ -160,7 +160,7 @@ See `docs/plans/architect_todo.md` Phase 100 for full design rationale and decis
 
 ---
 
-### [ ] 100.1 — Async LLM calls
+### [x] 100.1 — Async LLM calls
 
 Convert `call_llm()` in `llm.py` to an async version using `litellm.acompletion()`.
 Keep the synchronous `call_llm()` for the CLI path until 100.3 is done; add
@@ -174,7 +174,7 @@ Follow TDD. Key tests:
 
 ---
 
-### [ ] 100.2 — Remove verbose mode; enrich session log
+### [x] 100.2 — Remove verbose mode; enrich session log
 
 Remove `_beat_prompt()`, the `--verbose` / `-v` flag, and all `if verbose:` branches
 from `orchestrator.py` and `main.py`. Beat progression is fully SR-driven (4.40);
@@ -195,7 +195,7 @@ Follow TDD. Key tests:
 
 ---
 
-### [ ] 100.3 — Async turn loop + CLI adapter
+### [x] 100.3 — Async turn loop + CLI adapter
 
 Convert `run_turn_loop()` to an async generator: `async def run_turn_loop(scene, queue)`.
 The generator yields typed event dicts (see event types below) and suspends at 3 input
@@ -234,7 +234,7 @@ Follow TDD. Key tests:
 
 ---
 
-### [ ] 100.4 — Starlette web layer
+### [x] 100.4 — Starlette web layer
 
 `src/showrunner/web/app.py` — the Starlette application.
 
