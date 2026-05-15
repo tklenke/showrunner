@@ -1,7 +1,7 @@
 # ABOUTME: Phase runners — each function drives one phase of the turn loop via direct LLM calls.
 # ABOUTME: Replaces CrewAI crew builders; returns plain dicts/strings, no crew objects.
 
-from showrunner.llm import build_system_prompt, call_llm, load_task_prompt
+from showrunner.llm import build_system_prompt, call_llm, call_llm_async, load_task_prompt
 
 
 def run_npc_wave(
@@ -51,6 +51,47 @@ def run_npc_wave(
     return npc_outputs
 
 
+async def run_npc_wave_async(
+    npcs: dict[str, str],
+    beat_ctx: str,
+    user_action: str,
+    companion_summaries: dict[str, str],
+    summaries_log_path,
+    pc_name: str = "Player",
+) -> dict[str, str]:
+    """Async version of run_npc_wave. Does not print; caller yields outputs as events."""
+    prior_summaries = ""
+    npc_outputs: dict[str, str] = {}
+
+    for npc_id, npc_context in npcs.items():
+        sections = []
+        if companion_summaries:
+            for cid, summary in companion_summaries.items():
+                sections.append(f"\n{cid}: {summary}")
+        if prior_summaries:
+            sections.append(prior_summaries)
+        msg = load_task_prompt("run_npc_wave").format(
+            npc_context=npc_context,
+            beat_ctx=beat_ctx,
+            pc_name=pc_name,
+            player_action=user_action,
+            other_character_actions="".join(sections),
+        )
+
+        full_output = await call_llm_async("actors", build_system_prompt("actors"), msg, label=npc_id)
+        npc_outputs[npc_id] = full_output
+
+        summary_msg = load_task_prompt("run_npc_wave_summary").format(
+            npc_id=npc_id, full_output=full_output
+        )
+        summary = await call_llm_async("scribe", build_system_prompt("scribe"), summary_msg, label=npc_id)
+        with open(summaries_log_path, "a") as f:
+            f.write(f"{npc_id}: {summary}\n")
+        prior_summaries += f"\n{npc_id}: {summary}"
+
+    return npc_outputs
+
+
 def run_companion_wave(
     companion_contexts: dict[str, str],
     beat_ctx: str,
@@ -83,11 +124,47 @@ def run_companion_wave(
     return outputs, summaries
 
 
+async def run_companion_wave_async(
+    companion_contexts: dict[str, str],
+    beat_ctx: str,
+    player_action: str,
+    pc_name: str = "Player",
+) -> tuple[dict[str, str], dict[str, str]]:
+    """Async version of run_companion_wave. Does not print; caller yields outputs as events."""
+    if not companion_contexts:
+        return {}, {}
+    outputs: dict[str, str] = {}
+    summaries: dict[str, str] = {}
+    for pc_id, pc_context in companion_contexts.items():
+        msg = load_task_prompt("run_companion_wave").format(
+            pc_context=pc_context,
+            beat_ctx=beat_ctx,
+            pc_name=pc_name,
+            player_action=player_action,
+        )
+        output = await call_llm_async("actors", build_system_prompt("actors"), msg, label=pc_id)
+        outputs[pc_id] = output
+        summary_msg = load_task_prompt("run_npc_wave_summary").format(
+            npc_id=pc_id, full_output=output
+        )
+        summaries[pc_id] = await call_llm_async("scribe", build_system_prompt("scribe"), summary_msg, label=pc_id)
+    return outputs, summaries
+
+
 def run_summaries(party_actions: dict[str, str], summaries_log_path) -> None:
     """Step 4: Narrator summarises each party member's action, appending to summaries log."""
     for actor_id, action_text in party_actions.items():
         msg = load_task_prompt("run_summaries").format(actor_id=actor_id, action_text=action_text)
         summary = call_llm("scribe", build_system_prompt("scribe"), msg)
+        with open(summaries_log_path, "a") as f:
+            f.write(f"{actor_id}: {summary}\n")
+
+
+async def run_summaries_async(party_actions: dict[str, str], summaries_log_path) -> None:
+    """Async version of run_summaries."""
+    for actor_id, action_text in party_actions.items():
+        msg = load_task_prompt("run_summaries").format(actor_id=actor_id, action_text=action_text)
+        summary = await call_llm_async("scribe", build_system_prompt("scribe"), msg)
         with open(summaries_log_path, "a") as f:
             f.write(f"{actor_id}: {summary}\n")
 
@@ -99,6 +176,18 @@ def run_checks(char_summaries: dict[str, str], char_stats: dict[str, str]) -> st
         stats = char_stats.get(char_id, "")
         msg = load_task_prompt("run_checks").format(char_id=char_id, summary=summary, stats=stats)
         output = call_llm("referee", build_system_prompt("referee"), msg, label=char_id)
+        if "NO_CHECKS" not in output:
+            check_lines.append(output.strip())
+    return "\n".join(f"{i + 1}. {line}" for i, line in enumerate(check_lines)) if check_lines else "NO_CHECKS"
+
+
+async def run_checks_async(char_summaries: dict[str, str], char_stats: dict[str, str]) -> str:
+    """Async version of run_checks."""
+    check_lines: list[str] = []
+    for char_id, summary in char_summaries.items():
+        stats = char_stats.get(char_id, "")
+        msg = load_task_prompt("run_checks").format(char_id=char_id, summary=summary, stats=stats)
+        output = await call_llm_async("referee", build_system_prompt("referee"), msg, label=char_id)
         if "NO_CHECKS" not in output:
             check_lines.append(output.strip())
     return "\n".join(f"{i + 1}. {line}" for i, line in enumerate(check_lines)) if check_lines else "NO_CHECKS"
@@ -132,6 +221,29 @@ def run_rulings(check_specs: list[dict], *, on_ruling=None) -> dict[str, str]:
     return rulings
 
 
+async def run_rulings_async(check_specs: list[dict], *, on_ruling=None) -> dict[str, str]:
+    """Async version of run_rulings."""
+    if not check_specs:
+        return {}
+    rulings: dict[str, str] = {}
+    next_context = ""
+    for spec in check_specs:
+        msg = load_task_prompt("run_rulings").format(
+            actor=spec["actor"],
+            skill=spec["skill"],
+            difficulty=spec["difficulty"],
+            notes=spec.get("notes", ""),
+            roll_result=spec.get("roll_result", ""),
+        )
+        if next_context:
+            msg += f"\n\n## Current party status:\n{next_context}"
+        ruling = await call_llm_async("show_runner", build_system_prompt("show_runner"), msg)
+        rulings[spec["actor"]] = ruling
+        if on_ruling:
+            next_context = on_ruling(spec["actor"], ruling) or ""
+    return rulings
+
+
 def run_narrative(
     summaries: str,
     checks: str,
@@ -147,6 +259,21 @@ def run_narrative(
     return call_llm("narrator", system, msg)
 
 
+async def run_narrative_async(
+    summaries: str,
+    checks: str,
+    results: str,
+    pronoun_map: dict[str, str] | None = None,
+) -> str:
+    """Async version of run_narrative."""
+    msg = load_task_prompt("run_narrative").format(summaries=summaries, checks=checks, results=results)
+    system = build_system_prompt("narrator")
+    if pronoun_map:
+        pronoun_lines = "\n".join(f"- {actor}: {pronoun}" for actor, pronoun in pronoun_map.items())
+        system = system + f"\n\n## Pronouns\n{pronoun_lines}"
+    return await call_llm_async("narrator", system, msg)
+
+
 def run_last_actions(actor_summaries: dict[str, str]) -> dict[str, str]:
     """Step 3e: Extract each actor's last action sentence from their summary.
 
@@ -158,6 +285,17 @@ def run_last_actions(actor_summaries: dict[str, str]) -> dict[str, str]:
     for actor_id, summary in actor_summaries.items():
         msg = load_task_prompt("run_last_actions").format(actor_id=actor_id, summary=summary)
         last_actions[actor_id] = call_llm("scribe", build_system_prompt("scribe"), msg, label=actor_id)
+    return last_actions
+
+
+async def run_last_actions_async(actor_summaries: dict[str, str]) -> dict[str, str]:
+    """Async version of run_last_actions."""
+    if not actor_summaries:
+        return {}
+    last_actions: dict[str, str] = {}
+    for actor_id, summary in actor_summaries.items():
+        msg = load_task_prompt("run_last_actions").format(actor_id=actor_id, summary=summary)
+        last_actions[actor_id] = await call_llm_async("scribe", build_system_prompt("scribe"), msg, label=actor_id)
     return last_actions
 
 
@@ -196,6 +334,38 @@ def run_plan_update(
     return individual_plans
 
 
+async def run_plan_update_async(
+    characters: dict[str, str],
+    summaries: str,
+    results: str,
+    last_actions: dict[str, str],
+    *,
+    plan_log_path=None,
+) -> dict[str, str]:
+    """Async version of run_plan_update."""
+    if not characters:
+        return {}
+
+    last_actions_text = "\n".join(f"{k}: {v}" for k, v in last_actions.items())
+    overall_msg = load_task_prompt("run_plan_update").format(
+        summaries=summaries, results=results, last_actions_text=last_actions_text
+    )
+    overall_plan = await call_llm_async("show_runner", build_system_prompt("show_runner"), overall_msg)
+
+    if plan_log_path is not None:
+        with open(plan_log_path, "w") as f:
+            f.write(overall_plan)
+
+    individual_plans: dict[str, str] = {}
+    for char_id, char_context in characters.items():
+        msg = load_task_prompt("run_plan_update_individual").format(
+            overall_plan=overall_plan, char_id=char_id, char_context=char_context
+        )
+        individual_plans[char_id] = await call_llm_async("scribe", build_system_prompt("scribe"), msg, label=char_id)
+
+    return individual_plans
+
+
 def run_beat_advance(
     current_beat_title: str,
     next_beat_trigger: str,
@@ -219,6 +389,25 @@ def run_beat_advance(
     return "advance" in response.strip().lower()
 
 
+async def run_beat_advance_async(
+    current_beat_title: str,
+    next_beat_trigger: str,
+    results_text: str,
+    last_actions: str,
+) -> bool:
+    """Async version of run_beat_advance."""
+    if not next_beat_trigger:
+        return False
+    msg = load_task_prompt("run_beat_advance").format(
+        current_beat_title=current_beat_title,
+        next_beat_trigger=next_beat_trigger,
+        results_text=results_text,
+        last_actions=last_actions,
+    )
+    response = await call_llm_async("show_runner", build_system_prompt("show_runner"), msg)
+    return "advance" in response.strip().lower()
+
+
 def run_beat_opener(beat: dict, last_log_entry: str) -> None:
     """Print a 2-3 sentence player-facing opener for the start of a new beat."""
     msg = load_task_prompt("run_beat_opener").format(
@@ -229,3 +418,14 @@ def run_beat_opener(beat: dict, last_log_entry: str) -> None:
         msg += f"\n\n## Previous session log entry:\n{last_log_entry}"
     opener = call_llm("narrator", build_system_prompt("narrator"), msg)
     print(opener)
+
+
+async def run_beat_opener_async(beat: dict, last_log_entry: str) -> str:
+    """Async version of run_beat_opener; returns opener text instead of printing."""
+    msg = load_task_prompt("run_beat_opener").format(
+        show_runner_notes=beat.get("show_runner_notes", ""),
+        narrator_notes=beat.get("narrator_notes", ""),
+    )
+    if last_log_entry:
+        msg += f"\n\n## Previous session log entry:\n{last_log_entry}"
+    return await call_llm_async("narrator", build_system_prompt("narrator"), msg)

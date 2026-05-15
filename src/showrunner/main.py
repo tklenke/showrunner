@@ -2,6 +2,7 @@
 # ABOUTME: Supports player input, ! directives, and manual dice entry.
 
 import argparse
+import asyncio
 import logging
 import os
 import shutil
@@ -17,7 +18,7 @@ logging.getLogger("LiteLLM").setLevel(logging.ERROR)
 logging.getLogger("LiteLLM Router").setLevel(logging.ERROR)
 litellm.suppress_debug_info = True
 
-from showrunner.orchestrator import run_turn_loop
+from showrunner.cli_adapter import run_cli
 from showrunner.tools.state_reader import load_adventure_scene
 
 
@@ -60,7 +61,7 @@ def main() -> None:
         print("Session reset: logs and scene state cleared.")
 
     scene = load_adventure_scene(args.scene)
-    run_turn_loop(scene, dump_prompts=args.dump_prompts)
+    asyncio.run(run_cli(scene))
 
 
 if __name__ == "__main__":

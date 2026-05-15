@@ -12,18 +12,28 @@ from showrunner.agents.narrator import render_narrator_context
 from showrunner.agents.show_runner import render_show_runner_context
 from showrunner.config import apply_litellm_settings, load_agent_configs
 from showrunner.instrumentation import setup_instrumentation
-from showrunner.llm import build_system_prompt, call_llm, load_yaml_task_prompt
+from showrunner.llm import build_system_prompt, call_llm, call_llm_async, load_yaml_task_prompt
 from showrunner.runner import (
     run_beat_advance,
+    run_beat_advance_async,
     run_beat_opener,
+    run_beat_opener_async,
     run_last_actions,
+    run_last_actions_async,
     run_npc_wave,
+    run_npc_wave_async,
     run_narrative,
+    run_narrative_async,
     run_companion_wave,
+    run_companion_wave_async,
     run_plan_update,
+    run_plan_update_async,
     run_rulings,
+    run_rulings_async,
     run_summaries,
+    run_summaries_async,
     run_checks,
+    run_checks_async,
 )
 from showrunner.dice import dice_result_from_input, parse_dice_input
 from showrunner.tools.dice_roller import roll_pool
@@ -658,6 +668,290 @@ def run_turn_loop(scene: dict, dump_prompts: bool = False) -> None:
         active_chars = {**npc_chars, **companion_chars}
         sr_plan_path = logs_dir / f"{scene_num:02d}_{_beat_num:02d}_{current_beat}_{_turn_num:04d}_sr_plan.txt"
         new_plans = run_plan_update(
+            active_chars,
+            all_summaries,
+            results_text,
+            last_actions_extracted,
+            plan_log_path=sr_plan_path,
+        )
+        log.info("Turn complete")
+        if new_plans:
+            _write_session_log_plans(session_log_path, new_plans)
+
+        # ── State writes ──────────────────────────────────────────────────────
+        update_scene_state({"last_actions": last_actions_extracted})
+        if new_plans:
+            update_scene_state({"character_plans": new_plans})
+
+        if narrative:
+            with session_log_path.open("a") as f:
+                f.write(f"{narrative}\n\n")
+            log.info(f"Session log: {narrative[:120]}")
+
+        _turn_num += 1
+
+
+# ---------------------------------------------------------------------------
+# Async turn loop (100.3)
+# ---------------------------------------------------------------------------
+
+async def _roll_specs_async(specs: list[dict], queue):
+    """Async generator: yields dice_prompt events, awaits queue input, mutates specs in-place."""
+    for spec in specs:
+        ability = max(spec["char_value"], spec["skill_rank"])
+        proficiency = min(spec["char_value"], spec["skill_rank"])
+        diff_word = spec["difficulty"].split()[0]
+        diff_dice = _DIFFICULTY_MAP.get(diff_word, 2)
+
+        pool_parts = []
+        if proficiency:
+            pool_parts.append(f"{proficiency} Proficiency (yellow)")
+        if ability:
+            pool_parts.append(f"{ability} Ability (green)")
+        pool_str = " + ".join(pool_parts) if pool_parts else "no positive dice"
+
+        yield {
+            "type": "dice_prompt",
+            "actor": spec["actor"],
+            "skill": spec["skill"],
+            "pool": pool_str,
+            "difficulty": f"{diff_dice} Difficulty (purple)",
+            "notes": spec.get("notes", ""),
+        }
+
+        raw = await queue.get()
+        if raw:
+            parsed = parse_dice_input(raw)
+            result = dice_result_from_input(parsed)
+        else:
+            result = roll_pool({"ability": ability, "proficiency": proficiency, "difficulty": diff_dice})
+            outcome = "passed" if result.passed else "failed"
+            yield {
+                "type": "status",
+                "text": (
+                    f"Roll {outcome}: net {result.net_successes:+d} successes, "
+                    f"{result.net_advantage:+d} advantage"
+                    + (f" | {result.triumphs} Triumph(s)" if result.triumphs else "")
+                    + (f" | {result.despairs} Despair(s)" if result.despairs else "")
+                ),
+            }
+
+        outcome = "passed" if result.passed else "failed"
+        spec["roll_result"] = (
+            f"Roll {outcome}: net {result.net_successes:+d} successes, "
+            f"{result.net_advantage:+d} advantage"
+            + (f" | {result.triumphs} Triumph(s)" if result.triumphs else "")
+            + (f" | {result.despairs} Despair(s)" if result.despairs else "")
+        )
+
+
+async def _parse_structured_async(raw: str, parser, queue, result_out: dict, *, context: str = "", python_sample: str = ""):
+    """Async generator: parses LLM output; yields parse_error event on failure; stores result in result_out."""
+    result, ok = parser(raw)
+    if ok:
+        result_out.update({"result": result, "recovered": False})
+        return
+
+    repair_msg = load_yaml_task_prompt("repair_structured", raw=raw, context=context, python_sample=python_sample)
+    fixed = await call_llm_async("scribe", build_system_prompt("scribe"), repair_msg)
+    result, ok = parser(fixed)
+    if ok:
+        result_out.update({"result": result, "recovered": True})
+        return
+
+    yield {"type": "parse_error", "context": context}
+    user_input = await queue.get()
+    if user_input:
+        user_msg = load_yaml_task_prompt("repair_structured", raw=user_input, context=context, python_sample=python_sample)
+        fixed = await call_llm_async("scribe", build_system_prompt("scribe"), user_msg)
+        result, ok = parser(fixed)
+
+    if not ok:
+        _log.warning("_parse_structured_async failed for context: %r. Using zero fallback.", context)
+    result_out.update({"result": result, "recovered": ok})
+
+
+async def run_turn_loop_async(scene: dict, queue):
+    """Async generator turn loop; yields typed event dicts and suspends at input points."""
+    import asyncio as _asyncio
+    apply_litellm_settings()
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    log = _setup_session_log(timestamp)
+    prompts_path = setup_instrumentation(timestamp)
+    logs_dir = Path("logs")
+
+    agent_configs = load_agent_configs()
+    agents_text = "\n".join(f"  {name:<14} {cfg['model_alias']}" for name, cfg in agent_configs.items())
+    yield {"type": "status", "text": f"Agents:\n{agents_text}\nPrompt log: {prompts_path}"}
+
+    initialize_scene_state(scene)
+    initialize_npc_stats(scene)
+    scene_yamls = load_scene_yamls(scene)
+    actor_name_map = _build_actor_name_map(scene, scene_yamls)
+    human_pc_name = _find_human_pc_name(scene)
+    scene_num: int = scene.get("scene_num", 0)
+    beat_list = scene.get("beats", [])
+    beat_ids = [b["id"] for b in beat_list]
+
+    yield {"type": "status", "text": f"\n=== {scene['title']} ==="}
+    yield {"type": "narrative", "text": scene["location"]["read_aloud"]}
+    log.info(f"Scene started: {scene['scene_id']}")
+
+    session_log_path = Path("state/session_log.md")
+    _last_beat: str = ""
+    _turn_num: int = 1
+    _beat_num: int = 0
+
+    while True:
+        scene_state = load_scene_state()
+        party_stats = load_party_stats()
+        current_beat = scene_state.get("current_beat", "")
+        last_actions = scene_state.get("last_actions", {})
+
+        sr_ctx = render_show_runner_context(scene, scene_state, party_stats, last_actions)
+        narrator_ctx = render_narrator_context(scene, current_beat, last_actions, party_stats)
+
+        # ── Step 0: Beat initialization ───────────────────────────────────────
+        if current_beat != _last_beat:
+            beat = next((b for b in beat_list if b["id"] == current_beat), {})
+            _beat_num = beat_ids.index(current_beat) if current_beat in beat_ids else 0
+            last_log_entry = _read_last_session_log_entry()
+            character_plans = beat.get("character_plans", {})
+            if character_plans:
+                update_scene_state({"character_plans": character_plans})
+            sr_ctx, narrator_ctx = _apply_beat_notes(beat, sr_ctx, narrator_ctx)
+            opener = await run_beat_opener_async(beat, last_log_entry)
+            yield {"type": "narrative", "text": opener}
+            log.info(f"Beat transition: {beat['id']}")
+            _last_beat = current_beat
+            _turn_num = 1
+
+        active_ids = _active_npc_ids(scene, current_beat)
+        npc_chars = load_scene_characters(scene, scene_state, player_filter="npc", active_ids=active_ids)
+        companion_chars = load_scene_characters(scene, scene_state, player_filter="companion")
+
+        log.debug(f"Beat: {current_beat} turn: {_turn_num}  npcs: {list(npc_chars)}  companions: {list(companion_chars)}")
+        yield {"type": "status", "text": f"\n--- Beat: {current_beat} (turn {_turn_num}) ---"}
+
+        # ── Step 1: Player input ──────────────────────────────────────────────
+        yield {"type": "player_prompt"}
+        player_action = await queue.get()
+        log.info(f"Player action: {player_action!r}")
+
+        if player_action.strip().lower() in ("quit", "exit", "q"):
+            yield {"type": "session_end", "reason": "player_quit"}
+            log.info("Session ended by player.")
+            return
+
+        # ── Step 2: Companion wave ─────────────────────────────────────────────
+        actor_beat_ctx = render_actor_beat_context(scene, scene_state)
+        companion_outputs, companion_summaries = await run_companion_wave_async(
+            companion_chars, actor_beat_ctx, player_action, pc_name=human_pc_name
+        )
+        for pc_id, output in companion_outputs.items():
+            yield {"type": "narrative", "text": f"\n=== {pc_id} ===\n{output}"}
+        log.info(f"Step 2 complete: {len(companion_outputs)} Companions voiced")
+
+        # ── Step 3: NPC wave ──────────────────────────────────────────────────
+        summaries_log_path = logs_dir / f"{scene_num:02d}_{_beat_num:02d}_{current_beat}_{_turn_num:04d}_summaries.txt"
+        npc_outputs = await run_npc_wave_async(
+            npc_chars, actor_beat_ctx, player_action, companion_summaries, summaries_log_path, pc_name=human_pc_name
+        )
+        for npc_id, output in npc_outputs.items():
+            yield {"type": "narrative", "text": f"\n=== {npc_id} ===\n{output}"}
+        log.info(f"Step 3 complete: {len(npc_outputs)} NPCs voiced")
+
+        # ── Step 4: Party action summaries ────────────────────────────────────
+        party_actions = {"Z-4P0": player_action, **companion_outputs}
+        await run_summaries_async(party_actions, summaries_log_path)
+
+        # ── Step 5: Check identification ──────────────────────────────────────
+        char_summaries = _parse_summaries_log(summaries_log_path)
+        all_summaries = summaries_log_path.read_text() if summaries_log_path.exists() else ""
+        char_stats = _build_char_stats(
+            scene_yamls,
+            inline_npcs=[n for n in scene.get("inline_npcs", []) if n["id"] in active_ids],
+            minion_groups=[g for g in scene.get("minion_groups", []) if g["id"] in active_ids],
+        )
+        check_output = await run_checks_async(char_summaries, char_stats)
+        checks_text = _write_turn_file(logs_dir, scene_num, _beat_num, current_beat, _turn_num, "checks", check_output)
+        result_out: dict = {}
+        async for event in _parse_structured_async(checks_text, _ruling_specs_parser, queue, result_out, python_sample=_CHECK_PYTHON_SAMPLE):
+            yield event
+        ruling_specs = result_out.get("result", [])
+        log.info(f"Step 5 complete: {len(ruling_specs)} checks identified")
+        _write_session_log_checks(session_log_path, checks_text)
+
+        # ── Step 6: Dice rolling + rulings ────────────────────────────────────
+        party_stats_path = Path("state/party_stats.yaml")
+        async for event in _roll_specs_async(ruling_specs, queue):
+            yield event
+        rulings = await run_rulings_async(
+            ruling_specs,
+            on_ruling=_make_ruling_callback(party_stats_path, actor_name_map) if ruling_specs else None,
+        )
+        results_text = "\n".join(f"{k}: {v}" for k, v in rulings.items()) if rulings else "No checks this turn."
+        _write_turn_file(logs_dir, scene_num, _beat_num, current_beat, _turn_num, "results", results_text)
+        log.info(f"Step 6 complete: {len(ruling_specs)} checks resolved")
+        if rulings:
+            _write_session_log_rulings(session_log_path, rulings)
+
+        # ── Step 7: Resolution narrative ──────────────────────────────────────
+        pronoun_map: dict[str, str] = {}
+        for char_id, yaml in scene_yamls.items():
+            p = yaml.get("identity", {}).get("pronoun")
+            if p:
+                pronoun_map[char_id] = p
+        for npc in scene.get("inline_npcs", []):
+            if npc["id"] in active_ids and npc.get("pronoun"):
+                pronoun_map[npc["id"]] = npc["pronoun"]
+        for group in scene.get("minion_groups", []):
+            if group["id"] in active_ids and group.get("pronoun"):
+                pronoun_map[group["id"]] = group["pronoun"]
+        narrative = await run_narrative_async(all_summaries, checks_text, results_text, pronoun_map=pronoun_map or None)
+        if narrative:
+            yield {"type": "narrative", "text": narrative}
+
+        # ── Step 8: Last-action extraction ────────────────────────────────────
+        all_actors = {**npc_outputs, **party_actions}
+        last_actions_extracted = await run_last_actions_async(all_actors)
+        if not last_actions_extracted:
+            last_actions_extracted = all_actors
+
+        # ── Step 8.5: SR beat advancement ─────────────────────────────────────
+        next_id = _next_beat_id(scene, current_beat)
+        if next_id:
+            next_beat = next((b for b in beat_list if b["id"] == next_id), {})
+            last_actions_str = "\n".join(f"{k}: {v}" for k, v in last_actions_extracted.items())
+            current_beat_title = next((b.get("title", current_beat) for b in beat_list if b["id"] == current_beat), current_beat)
+            should_advance = await run_beat_advance_async(
+                current_beat_title=current_beat_title,
+                next_beat_trigger=next_beat.get("trigger", ""),
+                results_text=results_text,
+                last_actions=last_actions_str,
+            )
+            if should_advance:
+                advance_beat(next_id)
+                log.info(f"SR advanced beat: {current_beat} → {next_id}")
+                active_ids = _active_npc_ids(scene, next_id)
+                npc_chars = load_scene_characters(scene, scene_state, player_filter="npc", active_ids=active_ids)
+                companion_chars = load_scene_characters(scene, scene_state, player_filter="companion")
+            else:
+                log.info(f"SR staying on beat: {current_beat}")
+        else:
+            should_advance = False
+
+        _write_session_log_sr_decision(session_log_path, current_beat, should_advance, next_id if should_advance else None)
+
+        if should_advance and not next_id:
+            yield {"type": "session_end", "reason": "scene_complete"}
+            log.info("Scene complete — no more beats.")
+            return
+
+        # ── Step 9: Plan update ───────────────────────────────────────────────
+        active_chars = {**npc_chars, **companion_chars}
+        sr_plan_path = logs_dir / f"{scene_num:02d}_{_beat_num:02d}_{current_beat}_{_turn_num:04d}_sr_plan.txt"
+        new_plans = await run_plan_update_async(
             active_chars,
             all_summaries,
             results_text,
