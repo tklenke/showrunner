@@ -195,3 +195,123 @@ When a scene ends, before loading the next scene:
 - [ ] Document the skin/ schema so other skins can be built (the Star Wars skin is the reference impl)
 - [ ] Session resume: save/restore `state/` between sessions
 - [ ] Consider richer CLI output (colour, formatted stat blocks)
+
+---
+
+## Phase 100: Web App (Starlette)
+
+Not scheduled. May come after Phase 4 playthrough or much later.
+
+**Goal:** Replace the terminal CLI with a browser-based UI. Better markdown rendering,
+remote access, multiple concurrent users (feedback testers initially, more later).
+
+**Approach:** SSE + HTTP POST + minimal HTML/JS frontend. Single async process handles
+all concurrent sessions on one event loop.
+
+- SSE (Server-Sent Events) streams narrative output to the browser.
+- HTTP POST carries player input back to the server.
+- Starlette directly — not FastAPI. FastAPI adds auto-docs, Pydantic validation, and
+  dependency injection; none are needed here. Starlette has everything required.
+
+**Estimated effort:** ~5–6 days of focused work (the async refactor is the real risk).
+
+### Key decisions
+
+- **v0: single user only.** No state isolation — existing `state/` directory as-is.
+  Multi-user session isolation is a future concern.
+- **Typed SSE events.** The generator yields dicts, not bare strings. The browser
+  inspects `type` to decide how to render. Defined event types:
+  - `{"type": "narrative", "text": "..."}` — prose, rendered via Marked.js
+  - `{"type": "status", "text": "..."}` — beat/turn header
+  - `{"type": "dice_prompt", "actor": "...", "skill": "...", "pool": "...", "difficulty": "...", "notes": "..."}` — show pool, await input or auto-roll
+  - `{"type": "player_prompt"}` — show player action input box
+  - `{"type": "parse_error", "context": "..."}` — parse failure, await correction
+  - `{"type": "session_end", "reason": "..."}` — scene complete or quit
+- **Verbose mode removed.** `_beat_prompt` and `--verbose` flag eliminated. Beat
+  progression is fully SR-driven (4.40). Manual beat override is gone.
+- **Session log gets richer writes.** SR beat decisions, check specs, rulings, and
+  plan updates are logged to `state/session_log.md`. Currently only resolution
+  narrative is written; the log should be a complete debug trail.
+- **Input suspension: 3 points** (was 4 — beat override removed):
+  - Player action prompt
+  - Dice input (loop — suspends once per check spec)
+  - Parse failure correction
+
+### Stack
+
+```
+nginx      — production only: TLS, static files, reverse proxy
+uvicorn    — ASGI server (uvicorn directly, not gunicorn)
+starlette  — routing, SSE, session middleware, static file serving
+HTML/JS    — static, served by nginx in production / starlette in dev
+```
+
+Dev/test: run `uvicorn app:app --reload` and hit localhost:8000 directly. No nginx.
+
+### Capacity
+
+On a t4g.small (~$12/month, 2 vCPU, 2GB RAM): the bottleneck is memory, not CPU or
+network. Each active session holds scene data, character files, and state in memory —
+roughly 10–20MB. Usable RAM after OS/process overhead is ~1.5GB, giving **75–150
+concurrent active sessions** before memory pressure. CPU is negligible (almost entirely
+async I/O wait on LLM calls).
+
+### Work breakdown
+
+- [ ] **Async LLM calls** (~half day) — `call_llm()` becomes `call_llm_async()` using
+  `litellm.acompletion()`. All callers in `runner.py` updated to `await`.
+
+- [ ] **Turn loop async refactor** (~2 days, the real work) — convert `run_turn_loop()`
+  to an async generator that yields typed events. Replace `print()` with `yield`.
+  Replace `input()` with `await queue.get()` at the 3 suspension points. The queue
+  (`asyncio.Queue`) is passed in at session start. Remove `_beat_prompt` and verbose
+  mode. Add richer session log writes throughout.
+
+- [ ] **CLI adapter** (~half day) — wrap the async generator for terminal use. Input
+  adapter: `await loop.run_in_executor(None, input, prompt)`. Print events to stdout.
+
+- [ ] **Starlette layer** (~half day) — SSE endpoint streams generator events as JSON.
+  POST endpoint puts player input into the session queue. Session manager holds
+  `{session_id: (generator, queue)}`. Static file serving for frontend.
+
+- [ ] **Frontend** (~1 day) — `index.html` + JS. SSE event handler dispatches on
+  `type`: narrative → Marked.js render; dice_prompt → show pool + input form;
+  player_prompt → show action input box. No framework needed at this scale.
+
+- [ ] **Deployment** (~half day) — systemd service, nginx reverse proxy on AWS instance.
+
+### Session persistence (v1)
+
+Three levels of connection disruption:
+
+- **Level 1 — micro-hiccup** (milliseconds, packet loss): TCP handles it transparently.
+  Not our problem.
+- **Level 2 — blink** (seconds, SSE drops and reconnects): treated identically to
+  Level 3. No special handling.
+- **Level 3 — full disconnect** (browser closed, hours later): full reset. Same as
+  `--reset` from the CLI — scene 0, beat 0, all stats cleared.
+
+One behavior for all disconnects: session dies, state is wiped, player starts fresh.
+No resume logic, no partial state management, no buffering. This is acceptable because
+disconnects are rare on a stable wired/wireless home connection to AWS.
+
+### Session persistence (v2 — if the tool gains traction)
+
+Add a **Save** button, enabled only when the engine is idle at the player action prompt
+(the one clean break in the turn loop). On press, snapshot the 3 state files
+(`scene_state.yaml`, `party_stats.yaml`, `session_log.md`) to `state/saves/save_TIMESTAMP/`.
+
+On reconnect, if a save exists for this session, restore from it instead of full reset.
+Sessions identified by a **cookie** (UUID issued on first connection, `response.set_cookie()`
+— 5 lines, no middleware needed). Cookie survives browser close, so returning hours later
+still finds the right save. Clearing cookies loses the save; opening two tabs conflicts
+(user error for a single-player game).
+
+If multi-device access is ever needed, swap cookie-keyed saves for login-keyed saves.
+
+### Open decisions
+
+- Short-term terminal improvement: add `rich` library for markdown rendering in CLI.
+  Zero architecture change, one afternoon. Worth doing regardless of web app timing.
+- Authentication: for 1–2 feedback users, no auth needed. Revisit before opening to
+  many users.
