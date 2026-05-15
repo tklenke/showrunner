@@ -1,6 +1,7 @@
-# ABOUTME: LiteLLM wrapper — call_llm() assembles messages and calls litellm.completion().
+# ABOUTME: LiteLLM wrapper — call_llm() and call_llm_async() assemble messages and call litellm.
 # ABOUTME: Provides setup_llm_logging() to enable per-call summary logging to a file.
 
+import asyncio
 import inspect
 import logging
 import time
@@ -110,6 +111,62 @@ def call_llm(agent_name: str, system_prompt: str, user_message: str, label: str 
             wait = _BACKOFF_BASE ** attempt
             print(f"[showrunner] Gemini unavailable (503) — retrying in {wait}s (attempt {attempt + 1}/{_MAX_RETRIES})...")
             time.sleep(wait)
+
+    content = response.choices[0].message.content
+
+    if _prompt_logger is not None:
+        server = cfg["model_alias"].split("/")[0]
+        step = inspect.currentframe().f_back.f_code.co_name
+        _prompt_logger.log(
+            agent_name, server, step,
+            len(system_prompt) + len(user_message), len(content),
+            label=label, system_prompt=system_prompt, user_message=user_message, response=content,
+        )
+
+    return content
+
+
+async def call_llm_async(agent_name: str, system_prompt: str, user_message: str, label: str = "") -> str:
+    """Async version of call_llm; uses litellm.acompletion(). Same interface and logging."""
+    cfg = load_agent_configs()[agent_name]
+    params = cfg["litellm_params"]
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_message},
+    ]
+    kwargs: dict = {
+        "model": params["model"],
+        "messages": messages,
+    }
+    if "api_base" in params:
+        kwargs["api_base"] = params["api_base"]
+    if "api_key" in params:
+        kwargs["api_key"] = params["api_key"]
+    kwargs["temperature"] = cfg.get("temperature", 0.7)
+    if "gemini-2.5" in params["model"]:
+        kwargs["thinking"] = {"type": "disabled"}
+
+    max_ctx = cfg.get("max_context_tokens")
+    if max_ctx:
+        estimated = (len(system_prompt) + len(user_message)) // 4
+        if estimated > max_ctx:
+            _log.warning(
+                "Context pre-flight: agent=%s estimated=%d tokens exceeds max_context_tokens=%d",
+                agent_name, estimated, max_ctx,
+            )
+
+    _MAX_RETRIES = 5
+    _BACKOFF_BASE = 2
+    for attempt in range(_MAX_RETRIES + 1):
+        try:
+            response = await litellm.acompletion(**kwargs)
+            break
+        except litellm.exceptions.ServiceUnavailableError as exc:
+            if attempt == _MAX_RETRIES:
+                raise
+            wait = _BACKOFF_BASE ** attempt
+            print(f"[showrunner] Gemini unavailable (503) — retrying in {wait}s (attempt {attempt + 1}/{_MAX_RETRIES})...")
+            await asyncio.sleep(wait)
 
     content = response.choices[0].message.content
 

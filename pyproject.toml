@@ -14,3 +14,4 @@ where = ["src"]
 testpaths = ["tests"]
 pythonpath = ["src"]
 filterwarnings = []
+asyncio_mode = "auto"

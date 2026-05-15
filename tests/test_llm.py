@@ -1,8 +1,8 @@
-# ABOUTME: Tests for llm.py — call_llm(), build_system_prompt(), and setup_llm_logging().
-# ABOUTME: Uses mocked litellm.completion to verify message assembly and logging.
+# ABOUTME: Tests for llm.py — call_llm(), call_llm_async(), build_system_prompt(), and setup_llm_logging().
+# ABOUTME: Uses mocked litellm.completion/acompletion to verify message assembly and logging.
 
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 
 @pytest.fixture(autouse=True)
@@ -424,3 +424,60 @@ def test_build_system_prompt_missing_tier_falls_back_to_medium():
          patch("showrunner.llm._load_world_yaml", return_value=fake_world):
         prompt = build_system_prompt("narrator")
     assert "MEDIUM world description" in prompt
+
+
+# ---------------------------------------------------------------------------
+# call_llm_async (100.1)
+# ---------------------------------------------------------------------------
+
+async def test_call_llm_async_returns_response_content():
+    from showrunner.llm import call_llm_async
+    with patch("litellm.acompletion", new=AsyncMock(return_value=_mock_response("async output"))):
+        result = await call_llm_async("narrator", "sys", "user")
+    assert result == "async output"
+
+
+async def test_call_llm_async_sends_system_and_user_messages():
+    from showrunner.llm import call_llm_async
+    with patch("litellm.acompletion", new=AsyncMock(return_value=_mock_response("ok"))) as mock_ac:
+        await call_llm_async("narrator", "You are the narrator.", "Describe the scene.")
+    messages = mock_ac.call_args.kwargs["messages"]
+    assert [m["role"] for m in messages] == ["system", "user"]
+    assert messages[0]["content"] == "You are the narrator."
+    assert messages[1]["content"] == "Describe the scene."
+
+
+async def test_call_llm_async_logs_prompt(tmp_path):
+    from showrunner.llm import call_llm_async, setup_llm_logging
+    log_file = tmp_path / "prompts.log"
+    setup_llm_logging(log_file)
+    with patch("litellm.acompletion", new=AsyncMock(return_value=_mock_response("result"))):
+        await call_llm_async("narrator", "You are the narrator.", "Describe the hall.", label="test_label")
+    content = log_file.read_text()
+    assert "narrator" in content
+    assert "test_label" in content
+
+
+async def test_call_llm_async_retries_on_503_and_succeeds(capsys):
+    import litellm as _litellm
+    from showrunner.llm import call_llm_async
+    err = _litellm.exceptions.ServiceUnavailableError(
+        message="503", llm_provider="gemini", model="gemini-2.5-flash",
+    )
+    side_effects = [err, err, _mock_response("recovered")]
+    with patch("litellm.acompletion", new=AsyncMock(side_effect=side_effects)):
+        with patch("showrunner.llm.asyncio.sleep", new=AsyncMock()):
+            result = await call_llm_async("narrator", "sys", "user")
+    assert result == "recovered"
+
+
+async def test_call_llm_async_raises_after_max_retries():
+    import litellm as _litellm
+    from showrunner.llm import call_llm_async
+    err = _litellm.exceptions.ServiceUnavailableError(
+        message="503", llm_provider="gemini", model="gemini-2.5-flash",
+    )
+    with patch("litellm.acompletion", new=AsyncMock(side_effect=err)):
+        with patch("showrunner.llm.asyncio.sleep", new=AsyncMock()):
+            with pytest.raises(_litellm.exceptions.ServiceUnavailableError):
+                await call_llm_async("narrator", "sys", "user")
