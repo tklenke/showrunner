@@ -70,6 +70,17 @@ async def _post_input(request: Request) -> Response:
     return Response(status_code=204)
 
 
+def create_server_app() -> Starlette:
+    """Factory for uvicorn --factory: loads scene from APP_SCENE env var (default 0)."""
+    import os
+    from dotenv import load_dotenv
+    load_dotenv()
+    scene_num = int(os.environ.get("APP_SCENE", "0"))
+    from showrunner.tools.state_reader import load_adventure_scene
+    scene = load_adventure_scene(scene_num)
+    return create_app(scene)
+
+
 def create_app(scene: dict, generator_factory: Callable | None = None) -> Starlette:
     """Create the Starlette application.
 

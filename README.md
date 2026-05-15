@@ -15,13 +15,19 @@ Play is organised into four nested levels:
 A beat can span multiple turns. A combat beat runs one turn per round until the fight ends.
 A simple arrival beat might resolve in a single turn.
 
+Beat advancement is decided automatically by the Show Runner after each turn. The SR
+reads what happened against the next beat's entry condition and outputs `ADVANCE` or `STAY`.
+When it advances, NPC and companion plans for the next turn are written with the new beat
+context so characters react to where the story actually is.
+
 ---
 
 ## Setup
 
 ```bash
-cd ~/projects/showrunner
-python -m venv venv
+git clone git@github.com:tklenke/showrunner.git
+cd showrunner
+python3.11 -m venv venv
 source venv/bin/activate
 pip install -e .
 pip install -r requirements.txt
@@ -30,81 +36,73 @@ pip install -r requirements.txt
 Set your Gemini API key:
 
 ```bash
+# Either export it:
 export GEMINI_API_KEY=your_key_here
-# or add it to a .env file:
+
+# Or add it to a .env file (loaded automatically on startup):
 echo "GEMINI_API_KEY=your_key_here" > .env
 ```
 
 ---
 
-## Running a Session
+## Web App
+
+The primary interface. Start the server:
 
 ```bash
 source venv/bin/activate
-python -m showrunner.main
+uvicorn showrunner.web.app:create_server_app --factory --host 0.0.0.0 --port 8000
 ```
 
-Loads `state/scene_0.yaml` by default (Bargos mansion, Act 1).
+Then open `http://localhost:8000` in a browser.
 
-**Options:**
+**During a session:**
+
+- Narrative prose streams in and renders as markdown
+- When a skill check is needed, the dice pool is displayed — enter a result (e.g. `S2A1T1`) or leave the field blank and click **Auto-roll**
+- When it's your turn, type your action and press Enter or **Send**
+- Type `q` to end the session
+
+Single-session: opening a second tab cancels the first connection.
+
+**Scene selection:** set `APP_SCENE=1` (etc.) to load a different scene:
 
 ```bash
-python -m showrunner.main                  # scene 0 (default)
-python -m showrunner.main 1               # scene 1
-python -m showrunner.main --dump-prompts  # write full prompt+response MD files to logs/prompts/
-python -m showrunner.main --reset         # clear logs and scene state, restart from beat 1
+APP_SCENE=1 uvicorn showrunner.web.app:create_server_app --factory --host 0.0.0.0 --port 8000
+```
+
+---
+
+## CLI
+
+The terminal interface — useful for dev and debugging:
+
+```bash
+source venv/bin/activate
+python -m showrunner.main           # scene 0 (default)
+python -m showrunner.main 1        # scene 1
+python -m showrunner.main --reset  # clear state and restart from beat 1
+python -m showrunner.main --dump-prompts  # write full LLM calls to logs/prompts/
 ```
 
 **`--reset`** deletes `state/scene_state.yaml`, `state/session_log.md`, and everything
-under `logs/` (including `logs/prompts/`), then starts from the first beat. Use this
-when you want a clean run rather than resuming a prior session. `state/party_stats.yaml`
-is preserved — delete it manually if you need fully clean wound/strain tracking.
+under `logs/`. `state/party_stats.yaml` is preserved — delete it manually for fully
+clean wound/strain tracking.
 
 **`--dump-prompts`** writes one Markdown file per LLM call to `logs/prompts/`:
 
 ```
 logs/prompts/0001_narrator_run_beat_opener.md
 logs/prompts/0002_actors_run_npc_wave[bargos_the_hutt].md
-logs/prompts/0003_narrator_run_npc_wave[bargos_the_hutt].md
 ```
 
-Each file contains the full `# System`, `# User`, and `# Response` text for that call.
-The summary log at `logs/prompts_<timestamp>.log` is always written and shows a one-line
-entry per call with a sequential ID, agent, model server, step, and token counts:
+Each file contains the full `# System`, `# User`, and `# Response` text. A summary log
+is always written to `logs/prompts_<timestamp>.log`:
 
 ```
 0001  14:32:01  narrator  sardinia  run_beat_opener                1842p →  312r
 0002  14:32:04  actors    sardinia  run_npc_wave[bargos_the_hutt]  2103p →  445r
-0003  14:32:06  narrator  sardinia  run_npc_wave[bargos_the_hutt]   198p →   61r
 ```
-
-**During a session:**
-
-The engine runs several AI steps after each player action. Output may include narrative
-prose, character dialogue, and check results — and the prose sometimes ends with a
-question or a dramatic beat. **Wait for the horizontal rule (`────...`) before typing.**
-That line always appears immediately before a prompt that expects your input.
-
-**Beat advancement** is decided automatically by the Show Runner after each turn. The SR
-reads what happened this turn against the next beat's entry condition and outputs `ADVANCE`
-or `STAY`. When it advances, NPC and Companion plans for the next turn are written with
-the new beat context — so characters react to where the story actually is. The SR's
-decision is applied silently and play continues.
-
----
-
-## Web App
-
-Start the browser-based interface:
-
-```bash
-source venv/bin/activate
-uvicorn showrunner.web.app:app --host 0.0.0.0 --port 8000
-```
-
-Then open `http://localhost:8000` in a browser. The app streams narrative events via SSE;
-player input is posted back to `/play/input`. Single-session: opening a second tab cancels
-the first.
 
 ---
 
@@ -132,7 +130,7 @@ sudo mkdir -p /opt/showrunner
 sudo chown showrunner:showrunner /opt/showrunner
 
 # 3. Deploy code
-sudo -u showrunner git clone <repo-url> /opt/showrunner
+sudo -u showrunner git clone git@github.com:tklenke/showrunner.git /opt/showrunner
 cd /opt/showrunner
 sudo -u showrunner python3.11 -m venv venv
 sudo -u showrunner venv/bin/pip install -e . -r requirements.txt
@@ -147,7 +145,7 @@ sudo systemctl enable --now showrunner
 
 # 6. Configure nginx
 sudo cp deploy/nginx.conf /etc/nginx/sites-available/showrunner
-# Edit /etc/nginx/sites-available/showrunner: replace 'your.domain.here' with your domain
+# Edit the file: replace 'your.domain.here' with your actual domain
 sudo ln -s /etc/nginx/sites-available/showrunner /etc/nginx/sites-enabled/
 sudo nginx -t && sudo systemctl reload nginx
 
@@ -157,3 +155,6 @@ sudo certbot --nginx -d your.domain.here
 
 State files live at `/opt/showrunner/state/`. Back up `party_stats.yaml` and
 `scene_state.yaml` before deploying updates.
+
+To load a scene other than scene 0, add `Environment=APP_SCENE=1` to the
+`[Service]` section of the systemd unit.

@@ -6,7 +6,8 @@ After=network.target
 Type=simple
 User=showrunner
 WorkingDirectory=/opt/showrunner
-ExecStart=/opt/showrunner/venv/bin/uvicorn showrunner.web.app:app \
+ExecStart=/opt/showrunner/venv/bin/uvicorn showrunner.web.app:create_server_app \
+    --factory \
     --host 127.0.0.1 \
     --port 8000 \
     --workers 1
